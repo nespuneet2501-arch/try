@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪔</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PVASTRO - Premium Cosmic Vedic Astrology</title>
+    <!-- Cinzel (Aesthetic Serif) + Inter (Sans-Serif) + JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Inter:wght@300..900&family=JetBrains+Mono:wght@100..800&display=swap" rel="stylesheet">
+    <style>
+      /* Luxury Light traditional theme overrides */
+      body {
+        background-color: #FAF7F2 !important;
+        color: #2D2A26 !important;
+        font-family: 'Inter', sans-serif;
+      }
+      
+      /* Remap background Tailwind classes */
+      .bg-\[\#090a15\] {
+        background-color: #FAF7F2 !important;
+      }
+      .bg-\[\#070810\] {
+        background-color: #F1E9D7 !important;
+      }
+      .bg-\[\#0a0c1a\] {
+        background-color: #FAF7F2 !important;
+      }
+      .bg-\[\#0f1123\] {
+        background-color: #FFFFFF !important;
+        border-color: #E2D9BE !important;
+      }
+      .bg-\[\#0f1123\/95\] {
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        border-color: #E2D9BE !important;
+      }
+      .bg-\[\#0f1123\/50\] {
+        background-color: rgba(255, 255, 255, 0.50) !important;
+        border-color: #E2D9BE !important;
+      }
+      .bg-slate-900 {
+        background-color: #F8F5EC !important;
+      }
+      .bg-[#12142d] {
+        background-color: #eae3cb !important;
+      }
+      .bg-\[\#12142d\] {
+        background-color: #eae3cb !important;
+      }
+      .bg-[#161a35] {
+         background-color: #FAF7F2 !important;
+      }
+      .bg-\[\#161a35\] {
+         background-color: #FAF7F2 !important;
+      }
+      .bg-[#05060d]/60 {
+         background-color: rgba(245, 235, 214, 0.60) !important;
+      }
+      .bg-slate-950 {
+         background-color: #FAF7F2 !important;
+         color: #665C4E !important;
+         border-color: #E2CC9E !important;
+      }
+      
+      /* Text Colors */
+      .text-slate-100 {
+        color: #2D2A26 !important;
+      }
+      .text-slate-200 {
+        color: #3D3A35 !important;
+      }
+      .text-slate-300 {
+        color: #4D4A44 !important;
+      }
+      .text-slate-400 {
+        color: #5D5A54 !important;
+      }
+      .text-slate-500 {
+        color: #7A756D !important;
+      }
+      .text-white {
+        color: #1A1A1A !important;
+      }
+      .text-[#cca43b] {
+        color: #9c6c13 !important;
+      }
+      .text-[#cca43b]\/20 {
+        color: rgba(156, 108, 19, 0.20) !important;
+      }
+      
+      /* Borders */
+      .border-slate-800 {
+        border-color: #E5DEC3 !important;
+      }
+      .border-slate-850 {
+        border-color: #E5DEC3 !important;
+      }
+      .border-slate-700 {
+        border-color: #DCD2A2 !important;
+      }
+      .border-slate-750 {
+        border-color: #DCD2A2 !important;
+      }
+      .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+        border-color: #E5DEC3 !important;
+      }
+      
+      /* Buttons & Highlights */
+      .bg-\[\#cca43b\] {
+        background-color: #936a18 !important; /* Gold but solid and rich */
+        color: #FFFFFF !important;
+      }
+      .bg-\[\#cca43b\]:hover {
+        background-color: #af7f21 !important;
+      }
+      .bg-\[\#cca43b\] text-slate-950 {
+        color: #FFFFFF !important;
+      }
+      .bg-gradient-to-r.from-\[\#cca43b\] {
+        background-image: linear-gradient(to right, #936a18, #cca43b) !important;
+        color: #FFFFFF !important;
+      }
+      .bg-gradient-to-r.from-\[\#11132e\] {
+        background-image: linear-gradient(to right, #FBF8F3, #FAF7ED) !important;
+        border: 1px solid #E5DEC3 !important;
+      }
+      .bg-gradient-to-tr.from-\[\#cca43b\/10\] {
+        background-image: linear-gradient(to top right, #f6f1e2, #FAF7ED) !important;
+      }
+
+      /* Hover states */
+      .hover\:bg-\[\#1a1d37\]:hover {
+        background-color: #FAF4E5 !important;
+      }
+      .hover\:border-\[\#cca43b\]\/50:hover {
+        border-color: #cca43b !important;
+      }
+
+      /* Specific input text override */
+      input[type="text"], input[type="date"], input[type="time"], input[type="number"], select {
+        background-color: #FFFFFF !important;
+        color: #2D2A26 !important;
+        border: 1.5px solid #d3c8aa !important;
+      }
+      input[type="text"]:focus, input[type="date"]:focus, input[type="time"]:focus, input[type="number"]:focus, select:focus {
+        border-color: #936a18 !important;
+        outline: none;
+      }
+      
+      /* Make font sizes larger and premium */
+      .text-sm {
+        font-size: 0.925rem !important; /* 14.8px roughly */
+      }
+      .text-xs {
+        font-size: 0.825rem !important;  /* 13.2px roughly */
+      }
+      .text-[10px] {
+        font-size: 0.725rem !important;  /* 11.6px roughly */
+      }
+      
+      /* Title enhancements */
+      .font-cinzel {
+        font-family: 'Cinzel', serif !important;
+        letter-spacing: 0.05em !important;
+      }
+    </style>
+  </head>
+  <body class="bg-[#FAF7F2] text-[#2D2A26] min-h-screen selection:bg-[#cca43b] selection:text-[#FAF7F2]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

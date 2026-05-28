@@ -1,0 +1,6 @@
+{
+  "name": "PVASTRO",
+  "description": "Premium Cosmic Vedic Astrology app specializing in interactive North/South/East Kundlis with animated planetary aspect lines, AI predictions, planetary friendship grids, Vimshottari Dasha, and custom remedies.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
