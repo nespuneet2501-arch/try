@@ -296,6 +296,14 @@ function VedicKundliApp() {
   const [activeChartStyle, setActiveChartStyle] = useState('North Indian'); // North Indian, South Indian, East Indian
   const [highlightedPlanet, setHighlightedPlanet] = useState(null);
 
+  const [breakingNews, setBreakingNews] = useState(() => {
+    return localStorage.getItem('pva_breaking_news') || "महा शिवरात्रि एवं हिंदू नववर्ष के उपलक्ष्य में सभी कुंडली सेवाएं पूर्णतः निःशुल्क की गई हैं। वैदिक आचार्यों द्वारा सिद्ध गोचर यंत्र सक्रिय है।";
+  });
+  const [breakingNewsEng, setBreakingNewsEng] = useState(() => {
+    return localStorage.getItem('pva_breaking_news_eng') || "Under the blessings of Maha Shivratri and Hindu New Year, all premium Kundli and life prediction services are made 100% Free.";
+  });
+  const [showNewsEditor, setShowNewsEditor] = useState(false);
+
   const [usersList, setUsersList] = useState(() => {
     const saved = localStorage.getItem('pva_users_list');
     if (saved) {
@@ -1009,7 +1017,104 @@ function VedicKundliApp() {
         
         {/* -- REGION: HIGH CONTRAST ASTROLOGICAL VIEW NAV BAR -- */}
         {currentScreen !== 'WELCOME' && currentScreen !== 'AUTH' && (
-          <div className="w-full mb-8 pb-3 select-none flex flex-wrap gap-2.5 justify-start items-center border-b" style={{ borderColor: tObj.border }}>
+          <>
+            {/* 1. All Services Are Free - Animated & Continuous Scrolling Ribbon */}
+            <div className="w-full overflow-hidden bg-[#12142a] border text-white rounded-2xl mb-4.5 py-2.5 relative shadow-xl flex items-center select-none" style={{ borderColor: tObj.border }}>
+              <div className="absolute left-0 top-0 bottom-0 bg-[#936a18] px-3.5 z-10 flex items-center shadow-md font-cinzel font-black text-[9px] uppercase tracking-widest text-[#FFF] animate-pulse">
+                🔥 {t("FREE SERVICES", "निःशुल्क सेवा")}
+              </div>
+              <div className="whitespace-nowrap flex items-center w-full overflow-hidden">
+                <div className="animate-marquee inline-block font-sans font-extrabold text-[10.5px] uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-200 pl-16">
+                  ✨ 🕊️ {t("ALL DIGITAL HOROSCOPE GENERATION, LAL KITAB ANALYSIS, DAILY PANCHANG, AND KP ASTROLOGY MODULES ARE 100% FREE FOR THE DEVOUT PUBLIC!", "सभी डिजिटल जन्मपत्री, लाल किताब फलादेश, दैनिक महा पंचांग और केपी ज्योतिष कुण्डली फलित सर्वसाधारण के लिए शत-प्रतिशत निःशुल्क हैं!")} ✦ {t("NO HIDDEN FEES OR PREMIUM SUBSCRIPTION REQUIRED — SPREAD THE DIVINE LIGHT!", "कोई छिपा हुआ शुल्क या प्रीमियम सब्सक्रिप्शन आवश्यक नहीं — सनातन दैवीय ज्ञान सभी के लिए खुला है!")} 🕊️ ✨
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Cosmic Breaking News Update Centre (Admin Editable) */}
+            <div className="w-full bg-[#0b0c16]/90 border rounded-2xl p-4.5 mb-6 shadow-2xl relative font-sans text-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-l-4 border-l-rose-600" style={{ borderColor: tObj.border, borderLeftColor: '#e11d48' }}>
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2.5 w-2.5 rounded-full bg-rose-600 animate-ping relative"></span>
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-rose-500 font-mono">✦ {t("BREAKING KUNDLI NEWS", "ब्रेकिंग न्यूज़ अपडेट")}</span>
+                </div>
+                <p className="text-[12px] leading-relaxed text-slate-300 font-semibold italic">
+                  {currentLanguage === 'English' ? breakingNewsEng : breakingNews}
+                </p>
+              </div>
+
+              {/* Action area */}
+              <div className="flex items-center gap-2.5 shrink-0 self-end md:self-center">
+                {activeUserIsPremium && (
+                  <button
+                    onClick={() => setShowNewsEditor(!showNewsEditor)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600/10 border border-rose-500/20 text-rose-400 hover:bg-rose-600 hover:text-white rounded-xl text-[10px] font-extrabold transition uppercase tracking-widest"
+                  >
+                    ✏️ {t("Update News", "अपडेट न्यूज़")}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Interactive Admin Update Form Panel */}
+            {showNewsEditor && activeUserIsPremium && (
+              <div className="w-full bg-[#111224] border border-rose-500/30 rounded-2xl p-5 mb-6 space-y-4 animate-scale-up font-sans">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-2.5">
+                  <h4 className="text-xs font-black text-rose-400 uppercase tracking-widest flex items-center gap-1.5">
+                    ⚙️ {t("Admin Cosmic Broadcasting Station", "केंद्रीय प्रशासनिक ब्रॉडकास्टिंग डेस्क")}
+                  </h4>
+                  <button 
+                    onClick={() => setShowNewsEditor(false)}
+                    className="text-slate-450 hover:text-white font-mono font-bold text-xs"
+                  >
+                    [ {t("CLOSE", "बंद करें")} ]
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-col sm:flex-row">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("Hindi News Content", "हिंदी संदेश विषय")}</label>
+                    <textarea
+                      value={breakingNews}
+                      onChange={(e) => {
+                        setBreakingNews(e.target.value);
+                        localStorage.setItem('pva_breaking_news', e.target.value);
+                      }}
+                      className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-rose-500 font-semibold"
+                      rows="3"
+                      placeholder="हिंदी ब्रेकिंग न्यूज़ संदेश दर्ज करें..."
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">{t("English News Content", "अंग्रेजी संदेश विषय")}</label>
+                    <textarea
+                      value={breakingNewsEng}
+                      onChange={(e) => {
+                        setBreakingNewsEng(e.target.value);
+                        localStorage.setItem('pva_breaking_news_eng', e.target.value);
+                      }}
+                      className="w-full bg-slate-950 border border-[#1b1c30] rounded-xl p-3 text-xs text-white focus:outline-none focus:border-rose-500 font-semibold"
+                      rows="3"
+                      placeholder="Enter breaking news message in English..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button 
+                    onClick={() => {
+                      alert(t("Live breaking news successfully broadcasted and synced!", "ब्रेकिंग न्यूज़ का सजीव प्रसारण सफलतापूर्वक अपडेट और सिंक कर दिया गया है!"));
+                      setShowNewsEditor(false);
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white text-[10px] font-black rounded-xl uppercase tracking-wider shadow-md transition"
+                  >
+                    💾 {t("Broadcast & Save", "सुरक्षित एवं प्रसारित करें")}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="w-full mb-8 pb-3 select-none flex flex-wrap gap-2.5 justify-start items-center border-b" style={{ borderColor: tObj.border }}>
             <button
               onClick={() => setCurrentScreen('DASHBOARD')}
               className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
@@ -1088,7 +1193,8 @@ function VedicKundliApp() {
               <span>{t("Admin Panel", "संचालक नियंत्रण")}</span>
             </button>
           </div>
-        )}
+        </>
+      )}
         
         {/* -- SCREEN: WELCOME / INTRO (Fallback/Optional) -- */}
         {currentScreen === 'WELCOME' && (

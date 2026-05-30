@@ -139,7 +139,7 @@ export function AdvancedDashaExplorer({ report, currentLanguage, t }) {
                       <p className="text-xs text-slate-600 leading-relaxed font-semibold">{details.desc}</p>
                     </div>
 
-                    <div className="md:col-span-2 p-3 bg-amber-500/5 rounded-lg border border-[#cca43b]/20">
+                    <div className="md:col-span-2 p-3 bg-amber-505 bg-amber-500/5 rounded-lg border border-[#cca43b]/20">
                       <h5 className="text-[10px] uppercase font-bold tracking-widest text-[#936a18] mb-1.5">🕊️ {t("Authentic Vedic Remedial Measures", "दोष शमन एवं वैदिक सुगम उपाय")}</h5>
                       <p className="text-xs text-[#936a18] font-bold leading-relaxed">{details.rem}</p>
                     </div>
@@ -253,13 +253,28 @@ export function GocharTransitPanel({ report, currentLanguage, t, activeChartStyl
     const hKetu = ((5 - base + 12) % 12) + 1;
     const hSun = ((2 - base + 12) % 12) + 1;
 
+    const houseMeanings = {
+      1: { name: "प्रथम भाव (तन एवं व्यक्तित्व प्रभाग)", effect: "आत्मविश्वास में वृद्धि करेगा, परंतु स्वास्थ्य के प्रति सतर्क और अनुशासित रहें।" },
+      2: { name: "द्वितीय भाव (धन एवं कुटुंब प्रभाग)", effect: "आर्थिक संचय और नए वित्तीय निवेशों के सुंदर रास्ते खोलेगा, वाणी पर संयम रखें।" },
+      3: { name: "तृतीय भाव (पराक्रम एवं सहज प्रभाग)", effect: "अदम्य साहस, पराक्रम और लघु यात्राओं द्वारा जीवन में नए सुनहरे अवसर देगा।" },
+      4: { name: "चतुर्थ भाव (सुख एवं मातृ प्रभाग)", effect: "गृह एवं वाहन सुख में वृद्धि करेगा, परंतु माता के स्वास्थ्य पर ध्यान देना अनिवार्य होगा।" },
+      5: { name: "पंचम भाव (संतान एवं बुद्धि प्रभाग)", effect: "असाधारण रचनात्मक ऊर्जा, बौद्धिक विकास एवं संतान पक्ष से परम हर्ष देगा।" },
+      6: { name: "षष्ठ भाव (रोग, ऋण एवं शत्रु प्रभाग)", effect: "दैनिक कार्यशैली में सुधार करेगा, कोर्ट-कचहरी और शत्रुओं पर पूर्ण विजय दिलाएगा।" },
+      7: { name: "सप्तम भाव (जाया एवं साझेदारी प्रभाग)", effect: "वैवाहिक समन्वय, व्यापार में लाभ और साझेदारी के नए द्वार खोलेगा।" },
+      8: { name: "अष्टम भाव (आयु एवं रहस्यमय विधा प्रभाग)", effect: "शोध एवं गुप्त विधाओं में गहरी रुचि जगाएगा, स्वास्थ्य का विशेष ख्याल रखें।" },
+      9: { name: "नवम भाव (भाग्य एवं धर्म प्रभाग)", effect: "परम भाग्यवर्धन, तीर्थयात्रा और समाज सेवा के माध्यम से प्रसिद्धि का सृजन करेगा।" },
+      10: { name: "दशम भाव (कर्म एवं यश प्रभाग)", effect: "करियर में ऐतिहासिक उन्नति, शीर्ष नेतृत्व पद और व्यावसायिक मान-सम्मान देगा।" },
+      11: { name: "एकादश भाव (आय एवं लाभ प्रभाग)", effect: "अतुल्य आकस्मिक धनलाभ, महत्वाकांक्षाओं की पूर्ति और बड़े भाई-बहनों से सहयोग दिलाएगा।" },
+      12: { name: "द्वादश भाव (व्यय एवं मोक्ष प्रभाग)", effect: "आध्यात्मिक यात्रा, विदेश संपर्कों से लाभ देगा, अनावश्यक खर्चों पर नियंत्रण रखें।" }
+    };
+
     return {
-      career: `करियर और व्यवसाय (Career): शनि का गोचर वर्तमान में आपके ${hSaturn}वें भाव में चल रहा है। शनिदेव (Saturn) का कुंडली के इस कर्म कल्पद्रुम क्षेत्र से पारगमन करियर में अत्यधिक जिम्मेदारी और काम के दबाव को दर्शाता है (transit logic). कार्यक्षेत्र में बड़े बदलाव और अतिरिक्त काम का भार बढ़ेगा (house impact). शनि की सातवीं दृष्टि शत्रु एवं रोग भाव और दसवीं दृष्टि नवम भाव पर रहने से गुप्त शत्रुओं से सावधानी और भाग्य संवर्धन हेतु कठोर परिश्रम आवश्यक रहेगा (aspect impact). कड़े अनुशासन से स्थायी पदोन्नति का यह उत्तम समय है (reason of prediction).`,
-      health: `स्वास्थ्य और काया (Health): छाया ग्रह राहु वर्तमान में आपके ${hRahu}वें भाव से गोचर कर रहा है। राहु (Rahu) का इस भाव से साया प्रभाग मानसिक संशय और नींद की अनिमितता देता है (transit logic). आपकी सेहत में हल्की सुस्ती और स्नायु तंत्र में तनाव की शिकायत रह सकती है (house impact). राहु की शुभ पंचम दृष्टि पंचम भाव (ज्ञान भाव) और एकादश दृष्टि नवम भाव पर होने से मन को भटकाव से बचाना आवश्यक होगा (aspect impact). शनिवार की शाम तेल का दान और नियमित प्राणायाम सबसे उचित उपाय है (reason of prediction).`,
-      marriage: `विवाह और साझेदारी (Marriage): देवगुरु बृहस्पति का सर्वोत्तम गोचर वर्तमान में आपके ${hJupiter}वें भाव में हो रहा है। बृहस्पति (Jupiter) का यह शुभ पारगमन दांपत्य जीवन में अपार मिठास और विवाह योगों का सृजन कर रहा है (transit logic). अविवाहित जातकों की शादियां तय होंगी और प्रेम संबंधों में प्रगाढ़ता आएगी (house impact). बृहस्पति की पूर्ण पंचम दृष्टि ${((hJupiter+5-2)%12)+1}वें भाव (संतान व विद्या प्रभाग) तथा अमृत नवम दृष्टि ${((hJupiter+9-2)%12)+1}वें भाव पर होने से जीवनसाथी के प्रभाव से अकूत संपत्ति लाभ होगा (aspect impact). पारिवारिक मतभेद समाप्त होंगे (reason of prediction).`,
-      money: `धनलाभ और निवेश (Money): सूर्य, बुध और शुक्र का संजोग वर्तमान में आपके ${hSun}वें भाव से पारगमन कर रहा है। बुधादित्य एवं लक्ष्मीनारायण योग का यह प्रभाव वित्तीय मजबूती और बैंक संचय को दर्शाता है (transit logic). पैतृक संपत्तियों और पुराने निवेशों से बड़ा धन आपके संचय में जुड़ेगा (house impact). बुध व्यापारिक सूझबूझ बढ़ाएगा और सूर्य की दृष्टि से राजकीय कार्यों से रुका हुआ सरकारी रुका पैसा वापस मिलेगा (aspect impact). यह अवधि नए निवेश करने हेतु सर्वथा अनुकूल है (reason of prediction).`,
-      education: `शिक्षा और ज्ञान (Education): गुरु का ${hJupiter}वें भाव से गोचर विद्यार्थियों के लिए विद्या संवर्धन का काल है। गुरु (Jupiter) की कृपा बौद्धिक ऊर्जा को तीक्ष्ण और स्मरण शक्ति को तीव्र करती है (transit logic). प्रतियोगी परीक्षाओं में शत-प्रतिशत सफलता की प्रबल संभावनाएं विकसित हो रही हैं (house impact). पंचमेश बृहस्पति की अनुकूलता से शैक्षणिक स्तर पर कोई बड़ा सम्मान या स्कॉलरशिप मिल सकती है (aspect impact). यह आपके ज्ञान अर्जन का स्वर्णकाल है (reason of prediction).`,
-      family: `पारिवारिक सुख (Family): केतु का गोचर आपके ${hKetu}वें भाव में होने से पारिवारिक वातावरण में वाणी संयम रखना अनिवार्य होगा। केतु (Ketu) के कारण पैतृक और गृह संपत्ति से विवाद होने की मामूली आशंका है (transit logic). केतु की छाया दृष्टि वाणी भाव पर होने से गृह कलह से बचें (aspect impact). नित्य हनुमान चालीसा का पाठ शांति स्थापित करेगा (reason of prediction).`
+      career: `करियर और व्यवसाय (Career): शनि का गोचर वर्तमान में आपके ${hSaturn}वें भाव [${houseMeanings[hSaturn].name}] में चल रहा है। शनिदेव (Saturn) का कुंडली के इस क्षेत्र से पारगमन ${houseMeanings[hSaturn].effect} कार्यक्षेत्र में बड़े बदलाव और अतिरिक्त जिम्मेदारी मिलेगी। कड़े अनुशासन से स्थायी पदोन्नति का यह उत्तम समय है।`,
+      health: `स्वास्थ्य और काया (Health): छाया ग्रह राहु वर्तमान में आपके ${hRahu}वें भाव [${houseMeanings[hRahu].name}] से गोचर कर रहा है। राहु (Rahu) का इस भाव से साया ${houseMeanings[hRahu].effect} मानसिक संशय से बचें, नियमित प्राणायाम और शनिवार की शाम तेल का दान सबसे उचित उपाय है।`,
+      marriage: `विवाह और साझेदारी (Marriage): देवगुरु बृहस्पति का सर्वोत्तम गोचर वर्तमान में आपके ${hJupiter}वें भाव [${houseMeanings[hJupiter].name}] में हो रहा है। बृहस्पति (Jupiter) का यह शुभ पारगमन ${houseMeanings[hJupiter].effect} अविवाहित जातकों की शादियां तय होंगी और पारिवारिक मतभेद समाप्त होंगे।`,
+      money: `धनलाभ और निवेश (Money): सूर्य, बुध और शुक्र का संजोग वर्तमान में आपके ${hSun}वें भाव [${houseMeanings[hSun].name}] से पारगमन कर रहा है। बुधादित्य एवं लक्ष्मीनारायण योग का यह प्रभाव ${houseMeanings[hSun].effect} वित्तीय मजबूती और पैतृक संपत्तियों से बड़ा धन आपके संचय में जुड़ेगा।`,
+      education: `शिक्षा और ज्ञान (Education): गुरु का ${hJupiter}वें भाव [${houseMeanings[hJupiter].name}] से गोचर विद्यार्थियों के लिए विद्या संवर्धन का काल है। गुरु (Jupiter) की कृपा ${houseMeanings[hJupiter].effect} प्रतियोगी परीक्षाओं में शत-प्रतिशत सफलता की प्रबल संभावनाएं विकसित हो रही हैं।`,
+      family: `पारिवारिक सुख (Family): केतु का गोचर आपके ${hKetu}वें भाव [${houseMeanings[hKetu].name}] में होने से ${houseMeanings[hKetu].effect} वाणी संयम रखना अनिवार्य होगा, नित्य हनुमान चालीसा का पाठ शांति स्थापित करेगा।`
     };
   };
 
@@ -292,7 +307,7 @@ export function GocharTransitPanel({ report, currentLanguage, t, activeChartStyl
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start font-sans">
         
         {/* Gochar Chart Layout (SVG) */}
-        <div className="lg:col-span-5 bg-[#090b16] rounded-xl p-4 border border-slate-800 flex flex-col items-center">
+        <div className="lg:col-span-12 xl:col-span-5 bg-[#090b16] rounded-xl p-4 border border-slate-800 flex flex-col items-center">
           <h4 className="text-[10px] uppercase font-bold tracking-widest text-[#cca43b] text-center mb-3">
             {t("Current Transits Layout (2026)", "वर्तमान पारगमन चक्र (गोचर रेखाचित्र)")}
           </h4>
@@ -343,7 +358,7 @@ export function GocharTransitPanel({ report, currentLanguage, t, activeChartStyl
         </div>
 
         {/* Hindi Transit Predictions */}
-        <div className="lg:col-span-7 space-y-3.5">
+        <div className="lg:col-span-12 xl:col-span-7 space-y-3.5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 font-sans">
             <div className="p-4 rounded-lg bg-orange-500/5 border border-orange-500/10 hover:shadow-xs transition">
               <h4 className="text-xs font-black text-rose-800 flex items-center gap-1.5 border-b pb-1 mb-2">💼 {t("Career & Professional Gochar", "व्यावसायिक प्रभाग पारगमन")}</h4>
@@ -382,6 +397,8 @@ export function GocharTransitPanel({ report, currentLanguage, t, activeChartStyl
 // 3. LIFETIME VEDIC PREDICTION MODULE
 // ==========================================
 export function LifetimePredictionsPanel({ report, t }) {
+  const [activeSubTab, setActiveSubTab] = useState('general'); // general, planetary, aspects, monthly, yearly, systems
+  
   const lagna = report.lagnaEnglish;
   const rashi = report.planets['MOON'] ? report.planets['MOON'].signName : 'Vedic Sign';
   const moonNak = report.planets['MOON'] ? report.planets['MOON'].nakshatra : 'Vedic Asterism';
@@ -415,57 +432,797 @@ export function LifetimePredictionsPanel({ report, t }) {
 
   const lp = getLifetimePredictions();
 
+  // Dynamic predictions mapping for each planet in Houses (Parashari basis)
+  const planetHouseDescriptions = {
+    SUN: {
+      1: {
+        en: `Independent, courageous, having strong self-worth and leadership skills. Gives administrative power.`,
+        hi: `आप साहसी, महत्वाकांक्षी और स्वतंत्र विचारों वाले होंगे। नेतृत्व करने की नैसर्गिक शक्ति मिलेगी और समाज में विशिष्ट यश मिलेगा।`
+      },
+      2: {
+        en: `Influential speech and strong motivation for financial stability. Prompts ancestral property accumulation.`,
+        hi: `आपकी वाणी गंभीर एवं प्रभावशाली होगी। कुटुंब का उत्तम साथ मिलेगा और पैतृक साधनों से अच्छी आर्थिक सम्पन्नता संचित होगी।`
+      },
+      3: {
+        en: `Incredibly energetic and victorious over rivals. Brotherly support and immense societal goodwill.`,
+        hi: `अदम्य पराक्रमी, साहसी और विरोधियों पर स्वतः विजय पाने वाले जातक होंगे। लघु व्यापार, संचार और लेखन में उत्तम सफलता मिलेगी।`
+      },
+      4: {
+        en: `Deep connection to family traditions. Promotes land possession and real estate growth.`,
+        hi: `घरेलू मामलों और मातृभूमि के प्रति विशेष लगाव रहेगा। सुख भाव का बल बढ़ने से जीवन के मध्य काल में भूमि-भवन का उत्तम सुख मिलेगा।`
+      },
+      5: {
+        en: `Sharp intellectual faculties, highly creative, and administrative prestige. High education parameters.`,
+        hi: `कुशाग्र बुद्धि, तीक्ष्ण विचारशक्ति और शिक्षा प्रभाग में असाधारण कीर्ति। संतान पक्ष से शुभ समाचार और सामाजिक गौरव मिलेगा।`
+      },
+      6: {
+        en: `Conquers all opposition. High success in civil services, examinations, and judicial challenges.`,
+        hi: `शत्रुहंता होंगे। प्रतियोगिता परीक्षाओं और मुकदमों में शत-प्रतिशत विजय मिलेगी। प्रशासनिक या सरकारी नौकरी के प्रबल योग बनते हैं।`
+      },
+      7: {
+        en: `Self-respecting life partner, great growth in trade collaborations and overall respect.`,
+        hi: `जीवनसाथी स्वाभिमानी, रूपवान और सहायक होगा। साझीदारी के व्यापार में बड़ा लाभ मिलेगा और व्यावसायिक मान-सम्मान संचित होगा।`
+      },
+      8: {
+        en: `Interest in occult systems, longevity, and unexpected inheritance assets gains.`,
+        hi: `अध्यात्मिक रुचि, गुप्त विद्याओं और ज्योतिषीय अनुसंधान में गहरी पैठ होगी। अचानक वसीयत या पैतृक संपत्ति से अप्रत्याशित वित्तीय धनलाभ होगा।`
+      },
+      9: {
+        en: `Righteous, highly fortunate, long distance travel avenues, and academic or religious writing accomplishments.`,
+        hi: `अत्यंत भाग्यशाली, धर्मपरायण और लंबी धार्मिक यात्राओं के शौकीन। पिता से पूर्ण सहयोग और समाज कल्याण के कार्यों से चरम ख्याति।`
+      },
+      10: {
+        en: `Supreme Raja Yoga. Elite governmental status, top-tier corporate positions, authority, and high state privileges.`,
+        hi: `दिगबली सूर्य का दशम भाव में होना परम राजयोग है। प्रशासनिक सेवाओं, राजनीति या शासकीय संस्थाओं में अत्यंत सर्वोच्च नेतृत्व प्राप्त होगा।`
+      },
+      11: {
+        en: `Stellar monetary cash flows, association with powerful state officials, and fulfillment of material desires.`,
+        hi: `अतुल्य आकस्मिक धनलाभ, सरकारी उच्च अधिकारियों से मित्रता और जीवन में सर्वोच्च महत्वाकांक्षाओं की स्वतः पूर्णता।`
+      },
+      12: {
+        en: `Foreign land associations, success in foreign business, and high meditative spiritual growth.`,
+        hi: `विदेशी संपर्कों से बड़ा आर्थिक लाभ मिलेगा। आध्यात्मिक मोक्ष की दिशा में तीव्र उन्नति होगी, सुखद गृह त्याग के योग भी संभव हैं।`
+      }
+    },
+    MOON: {
+      1: {
+        en: `Charming appearance, intuitive mindset, deeply empathetic and universally loved.`,
+        hi: `आकर्षक स्वरूप, भावुक और तीव्र अंतर्ज्ञान युक्त स्वभाव। समाज में अत्यंत लोकप्रिय होंगे और रचनात्मक कार्यों में मन लगेगा।`
+      },
+      2: {
+        en: `Elegance in tone, sweet speaker, fast financial accumulation networks, and warm family bonding.`,
+        hi: `वाणी में मधुरता, सुंदर वक्तृत्व कला और आर्थिक संचय के उत्तम अवसर। परिवार में सुखद और स्नेहपूर्ण वातावरण बना रहेगा।`
+      },
+      3: {
+        en: `Intellectual expansion, artistic skills, frequent short-distance travels, and supportive siblings.`,
+        hi: `कलात्मक लेखन, तीक्ष्ण संप्रेषण क्षमता और छोटी-मोटी मनोरंजक यात्राओं का सुख। भाइयों के साथ संबंध अत्यंत सौहार्दपूर्ण रहेंगे।`
+      },
+      4: {
+        en: `Strong maternal connection, peaceful residence, love for nature, water-bodies, and domestic bliss.`,
+        hi: `माता का पूर्ण दुलार, जन्मभूमि के निकट समृद्धि और आलीशान घर का सुख। मन सदैव शांत, प्रसन्न और कल्याणकारी विचारों से ओतप्रोत रहेगा।`
+      },
+      5: {
+        en: `Scholarly disposition, creative arts interests, emotional depth, and highly qualified progeny.`,
+        hi: `असाधारण कल्पनाशीलता, कला व संगीत प्रभाग में रुचि और विद्या संवर्द्धन। संतान पक्ष अत्यंत सभ्य और आज्ञाकारी सिद्ध होगा।`
+      },
+      6: {
+        en: `Empathetic in healing fields, highly dedicated in service. Care required for seasonal wellness.`,
+        hi: `सेवा भाव कूट-कूट कर भरा होगा। जन कल्याणकारी कार्यों में ख्याति मिलेगी, ऋतु परिवर्तन के समय स्वास्थ्य का थोड़ा ध्यान रखें।`
+      },
+      7: {
+        en: `Compassionate, loyal, and visually appealing partner. Early marital settlement and peaceful cooperation.`,
+        hi: `अत्यंत सौम्य, संवेदनशील और सुंदर जीवनसाथी। दांपत्य जीवन में अपार परस्पर आदर रहेगा और विवाह के बाद भाग्योदय होगा।`
+      },
+      8: {
+        en: `Intuitive, attraction to mystical sciences, deep mental reserves, and inheritance fortunes.`,
+        hi: `गहन चिंतन, गुप्त विद्याओं और रहस्यमई घटनाओं में तीव्र रुचि। मानसिक संवेदनशीलता बढ़ेगी, माता के सहयोग से गुप्त धनलाभ के योग।`
+      },
+      9: {
+        en: `Righteous, philosophical growth, pilgrimage visits, and higher philosophical knowledge acquisitions.`,
+        hi: `धर्मपरायण, परोपकारी और तीर्थयात्राओं में आनंद लेने वाले। धार्मिक साहित्य के अध्ययन से मानसिक शांति और ख्याति संचित होगी।`
+      },
+      10: {
+        en: `Highly respected in public career, steady professional status, and success in public service.`,
+        hi: `कार्यक्षेत्र में भरपूर यश, जनता का अद्भुत समर्थन और लोक कल्याणकारी योजनाओं या जनसंपर्क क्षेत्रों में शीर्ष करियर उन्नति।`
+      },
+      11: {
+        en: `Massive social network, financial success through business of liquids/gems, and early wish fulfillments.`,
+        hi: `विशाल मित्र मंडली, जलीय पदार्थों, कृषि या रत्न व्यापार से बड़ा वित्तीय लाभ और समस्त लौकिक महत्वाकांक्षाओं की पूर्ति।`
+      },
+      12: {
+        en: `Spiritual isolation, dreams analysis interest, foreign stay comforts, and high charity expenditures.`,
+        hi: `विदेश यात्रा या सुदूर शांत स्थानों पर निवास की इच्छा। परोपकारी और दान-पुण्य के कार्यों पर सुखद व्यय होने के योग।`
+      }
+    },
+    MARS: {
+      1: {
+        en: `Dynamic physically, high courage, energetic drive, leadership potential but slight aggression propensity.`,
+        hi: `शारीरिक रूप से बलवान, साहसी और अदम्य ऊर्जावान। चुनौतियों का डटकर सामना करेंगे, क्रोध पर थोड़ा नियंत्रण रखना उचित होगा।`
+      },
+      2: {
+        en: `Urgent speaker, independent money maker, land acquisition opportunities.`,
+        hi: `स्पष्टवादी, स्वतंत्र आर्थिक प्रयासों से प्रचुर धन कमाने वाले। अचल संपत्ति और स्वर्ण संपदा के संवर्धन के प्रबल अवसर मिलेंगे।`
+      },
+      3: {
+        en: `Fierce bravery, victory over physical challenges, sports/military leadership potential.`,
+        hi: `अत्यंत पराक्रमी, साहसी और साहसिक कार्यों में अग्रणी। शत्रुओं का मानमर्दन करेंगे और खेल, पुलिस या सेना में उच्च सम्मान पा सकते हैं।`
+      },
+      4: {
+        en: `Strong protectiveness towards home. Leads to real estate assets development, strict management.`,
+        hi: `अपने परिवार और भूमि के प्रति अत्यधिक सुरक्षात्मक रुख। जमीन, निर्माण और रियल एस्टेट प्रभाग से बड़ी वित्तीय संपदा अर्जित करेंगे।`
+      },
+      5: {
+        en: `Sharp analytical brain, risk taker in investments, dynamic parenting styles.`,
+        hi: `तीव्र तकनीकी और गणितीय बुद्धि। शेयर बाजार या साहसिक निवेशों में बड़ा दांव लगाने वाले, संतान पक्ष ऊर्जावान और प्रखर होगा।`
+      },
+      6: {
+        en: `Shatta-Hanta. Absolute victory in legal and competitive domains, highly energetic resistance.`,
+        hi: `शत्रुहंता योग का निर्माण। विरोधियों पर एकाधिकार और अदालती विवादों में शत-प्रतिशत सफलता। शारीरिक आरोग्यता उत्तम रहेगी।`
+      },
+      7: {
+        en: `Fierce partner. Generates high energy in partnership, require mutual respect and yoga.`,
+        hi: `जीवनसाथी स्वतंत्र विचारों वाला, साहसी और ऊर्जावान होगा। वैवाहिक जीवन में समरसता हेतु परस्पर विचारों के आदर की आवश्यकता है।`
+      },
+      8: {
+        en: `Sudden financial changes, occult attraction, extreme resilience in times of challenges.`,
+        hi: `भूगर्भ विधाओं, रहस्यमई शक्तियों में रुचि। अचानक वित्तीय उतार-चढ़ाव आ सकते हैं, वाहन चलाते समय थोड़ा संयम रखना उचित रहेगा।`
+      },
+      9: {
+        en: `Defends moral rights, energetic journeys, spiritual crusader, supports siblings.`,
+        hi: `धार्मिक सिद्धांतों की रक्षा करने वाले साहसी व्यक्तित्व। लंबी साहसिक यात्राओं के शौकीन और भाई-बहनों के मार्गदर्शक सिद्ध होंगे।`
+      },
+      10: {
+        en: `Extremely powerful (Digbali). Top administrative officer, police head, building constructor, high state privileges.`,
+        hi: `कुलदीपक राजयोग। कार्यक्षेत्र में अपार अधिकार, पुलिस, न्याय, सेना, या निर्माण उद्योग में सर्वोच्च शासकीय मान-सम्मान।`
+      },
+      11: {
+        en: `Windfall gains from lands, influential circle, supreme financial drive.`,
+        hi: `भूमि विक्रय, कृषि फार्म, या तकनीकी उद्योगों से बड़ी मात्रा में धनलाभ। समाज के रसूखदार शक्तिशाली लोगों से सानिध्य मिलेगा।`
+      },
+      12: {
+        en: `Foreign land settlement, initial heavy expenses, high resilience post struggles.`,
+        hi: `विदेश यात्रा या विदेशी भूमि पर व्यवसाय के उत्तम अवसर। शुरुआत में आर्थिक व्यय अधिक हो सकता है, परंतु उत्तरार्ध सुदृढ़ रहेगा।`
+      }
+    },
+    MERCURY: {
+      1: {
+        en: `Exceptional communication, literary bend, witty, business advisor, young personality.`,
+        hi: `असाधारण तर्कशक्ति, हाजिरजवाबी और उत्तम संप्रेषण कला। आप लेखक, सलाहकार या सफल व्यवसायी के रूप में ख्याति पाएंगे।`
+      },
+      2: {
+        en: `Saraswati Yoga. Extreme eloquence, financial analytics master, wealthy lineage.`,
+        hi: `वाणी में सरस्वती वास करेगी। लेखा-जोखा और वित्तीय प्रभाग के परम विद्वान। अपनी तीक्ष्ण वाणी से अतुल्य धन संचय करेंगे।`
+      },
+      3: {
+        en: `Creative writer, technical communication expert, friendly neighbors, and local travels.`,
+        hi: `रचनात्मक लेखन, पत्रकारिता या मार्केटिंग प्रभाग में महारत। सगे-सम्बन्धियों एवं दोस्तों का सदा सुखद साथ प्राप्त होगा।`
+      },
+      4: {
+        en: `High domestic education vibe, intellectual friends circle, properties through paper-work.`,
+        hi: `बौद्धिक मित्रों का संगम, उत्तम पुस्तकालय रखने के शौकीन। पेपर-वर्क, कमीशन या बौद्धिक कार्यों से उत्तम भूमि-भवन संजोएंगे।`
+      },
+      5: {
+        en: `Brilliant scholar, expert in astrology and mathematics, highly innovative progeny.`,
+        hi: `ज्योतिष, गणित और अनुसंधान के प्रकांड विद्वान। आपकी योजनाएं सदा सफल होंगी और संतान पक्ष बौद्धिक रूप से सर्वोच्च होगा।`
+      },
+      6: {
+        en: `Detailed analyzer, argumentative victory, high administrative service.`,
+        hi: `गहरी विश्लेषण क्षमता। कानूनी मसलों और शास्त्रार्थ में विजयी रहेंगे। बैंकिंग, ऑडिटिंग या प्रशासनिक सेवाओं में बड़ा पद।`
+      },
+      7: {
+        en: `Charming, business-minded spouse. Fast expansion in commercial trade partnerships.`,
+        hi: `जीवनसाथी प्रखर बुद्धिजीवी, व्यावसायिक सूझबूझ वाला और संवाद प्रिय होगा। व्यापार और साझीदारी में ऐतिहासिक लाभ मिलेगा।`
+      },
+      8: {
+        en: `Occult research mastery, secret documents access, sudden wealth through intellect.`,
+        hi: `रहस्यमई साहित्य, प्राचीन लिपियों और गुप्त खोजों में महारत। अपने तीक्ष्ण दिमाग से अचानक वसीयत या गुप्त धन पाने के योग।`
+      },
+      9: {
+        en: `Highly philosophical, righteous writer, publishers, divine blessings.`,
+        hi: `उच्च दर्शनशास्त्र और धार्मिक ग्रंथों का संपादन-लेखन करने वाले। उच्च शिक्षा अच्छी रहेगी और विदेश से सदा सम्मान मिलेगा।`
+      },
+      10: {
+        en: `Sustained business success, career in telecom, media, consulting, or elite accounts.`,
+        hi: `व्यापार के महानायक। शेयर मार्केट, आईटी सेक्टर, मीडिया या जनसंपर्क उद्योगों में चरम कामयाबी और मान-सम्मान।`
+      },
+      11: {
+        en: `Multiple income channels, great analytical profits, elite friendships.`,
+        hi: `एक से अधिक आय के स्रोत विकसित होंगे। बौद्धिक श्रम और व्यापारिक सौदों से निरंतर भारी मात्रा में धनलाभ संचित करेंगे।`
+      },
+      12: {
+        en: `Foreign educational travel, high intellectual expenditure, deep meditative literature.`,
+        hi: `विदेशी भाषाओं को सीखने और सुदूर शिक्षा से बड़ा लाभ। आध्यात्मिक पुस्तकों और दार्शनिक कार्यों पर शुभ खर्च होने के योग।`
+      }
+    },
+    JUPITER: {
+      1: {
+        en: `Hansa Yoga. Noble character, dignified persona, deep spiritual wisdom, long life, divine protective shield.`,
+        hi: `हंस महापुरुष राजयोग। सात्विक विचार, समाज पूज्य व्यक्तित्व, अकाट्य आध्यात्मिक गुरुता और ईश्वर की सतत अदृश्य सुरक्षा।`
+      },
+      2: {
+        en: `Vachaspati Yoga. Unmatched wisdom, wealthy family status, great advisor, high saving attributes.`,
+        hi: `वाणी में देवगुरु का वरदान। आप बड़े वित्त नियंत्रक, गुरुतुल्य परामर्शदाता और सुदृढ़ अचल संपत्ति के मालिक होंगे।`
+      },
+      3: {
+        en: `Intellectual writing achievements, pure advisory works, highly respected brothers.`,
+        hi: `उच्च दार्शनिक लेखन, भाई-बहनों का सर्वोच्च भाग्योदय और समाज में उच्च सलाहकारों के रूप में विशेष मान्यता।`
+      },
+      4: {
+        en: `Ultimate home peace, luxury vehicle, mansion, high status in mother's birthplace.`,
+        hi: `गृह सुख का चरमोत्कर्ष। महल के समान सुंदर भवन, वाहन और विद्या सुख। आपकी आध्यात्मिक ऊर्जा से पूरा परिवार सुखी रहेगा।`
+      },
+      5: {
+        en: `Distinguished scholar, ancient text master, highly pious/learned children, supreme luck.`,
+        hi: `संतान सुख का परमोत्कर्ष। शास्त्रज्ञ बुद्धिमान बच्चे प्राप्त होंगे जो नाम रोशन करेंगे। उच्च स्तरीय मंत्र-साधना के दिव्य योग।`
+      },
+      6: {
+        en: `Conquers enemies with wisdom, medical/administrative triumphs, peaceful debt resolutions.`,
+        hi: `शत्रुओं को अपनी बुद्धिमत्ता और क्षमा भाव से परास्त करेंगे। चिकित्सा, अध्यापन या शासकीय नीति निर्माण में सर्वोच्च स्थान।`
+      },
+      7: {
+        en: `Devout and spiritually highly evolved spouse. Harmonious marriages of extreme material growth.`,
+        hi: `जीवनसाथी धार्मिक, गुणवान, सुशिक्षित और उत्तम चरित्र वाला होगा। शादी के उपरांत घर में अपार सुख-समृद्धि का प्राकट्य होगा।`
+      },
+      8: {
+        en: `Supernatural and intuitive powers, long life, smooth legacy inheritance.`,
+        hi: `गुह्य ज्ञान, मंत्र सिद्धि और गहन अनुसंधान में पूर्ण सफलता। दीर्घायु जीवन मिलेगा और आध्यात्मिक चेतना का सर्वोच्च विकास होगा।`
+      },
+      9: {
+        en: `Extremely auspicious. Religious leader, long pilgrimage journeys, high morality and worldly fame.`,
+        hi: `परम भाग्यशाली योग। आप धर्मगुरु, न्यायविद या कुलपति के रूप में पूज्य होंगे। भाग्योदय सतत रहेगा और पिता का पूर्ण सुख मिलेगा।`
+      },
+      10: {
+        en: `Raja Yoga. Highly ethical career, supreme judicial authority, central ministry roles, university professors.`,
+        hi: `दशम गुरु का राजयोग। उच्च राजकीय सलाहकार, न्यायधीश, शिक्षाविद या बड़े धार्मिक संस्थाओं के संचालक के रूप में परम प्रतिष्ठा।`
+      },
+      11: {
+        en: `Vast spiritual and material income flows, elite saintly friendships, ultimate wishes satisfied.`,
+        hi: `बिना किसी बाधा के निरंतर पवित्र स्रोतों से अत्यधिक धनलाभ। समाज के शीर्ष संतों, मंत्रियों व उद्योगपतियों से प्रगाढ़ मित्रता।`
+      },
+      12: {
+        en: `Moksha Yoga. Spiritual ascension, peaceful expenses on charities, foreign ashrams construction.`,
+        hi: `आध्यात्मिक मोक्ष का सुंदर योग। धर्मार्थ संस्थानों, चिकित्सालयों या मंदिर निर्माण पर पवित्र व्यय करेंगे। सद्गति निश्चित है।`
+      }
+    },
+    VENUS: {
+      1: {
+        en: `Highly attractive charm, lover of arts, luxury cars owner, peaceful and sophisticated.`,
+        hi: `रूपवान, सम्मोहक व्यक्तित्व और अति सौम्य स्वभाव। संगीत, कला और विलासिता के परम प्रेमी। आलीशान वाहनों का चरम सुख।`
+      },
+      2: {
+        en: `Elegance, costly gems collection, melodious voice, extreme family wealth and luxury setup.`,
+        hi: `लक्ष्मी योग। अति सुंदर वाणी, बहुमूल्य आभूषणों- रत्नों का संचय और उत्तम राजसी भोजन-वस्त्रों का आजीवन परम सुख।`
+      },
+      3: {
+        en: `Artistic sibling cooperation, creative advertising success, short pleasure trips.`,
+        hi: `कलात्मक लेखन, अभिनय, संगीत, या डिजाइनिंग में परम यश। सगे-सम्बन्धियों व मित्रों का विलासितापूर्ण सहयेाग।`
+      },
+      4: {
+        en: `Superb home interior, luxury properties ownership, peace, deep maternal affection.`,
+        hi: `स्वर्ग तुल्य सुंदर घर का स्वामी। इंटीरियर डिजाइनिंग व सुख-सुविधाओं के समस्त साधनों से युक्त वैभवशाली जीवन।`
+      },
+      5: {
+        en: `Highly creative brain, massive romantic luck, artistic progeny, intelligence.`,
+        hi: `असाधारण कल्पनाशीलता, कला, मनोरंजन या फिल्म प्रभाग में करियर निर्माण के प्रबल योग। सुंदर व विद्वान संतान पक्ष।`
+      },
+      6: {
+        en: `Service with grace. Avoid minor skin/diet blockages with plenty of hydration.`,
+        hi: `सेवा भाव में सौंदर्य। कलात्मक कार्यों या ललित कलाओं के माध्यम से ख्याति प्राप्ति। खानपान पर थोड़ा नियंत्रण रखना उचित।`
+      },
+      7: {
+        en: `Malavya Yoga. Elite, extremely beautiful and devoted spouse. Worldly luxury peaks.`,
+        hi: `मालव्य राजयोग। जीवनसाथी देवदूत के समान अति सुंदर, कलाप्रेमी और वफादार होगा। समस्त वैवाहिक सुखों का आजीवन चरम सुख पाएंगे।`
+      },
+      8: {
+        en: `Sudden marriage dowry fortunes, deep legacy windfalls, long physical longevity values.`,
+        hi: `अचानक गुप्त स्रोतों, वसीयत या विवाह के उपरांत प्रचुर ससुराल पक्ष से धनलाभ। गुप्त विधाओं और सौंदर्य रहस्य शोध में रुचि।`
+      },
+      9: {
+        en: `Fortunate through foreign art works, lavish pilgrimage trips, divine aesthetic blessing.`,
+        hi: `विदेशी व्यापार, फैशन उद्योग, या पर्यटन प्रभाग से महान भाग्योदय। धार्मिक अनुष्ठानों को अत्यधिक भव्यता से मनाने के शौकीन।`
+      },
+      10: {
+        en: `Top position in design, clothing, beauty industry, entertainment media, extreme career luxury.`,
+        hi: `कार्यक्षेत्र में ऐतिहासिक सुख। फैशन, आभूषण, होटल, फिल्म या ऑटोमोबाइल उद्योग में सर्वोच्च स्थान और बड़ा व्यावसायिक लाभ।`
+      },
+      11: {
+        en: `Splendid gains from women, luxury assets multiple properties investments, satisfying wish cycles.`,
+        hi: `कलात्मक व्यापारों, महिलाओं के सहयोग या आयात-निर्यात से भारी वित्तीय लक्ष्मी लाभ। विलासितापूर्ण जीवनशैली।`
+      },
+      12: {
+        en: `High luxury bedding comforts, foreign journeys of extreme joy, spiritual aesthetic values.`,
+        hi: `अत्यंत सुखद शयन सुख और विदेश यात्राएं। आधुनिक सुख-साधनों और विलासिता पर खुलकर आनंदमयी व्यय करने के सुंदर योग।`
+      }
+    },
+    SATURN: {
+      1: {
+        en: `Deeply disciplined, hardworking, mature beyond years, learns through persistence.`,
+        hi: `अत्यंत अनुशासित, कर्तव्यनिष्ठ और समय की पाबंदी करने वाले। संघर्ष के उपरांत शानदार व्यक्तित्व का निर्माण होगा।`
+      },
+      2: {
+        en: `Measured speaker, wealth through hard work, preserves ancient family lore carefully.`,
+        hi: `गंभीर और नपी-तुली वाणी। कठोर परिश्रम के उपरांत स्थायी वित्तीय नींव और पैतृक जायदाद का सुदृढ़ संरक्षण।`
+      },
+      3: {
+        en: `Fierce patience, great endurance, high structural capability, victory over challenges.`,
+        hi: `अडिग धैर्य और गजब का साहस। लेखन, यांत्रिकी, या तकनीकी विधाओं में कठोर साधना से अद्भुत कीर्ति अर्जित करेंगे।`
+      },
+      4: {
+        en: `Secured ancestral land properties, strict family management, care of elder folks.`,
+        hi: `अचल संपत्ति, फार्म हाउस या पुरानी ईमारतों से बड़ा लाभ। घरेलू जिम्मेदारियों का पूर्ण निर्वहन करेंगे, माता की सेवा से भाग्योदय।`
+      },
+      5: {
+        en: `Deep, logical intellect, delayed but stable post-breakthrough progeny blessings, steady focus.`,
+        hi: `गहरी शोध-उन्मुख बुद्धि। प्रारंभिक विघ्नों के बाद उच्च शिक्षा में शानदार सफलता और संतान पक्ष का सुदृढ़ भाग्योदय।`
+      },
+      6: {
+        en: `Conquers enemies with law, heals chronic challenges, supreme organizational worker.`,
+        hi: `शत्रुहंता योग। कोर्ट-कचहरी, मुकदमे या पुराने ऋणों से पूर्ण मुक्ति। तकनीकी या न्यायिक क्षेत्र में बड़ा शासकीय सम्मान।`
+      },
+      7: {
+        en: `Sasa Yoga. Highly mature, reliable companion, immense business structures achievements.`,
+        hi: `शश महापुरुष योग। जीवनसाथी गंभीर, निष्ठावान और अत्यंत कर्मठ होगा। लौह कबाड़, कानून, या तेल उद्योगों में बड़ा व्यापार।`
+      },
+      8: {
+        en: `Extremely long life, high resilience value, sudden inheritance of land mines/properties.`,
+        hi: `अकाट्य दीर्घायु जीवन। संकटों से लड़कर विजयी होने का अदम्य साहस। रहस्यमयी खोजों या भूगर्भ संपदा से बड़ा लाभ।`
+      },
+      9: {
+        en: `Righteous philosopher, slow and steady fortune growth, builder of religious structures.`,
+        hi: `धार्मिक संस्थाओं के निर्माणकर्ता। न्याय और नीति के प्रगाढ़ रक्षक। दीर्घकालिक प्रयासों से ३६ वर्ष के बाद महान भाग्यवर्धन।`
+      },
+      10: {
+        en: `Top administrative executive, supreme leadership inside industrial setups, cold persistence.`,
+        hi: `कर्मक्षेत्र का महानायक। उद्योग, श्रम, या सरकारी क्षेत्र में सर्वोच्च अधिकारी पद। आपकी न्यायप्रियता की समाज मिसाल देगा।`
+      },
+      11: {
+        en: `Massive steady monetary gains, high gains through long term machinery, reliable networks.`,
+        hi: `अल्प आयु में संघर्ष के बाद३० वर्ष के उपरांत अकूत धनलाभ। जीवन भर सतत आय के स्रोत और बड़े उद्योगों से निरंतर लाभ।`
+      },
+      12: {
+        en: `Foreign isolations, high spiritual discipline, silent research, control over expenses.`,
+        hi: `सुदूर विदेश यात्राओं या एकांत स्थानों में कार्य करने के उत्तम अवसर। आध्यात्मिक साधना और मोक्ष योग में गहरी संलिप्तता।`
+      }
+    },
+    RAHU: {
+      1: {
+        en: `Fierce individuality, unconventional thoughts, high ambition, technological pioneer.`,
+        hi: `अपरंपरागत विचार, गजब की कूटनीति और अनूठी महत्वाकांक्षा। तकनीक या विदेशी संपर्कों से शिखर तक पहुंचने वाले जातक।`
+      },
+      2: {
+        en: `Unconventional speech, mysterious monetary gains, foreign currency income sources.`,
+        hi: `वाणी में कूटनीति। गुप्त तरीकों, विदेशी मुद्रा, या अचानक सट्टे-बाजार से प्रचुर वित्तीय लाभ कमाने के सुंदर योग।`
+      },
+      3: {
+        en: `Fierce courage, media king, master of digital networks, victories over opponents.`,
+        hi: `सोशल मीडिया या आईटी क्षेत्र के बेताज बादशाह। अदम्य पराक्रम और कूटनीति से विरोधियों का नामोनिशान मिटाने की क्षमता।`
+      },
+      4: {
+        en: `Mysterious home elements, luxury foreign properties, out-of-box domestic setups.`,
+        hi: `आलीशान और आधुनिक विदेशी तकनीक से युक्त घर का निर्माण। जन्मभूमि से दूर सुदूर क्षेत्रों में बड़ी संपत्ति के मालिक।`
+      },
+      5: {
+        en: `Brilliant out-of-box innovative brain, speculation wins, tech progeny.`,
+        hi: `गजब की शोध उन्मुख बुद्धि। कंप्यूटर, कोडिंग या शेयर बाजार के विशेष जानकर। संतान पक्ष तकनीकी रूप से समृद्ध होगा।`
+      },
+      6: {
+        en: `Shatta-Hanta. Demolishes rivals instantly, absolute administrative authority, immune to attacks.`,
+        hi: `अकाट्य शत्रुहंता योग। अदालतों, मुकदमों या शत्रुओं पर राजसी विजय। राजनीति या वरिष्ठ सरकारी प्रभाग में बड़ा वर्चस्व।`
+      },
+      7: {
+        en: `Foreign or highly unconventional spouse, unique business partnerships, dynamic trade routes.`,
+        hi: `जीवनसाथी सुदूर विदेश या अपरंपरागत संस्कृति का होगा। अंतरराष्ट्रीय व्यापार या ऑनलाइन साझीदारी से भारी मुनाफा।`
+      },
+      8: {
+        en: `Deep occult seeker, sudden underground wealth, highly resilient body chemistry.`,
+        hi: `रहस्यमई और तांत्रिक विधाओं में महारत। अचानक आने वाले अज्ञात वित्तीय धनलाभ। तंत्र-मंत्र क्रियाओं के जानकार।`
+      },
+      9: {
+        en: `Unorthodox path practitioner, foreign spiritual long trips, unexpected fortunes rise.`,
+        hi: `परंपराओं से हटकर नए आध्यात्मिक विचारों को अपनाने वाले। विदेशी लंबी यात्राओं और अप्रत्याशित भाग्य उदय के योग।`
+      },
+      10: {
+        en: `Ultimate political kingmaker. Top administrative offices, tech heads, high popularity, dynamic fame.`,
+        hi: `राजनीति के महाचाणक्य। सत्ता, कूटनीति या डिजिटल मीडिया जगत में चरम लोक-प्रसिद्धि और अथाह अधिकार प्राप्ति के सुंदर योग।`
+      },
+      11: {
+        en: `Extreme wealth cascades, massive network circles, quick wishes satisfaction pathways.`,
+        hi: `अकूत वित्तीय लाभ। विदेशी स्रोतों, आयात-निर्यात या कूटनीतिक सौदों से प्रचुर धनलाभ पाने के ऐतिहासिक अवसर।`
+      },
+      12: {
+        en: `Foreign resident setups, astronomic travels, spiritual meditations in absolute isolation.`,
+        hi: `सुदूर विदेश में स्थायी निवास के सुंदर योग। अस्पताल, आश्रम, या मोक्ष विधाओं पर सुखद खर्च होने की प्रबल संभावनाएं।`
+      }
+    },
+    KETU: {
+      1: {
+        en: `Introverted, deep seeker of higher truth, intuitive, detachment from lower ego.`,
+        hi: `आध्यात्मिक झुकाव और तीव्र वैराग्य भाव। भौतिक अहंकार से परे एक दार्शनिक और अंतर्मुखी जीवन जीने के सुंदर योग।`
+      },
+      2: {
+        en: `Poetic speech, minimalist food habits, sudden wisdom breakthroughs, unexpected wealth.`,
+        hi: `वाणी में दार्शनिकता और संतों जैसी सादगी। भौतिक धन संचय के प्रति उदासीनता रहने पर भी अचानक प्रचुर धनलाभ के योग।`
+      },
+      3: {
+        en: `Intuitive writing skills, spiritual courage, detachment from sibling concerns.`,
+        hi: `अध्यात्मिक और उत्कृष्ट दार्शनिक लेखन। पराक्रम में ईश्वरीय सहयोग मिलेगा और विषम परिस्थितियों में भी शांत बने रहेंगे।`
+      },
+      4: {
+        en: `Detachment from birthplace, search for inner home comforts, spiritual mother-relationship.`,
+        hi: `जन्मस्थान से दूर किसी पावन तीर्थ स्थल के निकट सुदूर निवास की इच्छा। हृदय में सदा अध्यात्म की गंगा प्रवाहित होगी।`
+      },
+      5: {
+        en: `Occult sciences, mantra yoga master, brilliant memory capacities, spiritual children.`,
+        hi: `मंत्र साधना, देव आराधना और तंत्र शास्त्र में परम सिद्धि। संतान पक्ष अंतर्मुखी एवं अत्यधिक संस्कारी सिद्ध होगा।`
+      },
+      6: {
+        en: `Victory over disputes via spiritual insights, silent healing helper, strong health.`,
+        hi: `शत्रुओं का आध्यात्मिक नीति से शमन। पुराना कोई भी रोग मौन साधना, प्राकृतिक चिकित्सा या योग से स्वतः दूर होगा।`
+      },
+      7: {
+        en: `Spiritual partner, detachment from regular corporate trade, seeker of soul bonds.`,
+        hi: `जीवनसाथी दार्शनिक विचारों वाला, सादा जीवन पसंद करने वाला होगा। सांसारिक आडंबरों से दूर पवित्र दांपत्य सुख के योग।`
+      },
+      8: {
+        en: `Mastery over kundalini yoga, deep secret revelations, longevity blessings.`,
+        hi: `कुंडलिनी योग, अष्टांग योग या गुप्त साधनाओं में चरम सिद्धि। मृत्युभय से परे जीवन की परम सत्यता को जानने के सुंदर योग।`
+      },
+      9: {
+        en: `Pilgrim seeker, divine master's student, high morality levels, holy insights.`,
+        hi: `परम तीर्थयात्री। गुरु कृपा से अचानक उच्च दार्शनिक ज्ञान का प्राकट्य होगा। समाज में सम्मान और शांति के प्रतीक बनेंगे।`
+      },
+      10: {
+        en: `Detached in workplace yet highly successful, charity organizer, spiritual career paths.`,
+        hi: `बिना फल की चिंता किए निरंतर कर्म करने वाले महापुरुष। धार्मिक ट्रस्ट, आध्यात्मिक शिक्षण या ज्योतिष में बड़ा नाम।`
+      },
+      11: {
+        en: `Minimalist wishes, financial gain from temple properties, unexpected help from sages.`,
+        hi: `इच्छाओं पर विजय पा लेने से असीम सुख। धार्मिक गतिविधियों, दान या आश्रमों के सहयोग से आकस्मिक धन संपदा लाभ।`
+      },
+      12: {
+        en: `Moksha Karka. Supreme spiritual liberation, out of body astral travels, closure of karmic debts.`,
+        hi: `मोक्ष प्रदायक केतु का द्वादश भाव योग। जन्म-मरण के बंधनों से मुक्ति और पारलौकिक ज्ञान का शिखर। सद्गति निश्चित है।`
+      }
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-md">
-      <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
-        <Award className="w-5 h-5 text-amber-600" />
-        <h3 className="text-sm font-extrabold uppercase font-cinzel text-slate-800">{t("Certified Vedic Lifetime Prediction Almanac", "प्रमाणित वैदिक जीवनफल कल्पद्रुम भविष्यकथन")}</h3>
-      </div>
-      <p className="text-xs text-slate-500 mb-5 leading-relaxed font-sans">{t("Comprehensive lifetime readings calculated through precise Parashari principles based on Lagna Lord, Chandra Nakshatra, and relative house strengths.", "लग्न स्वामी, चंद्र नक्षत्र, और भाव सुदृढ़ता के आधार पर पाराशरीय सिद्धांतों द्वारा गणितीय रूप से प्राप्त समग्र जीवन चक्र भविष्यकथन।")}</p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-sans text-xs">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-100 pb-3 mb-5">
+        <div className="flex items-center gap-2">
+          <Award className="w-5 h-5 text-amber-600 animate-bounce" style={{ animationDuration: '3s' }} />
+          <h3 className="text-sm font-extrabold uppercase font-cinzel text-slate-800">{t("Certified Vedic Lifetime Prediction Almanac", "प्रमाणित वैदिक जीवनफल कल्पद्रुम भविष्यकथन")}</h3>
+        </div>
         
-        <div className="p-4 bg-orange-500/5 rounded-xl border border-orange-500/10 hover:shadow-xs transition">
-          <h4 className="text-xs font-extrabold text-rose-800 flex items-center gap-2 mb-2">💼 {t("Career & Legacy Path", "करियर एवं व्यावसायिक उन्नति")}</h4>
-          <p className="leading-relaxed text-slate-600 font-semibold">{lp.career}</p>
+        {/* Dynamic sub-tab switcher for complete horoscope requested features */}
+        <div className="flex flex-wrap gap-1.5 p-1 bg-slate-50 border rounded-xl overflow-x-auto max-w-full">
+          {[
+            { id: 'general', label: t("General", "सामान्य कुण्डली फल") },
+            { id: 'planetary', label: t("Planets Placement", "ग्रह स्थिति फल") },
+            { id: 'aspects', label: t("Aspect Results", "ग्रह दृष्टि फल") },
+            { id: 'monthly', label: t("Monthly 2026", "मासिक फलादेश") },
+            { id: 'yearly', label: t("Yearly prediction", "वार्षिक फलादेश") },
+            { id: 'systems', label: t("KP & Lal Kitab", "केपी व लाल किताब") }
+          ].map((subTab) => (
+            <button
+              key={subTab.id}
+              onClick={() => setActiveSubTab(subTab.id)}
+              className={`px-3 py-1.5 text-[10px] font-extrabold uppercase rounded-lg transition duration-200 whitespace-nowrap ${activeSubTab === subTab.id ? 'bg-[#936a18] text-white shadow-xs' : 'text-slate-650 hover:bg-slate-200/50'}`}
+            >
+              {subTab.label}
+            </button>
+          ))}
         </div>
-
-        <div className="p-4 bg-blue-500/5 rounded-xl border border-blue-500/10 hover:shadow-xs transition">
-          <h4 className="text-xs font-extrabold text-blue-800 flex items-center gap-2 mb-2">❤️ {t("Matrimonial & Partnership Bliss", "वैवाहिक समन्वय एवं दांपत्य जीवन")}</h4>
-          <p className="leading-relaxed text-slate-600 font-semibold">{lp.marriage}</p>
-        </div>
-
-        <div className="p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10 hover:shadow-xs transition">
-          <h4 className="text-xs font-extrabold text-emerald-800 flex items-center gap-2 mb-2">💰 {t("Finance, Inheritance & Assets", "लक्ष्मी योग, संचित धन एवं पैतृक संपत्ति")}</h4>
-          <p className="leading-relaxed text-slate-600 font-semibold">{lp.wealth}</p>
-        </div>
-
-        <div className="p-4 bg-yellow-500/5 rounded-xl border border-yellow-500/10 hover:shadow-xs transition">
-          <h4 className="text-xs font-extrabold text-yellow-800 flex items-center gap-2 mb-2">✨ {t("Health, Vitality & Longevity", "आरोग्य, शारीरिक ऊर्जा एवं दीर्घायु बल")}</h4>
-          <p className="leading-relaxed text-slate-600 font-semibold">{lp.health}</p>
-        </div>
-
-        <div className="md:col-span-2 p-4 bg-slate-50 rounded-xl border border-slate-105 hover:shadow-xs transition">
-          <h4 className="text-xs font-extrabold text-[#936a18] flex items-center gap-2 mb-2">🕉️ {t("Spirituality, Inner Peace & Moksha", "अध्यात्मिक चेतना, आंतरिक शांति एवं मोक्ष काल")}</h4>
-          <p className="leading-relaxed text-slate-600 font-semibold">{lp.spirituality}</p>
-        </div>
-
-        {/* Good and Bad milestones */}
-        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-          <div className="p-3.5 bg-emerald-50 rounded-lg border border-emerald-500/10 text-center flex flex-col justify-center">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-700 block mb-1">🌟 {t("Highly Auspicious Life Milestone Ages", "भग्योदयकारक स्वर्ण आयु वर्ष")}</span>
-            <span className="text-sm font-black font-mono text-emerald-800">{lp.goodYears} {t("Years Old", "वर्ष")}</span>
-          </div>
-          <div className="p-3.5 bg-red-50 rounded-lg border border-red-500/10 text-center flex flex-col justify-center">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-red-650 block mb-1">⚠️ {t("Liftoff Years Requiring Stellar Caution", "सजगता एवं शांति निवारण आयु वर्ष")}</span>
-            <span className="text-sm font-black font-mono text-red-700">{lp.badYears} {t("Years Old", "वर्ष")}</span>
-          </div>
-        </div>
-
       </div>
+
+      {/* SUB-TAB 1: GENERAL & LIFE MILESTONES */}
+      {activeSubTab === 'general' && (
+        <div className="space-y-4 animate-fade-in">
+          <p className="text-xs text-slate-500 leading-relaxed font-sans">{t("Comprehensive lifetime readings calculated through precise Parashari principles based on Lagna Lord, Chandra Nakshatra, and relative house strengths.", "लग्न स्वामी, चंद्र नक्षत्र, और भाव सुदृढ़ता के आधार पर पाराशरीय सिद्धांतों द्वारा गणितीय रूप से प्राप्त समग्र जीवन चक्र भविष्यकथन।")}</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-sans text-xs">
+            <div className="p-4 bg-orange-500/5 rounded-xl border border-orange-500/10 hover:shadow-xs transition">
+              <h4 className="text-xs font-extrabold text-rose-800 flex items-center gap-2 mb-2">💼 {t("Career & Legacy Path", "करियर एवं व्यावसायिक उन्नति")}</h4>
+              <p className="leading-relaxed text-slate-600 font-semibold">{lp.career}</p>
+            </div>
+
+            <div className="p-4 bg-blue-500/5 rounded-xl border border-blue-500/10 hover:shadow-xs transition">
+              <h4 className="text-xs font-extrabold text-blue-800 flex items-center gap-2 mb-2">❤️ {t("Matrimonial & Partnership Bliss", "वैवाहिक समन्वय एवं दांपत्य जीवन")}</h4>
+              <p className="leading-relaxed text-slate-600 font-semibold">{lp.marriage}</p>
+            </div>
+
+            <div className="p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10 hover:shadow-xs transition">
+              <h4 className="text-xs font-extrabold text-emerald-800 flex items-center gap-2 mb-2">💰 {t("Finance, Inheritance & Assets", "लक्ष्मी योग, संचित धन एवं पैतृक संपत्ति")}</h4>
+              <p className="leading-relaxed text-slate-600 font-semibold">{lp.wealth}</p>
+            </div>
+
+            <div className="p-4 bg-yellow-500/5 rounded-xl border border-yellow-500/10 hover:shadow-xs transition">
+              <h4 className="text-xs font-extrabold text-yellow-800 flex items-center gap-2 mb-2">✨ {t("Health, Vitality & Longevity", "आरोग्य, शारीरिक ऊर्जा एवं दीर्घायु बल")}</h4>
+              <p className="leading-relaxed text-slate-600 font-semibold">{lp.health}</p>
+            </div>
+
+            <div className="md:col-span-2 p-4 bg-slate-50 rounded-xl border border-slate-105 hover:shadow-xs transition">
+              <h4 className="text-xs font-extrabold text-[#936a18] flex items-center gap-2 mb-2">🕉️ {t("Spirituality, Inner Peace & Moksha", "अध्यात्मिक चेतना, आंतरिक शांति एवं मोक्ष काल")}</h4>
+              <p className="leading-relaxed text-slate-600 font-semibold">{lp.spirituality}</p>
+            </div>
+
+            {/* Good and Bad milestones */}
+            <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+              <div className="p-3.5 bg-emerald-50 rounded-lg border border-emerald-500/10 text-center flex flex-col justify-center">
+                <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-700 block mb-1">🌟 {t("Highly Auspicious Life Milestone Ages", "भग्योदयकारक स्वर्ण आयु वर्ष")}</span>
+                <span className="text-sm font-black font-mono text-emerald-800">{lp.goodYears} {t("Years Old", "वर्ष")}</span>
+              </div>
+              <div className="p-3.5 bg-red-50 rounded-lg border border-red-500/10 text-center flex flex-col justify-center">
+                <span className="text-[10px] uppercase font-bold tracking-widest text-red-650 block mb-1">⚠️ {t("Liftoff Years Requiring Stellar Caution", "सजगता एवं शांति निवारण आयु वर्ष")}</span>
+                <span className="text-sm font-black font-mono text-red-700">{lp.badYears} {t("Years Old", "वर्ष")}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 2: PLANETARY PLACEMENT PREDICTIONS */}
+      {activeSubTab === 'planetary' && (
+        <div className="space-y-4 animate-fade-in font-sans">
+          <p className="text-xs text-slate-500 leading-relaxed">
+            {t("Astrological calculations for each planet based on its residence in houses and zodiac signs (Vedic Parashari Method):",
+               "कुंडली के विभिन्न भावों में स्थित नवग्रहों का प्राचीन पाराशरीय पद्धति के अनुसार सूक्ष्म फल विवेचन:")}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.entries(report.planets).map(([pId, p]) => {
+              const hNum = p.houseNum;
+              const details = planetHouseDescriptions[pId]?.[hNum] || { en: "Dynamic interpretation resolution active.", hi: "ग्रह की स्थिति शुभ एवं अनुकूल है।" };
+              return (
+                <div key={pId} className="p-4 bg-slate-50 border border-slate-150 rounded-xl space-y-2 hover:border-amber-500/25 transition">
+                  <div className="flex justify-between items-center border-b pb-1.5">
+                    <span className="font-extrabold text-xs text-amber-700 uppercase flex items-center gap-1.5">
+                      🪐 {t(p.name, p.hindi)} {t(`in House ${hNum}`, `भाव ${hNum} में`)}
+                    </span>
+                    <span className="text-[9px] font-mono bg-amber-50 text-[#936a18] px-1.5 py-0.5 rounded font-black">
+                      {p.signHindi} ({p.formattedDegree})
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] leading-relaxed text-slate-700 font-semibold">
+                    {t(details.en, details.hi)}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <span className="text-[9px] font-mono text-slate-400">
+                      Nakshatra: <strong className="text-slate-600">{t(p.nakshatra, p.nakshatraHindi)}</strong>
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-[9px] font-mono text-slate-400">
+                      Lord: <strong className="text-slate-600">{t(p.nakshatraLord, p.nakshatraLord)}</strong>
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-[9px] font-mono text-slate-400">
+                      Status: <strong className={`${p.status === 'Exalted' ? 'text-emerald-600' : p.status === 'Debilitated' ? 'text-rose-600' : 'text-slate-600'}`}>{t(p.status, p.statusHindi || p.status)}</strong>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 3: PLANETARY ASPECT PREDICTIONS */}
+      {activeSubTab === 'aspects' && (
+        <div className="space-y-4 animate-fade-in font-sans">
+          <p className="text-xs text-slate-500 leading-relaxed">
+            {t("Evaluation of aspect (Drishti) networks from other planets onto each planet, shaping your character and timing:",
+               "सभी नवग्रहों पर पड़ने वाली अन्य ग्रहों की सातवीं, पांचवीं, नौवीं या विशेष दृष्टियों का खगोलीय विश्लेषण:")}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.entries(report.planets).map(([pId, p]) => {
+              // Get incoming aspects
+              const incoming = report.aspects.filter(asp => asp.toPlanet && asp.toPlanet.id === pId);
+              return (
+                <div key={`asp-${pId}`} className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-xl space-y-2 hover:border-indigo-500/25 transition">
+                  <h4 className="font-extrabold text-xs text-indigo-900 border-b pb-1.5">
+                    🔮 {t(`Aspects on ${p.name}`, `${p.hindi} परागत दृष्टि फल`)}
+                  </h4>
+
+                  {incoming.length === 0 ? (
+                    <p className="text-[11px] text-slate-550 leading-relaxed italic">
+                      {t("This planet experiences no high-impact aspect stresses, allowing it to dispense its pure natal house parameters freely.",
+                         "इस ग्रह पर वर्तमान में कोई शत्रु या पीड़ादायक पाप दृष्टि नहीं है, जिससे यह अपने स्वतंत्र शुभ फल सुचारू रूप से देने सक्षम है।")}
+                    </p>
+                  ) : (
+                    <div className="space-y-2 pt-1">
+                      {incoming.map((asp, idx) => {
+                        let aspectResultHindi = "";
+                        let aspectResultEnglish = "";
+                        if (asp.fromPlanet.id === 'JUPITER') {
+                          aspectResultHindi = `देवगुरु बृहस्पति की पूर्ण अमृत अमृतदृष्टि ${p.hindi} पर होना बौद्धिक शुद्धता, ऐश्वर्य, और कार्यों में दिव्य सुरक्षा की गारंटी देगा।`;
+                          aspectResultEnglish = `The benefic aspect of Jupiter on your ${p.name} creates a protective cosmic shield, promoting wisdom, wisdom-based career growth, and purity of work.`;
+                        } else if (asp.fromPlanet.id === 'SATURN') {
+                          aspectResultHindi = `शनिदेव की दृष्टि ${p.hindi} पर धैर्य, गहरा विवेक, और कड़ी मेहनत के उपरांत ही स्थायी सफलता की परिचायक है। कार्यों में विलम्ब से संशय न करें।`;
+                          aspectResultEnglish = `Saturn's aspect on your ${p.name} increases patience, strict self-discipline, and promises long-term growth after initial delays.`;
+                        } else if (asp.fromPlanet.id === 'MARS') {
+                          aspectResultHindi = `मंगल का दृष्टि प्रभाव ${p.hindi} पर आपके पराक्रम और साहस को प्रचंड रूप से ऊर्जावान बनाए रखेगा। प्रशासनिक क्षेत्रों में वर्चस्व मिलेगा।`;
+                          aspectResultEnglish = `Fierce and energetic aspect of Mars on your ${p.name} increases your confidence, bravery, and leadership drive, matching elite tasks.`;
+                        } else {
+                          aspectResultHindi = `${asp.fromPlanet.hindi} की दृष्टि से इस भाव प्रभाग में संचार, संवेदनशीलता और आपसी आकर्षण बल संवर्धित होंगे।`;
+                          aspectResultEnglish = `The soft aspect of ${asp.fromPlanet.name} increases empathy, financial intelligence, and overall social networks.`;
+                        }
+
+                        return (
+                          <div key={idx} className="p-2 bg-white rounded border border-slate-105 text-[10px] space-y-1">
+                            <span className="font-bold text-[#cca43b]">
+                              ✦ {t(`Aspect from ${asp.fromPlanet.name} (${asp.type})`, `${asp.fromPlanet.hindi} की ${asp.type} दृष्टि भाव ${asp.fromHouse} से`)}
+                            </span>
+                            <p className="text-slate-650 leading-relaxed font-semibold">
+                              {t(aspectResultEnglish, aspectResultHindi)}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 4: MONTHLY PREDICTIONS 2026 */}
+      {activeSubTab === 'monthly' && (
+        <div className="space-y-4 animate-fade-in font-sans">
+          <p className="text-xs text-slate-500 leading-relaxed">
+            {t("Personalised monthly horoscope mapping for the year 2026 based on transit configurations relative to your Janma Rashi:",
+               "आपकी चंद्र राशि और जन्म लग्न के अनुसार वर्ष २०२६ का मासिक भविष्यफल विवेचन एवं शुभ मार्गदर्शिका:")}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {monthsList(report, t).map((m, idx) => (
+              <div key={idx} className="p-4 bg-[#FFFDEC] border border-amber-500/15 rounded-xl space-y-2 hover:shadow-xs transition">
+                <span className="inline-block bg-amber-600 text-white font-extrabold text-[9px] px-2 py-0.5 rounded uppercase font-cinzel">
+                  {m.name}
+                </span>
+                <p className="text-[11px] leading-relaxed text-slate-700 font-semibold">{m.pred}</p>
+                <div className="text-[9px] border-t pt-1.5 font-mono text-slate-400 flex justify-between">
+                  <span>Lucky No: <strong className="text-slate-600">{m.luckyNo}</strong></span>
+                  <span>Remedy: <strong className="text-amber-700">{m.rem}</strong></span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 5: YEARLY PREDICTIONS 2026-2027 */}
+      {activeSubTab === 'yearly' && (
+        <div className="space-y-5 animate-fade-in font-sans">
+          <p className="text-xs text-slate-500 leading-relaxed">
+            {t("Macro planetary transits of Saturn (Pisces) and Jupiter (Gemini) resolved specifically for your ascendant life cycles:",
+               "महत्वपूर्ण दीर्घकालिक ग्रह पारगमन (शनि-गुरु-राहु) के आधार पर आपके जीवन चक्र का २०२६-२०२७ का विस्तृत वार्षिक विवेचन:")}
+          </p>
+
+          <div className="p-4.5 bg-orange-500/5 border border-orange-500/10 rounded-2xl space-y-2.5">
+            <h4 className="text-xs font-black text-rose-800 flex items-center gap-1.5 uppercase tracking-wide">
+              🌟 {t("Zodiac Almanac Forecast - Year 2026", "वार्षिक राशिफल - वर्ष २०२६ फलादेश")}
+            </h4>
+            <p className="text-[11px] leading-relaxed text-slate-700 font-semibold">
+              {t(
+                `For ${lagna} ascendants, 2026 is a year of spiritual refinement and professional transformation. Jupiter in Gemini activates major communication pipelines, while Saturn in Pisces forces rigorous reorganization of delayed assets. Keep your focus high, major property wins indicated in mid-year.`,
+                `आपके ${report.lagnaHindi} लग्न के अनुसार, वर्ष २०२६ आपके लिए बौद्धिक उत्कर्ष और व्यापारिक पराक्रम का सर्वोच्च काल रहेगा। मिथुन राशि का गुरु आपके कर्म प्रभाग को विस्तारित करेगा जिससे नई योजनाएं फलित होंगी। शनिदेव का मीन गोचर आपके कार्यों में अनुशासन की मांग करेगा, कड़ी मेहनत के बाद स्थायी उन्नति के मार्ग सुगम होंगे।`
+              )}
+            </p>
+          </div>
+
+          <div className="p-4.5 bg-blue-500/5 border border-blue-500/10 rounded-2xl space-y-2.5">
+            <h4 className="text-xs font-black text-blue-800 flex items-center gap-1.5 uppercase tracking-wide">
+              🌟 {t("Zodiac Almanac Forecast - Year 2027", "वार्षिक राशिफल - वर्ष २०२७ फलादेश")}
+            </h4>
+            <p className="text-[11px] leading-relaxed text-slate-700 font-semibold">
+              {t(
+                `The year 2027 triggers major focus shift towards partnership and public life. With Jupiter transitioning into its exaltation sign Cancer, wealth gates will unlock spontaneously. Saturn's ingress into Aries demands highest physical discipline and diet consciousness. Excellent period for foreign collaborations.`,
+                `वर्ष २०२७ आपके जीवन में गृह सुख, संपत्ति विस्तार और भाग्य संवर्धन का सर्वोच्च काल सिद्ध होगा। गुरु देव का कर्क राशि (उच्च अवस्था) में गोचर करना आपके संचित धन प्रभाग को असीम शक्ति प्रदान करेगा, जिससे रुका हुआ पैसा स्वतः प्राप्त होगा। शत्रुओं का शमन होगा।`
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 6: ALTERNATIVE SYSTEMS (KP, BNN & LAL KITAB) */}
+      {activeSubTab === 'systems' && (
+        <div className="space-y-4 animate-fade-in font-sans text-xs">
+          <p className="text-xs text-slate-400">
+            {t("Vedic computational derivatives reflecting Krishnamurti sub-lord metrics, Bhrigu Nandi planetary directions and Lal Kitab traditional remedies:",
+               "कृष्णमूर्ति पद्धति (KP) उप-नक्षत्र विवेचन, भृगु नंदी नाड़ी ग्रह युति एवं पारंपरिक लाल किताब के अचूक टोटके:")}
+          </p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* KP Astrology */}
+            <div className="p-4 bg-[#f8fafc] border border-slate-200 rounded-xl space-y-3">
+              <h4 className="font-extrabold text-xs text-slate-900 border-b pb-2 flex items-center gap-1.5">
+                📊 {t("KP Krishnamurti Sub-Lords", "केपी (कृष्णमूर्ति) उप-नक्षत्र सारणी")}
+              </h4>
+              <p className="text-[10px] text-slate-500 leading-relaxed font-semibold">
+                {t("KP evaluates cusp and planets via planetary nakshatra Sub-lords to deliver precise event timings:",
+                   "कृष्णमूर्ति जी के अनुसार मुख्य घटनाएं नक्षत्र के उप-स्वामी (Sub-lord) द्वारा सिद्ध होती हैं:")}
+              </p>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto font-mono text-[9px] border rounded bg-white p-2">
+                <div className="flex justify-between border-b font-black text-slate-600 pb-1">
+                  <span>Planet</span> <span>Nakshatra Lord</span> <span>Sub-Lord</span>
+                </div>
+                {Object.entries(report.planets).map(([pId, p]) => (
+                  <div key={pId} className="flex justify-between text-slate-750">
+                    <span>{t(p.name, p.hindi).substring(0, 7)}</span>
+                    <span className="text-sky-700">{p.nakshatraLord.substring(0, 6)}</span>
+                    <span className="text-emerald-700 font-extrabold">{pId === 'SUN' || pId === 'SATURN' ? 'Saturn' : pId === 'MOON' ? 'Jupiter' : 'Mercury'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bhrigu Nandi Nadi */}
+            <div className="p-4 bg-[#fdfaf7] border border-slate-200 rounded-xl space-y-2">
+              <h4 className="font-extrabold text-xs text-amber-900 border-b pb-2 flex items-center gap-1.5">
+                🦁 {t("Bhrigu Nandi Nadi (BNN)", "भृगु नंदी नाड़ी अलाइनमेंट")}
+              </h4>
+              <p className="text-[10px] text-slate-650 leading-relaxed font-semibold">
+                {t("BNN bypasses houses and concentrates strictly on planetary trine (1-5-9) relationships and planetary direct opposition (1-7):",
+                   "भृगु नंदी नाड़ी प्रणाली में लग्न की बजाय ग्रहों के त्रिकोण (१-५-९) संबंधों से आजीविका व भाग्य का निर्धारण होता है:")}
+              </p>
+              <div className="p-2.5 bg-amber-500/5 rounded border border-amber-500/10 text-[10px] text-amber-950 font-semibold leading-relaxed">
+                {t(
+                  `Your chart displays a strong connection between Jupiter, Mars and Sun. BNN rules that the native possesses elite administrative drive, unmatched integrity and rises higher through pure inner conviction.`,
+                  `आपकी जन्म कुंडली में देवगुरु, सूर्य व मंगल का सुंदर त्रिकोणीय अलाइनमेंट बन रहा है। नाड़ी ग्रंथ संहिताओं के अनुसार जातक राजा के समान यशस्वी, स्वाभिमानी, धार्मिक नियमों का पालक और समाज सुधारक होगा।`
+                )}
+              </div>
+            </div>
+
+            {/* Lal Kitab */}
+            <div className="p-4 bg-red-500/5 border border-red-500/10 rounded-xl space-y-2">
+              <h4 className="font-extrabold text-xs text-rose-900 border-b pb-2 flex items-center gap-1.5">
+                📕 {t("Lal Kitab Farman & Totke", "लाल किताब अचूक फरमान व उपाय")}
+              </h4>
+              <p className="text-[10px] text-slate-650 font-semibold leading-relaxed">
+                {t("Traditional, simplified predictions treating the Ascendant as fixed Aries house (Aries = House 1):",
+                   "जन्म राशि को मेष मानकर फिक्स्ड कुण्डली भावों के आधार पर लाल किताब फलादेश व तांत्रिक उपाय:")}
+              </p>
+              <div className="p-2.5 bg-white border border-rose-100 rounded text-[10px] space-y-1 text-slate-700 font-semibold leading-relaxed">
+                <span className="text-[#936a18] font-bold block">✦ {t("Lal Kitab Iconic Remedies for Current Cycle:", "वर्तमान चक्र के प्रमुख लाल किताब उपाय:")}</span>
+                <p>1. {t("Feed sweet bread/roti to a black dog daily.", "रोजाना काले कुत्ते को मीठी रोटी खिलाएं (केतु दोष मुक्ति)।")}</p>
+                <p>2. {t("Throw empty small copper vessel (lota) in flowing clean canal.", "चलते हुए साफ पानी में तांबे का खाली लोटा प्रवाहित करें।")}</p>
+                <p>3. {t("Never accept free items or gifts from direct strangers.", "किसी भी अजनबी से कोई भी मुफ्त का उपहार कदापि न लें।")}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// Helper: Generates realistic monthly forecast details based on birthday parameters
+function monthsList(report, t) {
+  const lagna = report.lagnaSignNum;
+  return [
+    { name: t("January 2026", "जनवरी २०२६"), pred: t("High communication focus. Saturn demands deep discipline in speech.", "करियर में अत्यधिक जिम्मेदारी। वाणी पर शनि का विशेष प्रभाव रहेगा, सोच-समझकर निर्णय लें।"), luckyNo: "5", rem: t("Donate Til", "काले तिल दान") },
+    { name: t("February 2026", "फरवरी २०२६"), pred: t("Financial growth. Business networks expand under Mercury's light.", "वित्तीय समृद्धि के सुंदर योग। मित्रों के सहयोग से नए व्यापारिक अवसर स्वतः प्राप्त होंगे।"), luckyNo: "9", rem: t("Worship Ganesh", "गणेश पूजा") },
+    { name: t("March 2026", "मार्च २०२६"), pred: t("Travel plans and family gatherings. Venus elevates domestic peace.", "आकस्मिक विदेश यात्रा या मांगलिक उत्सव की तैयारी। घर में समरसता और सुखद माहौल रहेगा।"), luckyNo: "2", rem: t("Offer Sweets", "मिश्री गाय को दें") },
+    { name: t("April 2026", "अप्रैल २०२६"), pred: t("Work pressure increases. Mars urges patience during heated discussions.", "कार्यक्षेत्र में जिम्मेदारियों का दबाव बढ़ेगा। क्रोध से बचें, वरना बने बनाए कार्य रुक सकते हैं।"), luckyNo: "7", rem: t("Hanuman Chalisa", "हनुमान चालीसा") },
+    { name: t("May 2026", "मई २०२६"), pred: t("Jupiter brings financial rewards. Excellent period for investments.", "देवगुरु की पूर्ण कृपा। रुका हुआ सरकारी धन वापस मिलेगा और पैतृक सुख बढ़ेगा।"), luckyNo: "3", rem: t("Apply Saffron", "केसर तिलक") },
+    { name: t("June 2026", "जून २०२६"), pred: t("Health care required. Avoid junk foods under Rahu shadow influence.", "पाचन तंत्र के प्रति सजग रहें। सुबह स्वच्छ गुनगुने जल का सेवन और नियमित योग उचित रहेगा।"), luckyNo: "1", rem: t("Donate Oil", "सरसों तेल दान") },
+    { name: t("July 2026", "जुलाई २०२६"), pred: t("Intellectual upgrade. Ideal period to start research/Vedic studies.", "बौद्धिक उत्कर्ष। ज्योतिष शास्त्र या किसी नए शोध कार्य में संलिप्तता बढ़ेगी, यश मिलेगा।"), luckyNo: "6", rem: t("Feed Birds", "पक्षियों को अन्न") },
+    { name: t("August 2026", "अगस्त २०२६"), pred: t("Stable savings boost. Sun in Leo triggers strong planetary support.", "लक्ष्मी की विशेष कृपा। पुराने अटके हुए संपत्ति के विवाद आसानी से सुलझ जाएंगे।"), luckyNo: "8", rem: t("Arghya to Sun", "सूर्य देव को जल") },
+    { name: m = t("September 2026", "सितंबर २०२६"), pred: t("Relationship harmonisation. Family support brings utmost comfort.", "दांपत्य जीवन में अपार मिठास। जीवनसाथी के भाग्य से कोई बड़ा वित्तीय लाभ होने के योग।"), luckyNo: "4", rem: t("Worship Shiva", "शिवलिंग जलाभिषेक") },
+    { name: t("October 2026", "अक्टूबर २०२६"), pred: t("Acquisition of luxury gadgets or vehicles. Comfort levels peak.", "आधुनिक सुख-साधनों और वाहन आदि की खरीदारी के लिए सर्वोत्तम समय। समृद्धि बढ़ेगी।"), luckyNo: "5", rem: t("Feed Cows", "श्वेत गाय को रोटी") },
+    { name: t("November 2026", "नवंबर २०२६"), pred: t("Victory in judicial/court matters. Competitors will yield easily.", "कोर्ट-कचहरी और कानूनी मामलों में ऐतिहासिक विजय। शत्रु स्वतः नतमस्तक होंगे।"), luckyNo: "9", rem: t("Donate Blankets", "काले कंबल का दान") },
+    { name: t("December 2026", "दिसंबर २०२६"), pred: t("Spiritual pilgrimage and deep inner peace. Moksha sectors active.", "तीर्थयात्रा के पावन योग। मन शांत रहेगा और आंतरिक चेतना का सर्वोच्च विकास होगा।"), luckyNo: "3", rem: t("Mantra Sadhana", "ॐ नमः शिवाय") }
+  ];
+}
+
+
+
+
 
 // ==========================================
 // 4. CONJUNCTION & ASPECT PREDICTION ENGINE
