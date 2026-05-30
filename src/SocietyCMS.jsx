@@ -1880,7 +1880,7 @@ export function AdminControlWorkstation({
       )}
 
       {/* Admin Subtabs Layout */}
-      <div className="flex gap-2 border-b border-slate-850 pb-3 mb-6 overflow-x-auto scrollbar-none">
+      <div className="flex gap-2 border-b pb-3 mb-6 overflow-x-auto scrollbar-none" style={{ borderColor: tObj.border }}>
         {[
           { id: 'modules', label: t("Astrological Modules", "ज्योतिषीय मॉड्यूल नियंत्रण"), icon: "⚙️" },
           { id: 'payplans', label: t("Subscription Pricing Plans", "मूल्य निर्धारण योजनाएं"), icon: "💎" },
@@ -1892,7 +1892,12 @@ export function AdminControlWorkstation({
             <button
               key={tab.id}
               onClick={() => setActiveAdminTab(tab.id)}
-              className={`px-4.5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 focus:outline-none ${isActive ? 'bg-amber-400 text-slate-950 shadow-md' : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-850'}`}
+              className="px-4.5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 focus:outline-none shadow-sm"
+              style={{
+                backgroundColor: isActive ? tObj.primary : tObj.bgCard,
+                color: isActive ? '#FFFFFF' : tObj.textMain,
+                border: `1.5px solid ${isActive ? tObj.primary : tObj.border}`
+              }}
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>

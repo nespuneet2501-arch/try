@@ -168,6 +168,30 @@
   </head>
   <body class="bg-[#FAF7F2] text-[#2D2A26] min-h-screen selection:bg-[#cca43b] selection:text-[#FAF7F2]">
     <div id="root"></div>
+    <script>
+      window.addEventListener('error', function(event) {
+        var root = document.getElementById('root');
+        if (root && (!root.innerHTML || root.innerHTML === '')) {
+          root.innerHTML = '<div style="padding: 24px; background: #FFF5F5; border: 2px solid #FEB2B2; color: #9B2C2C; font-family: system-ui, -apple-system, sans-serif; border-radius: 12px; margin: 32px auto; max-width: 640px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">' +
+            '<h2 style="margin-top:0; font-size: 18px; font-weight: 800; border-bottom: 2px solid #FED7D7; padding-bottom: 8px;">🌌 Cosmic Applet Diagnostic Active</h2>' +
+            '<p style="font-size:14px; margin: 12px 0;"><b>Runtime Error:</b> <span style="background:#FFF; padding:2px 6px; border-radius:4px; font-family:monospace;">' + event.message + '</span></p>' +
+            '<p style="font-size:12px; color: #742A2A;"><b>File:</b> ' + event.filename + ' (line ' + event.lineno + ')' + '</p>' +
+            '<pre style="background: #1A202C; color: #EDF2F7; padding: 12px; border-radius: 8px; overflow: auto; font-size: 11px; max-height: 240px; font-family: monospace; text-align: left;">' + (event.error ? event.error.stack : 'No stacktrace available') + '</pre>' +
+            '<button onclick="localStorage.clear(); window.location.reload();" style="margin-top: 16px; background: #9B2C2C; color: white; border: none; padding: 8px 16px; font-size:12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Reset Storage & Force Reload</button>' +
+            '</div>';
+        }
+      });
+      window.addEventListener('unhandledrejection', function(event) {
+        var root = document.getElementById('root');
+        if (root && (!root.innerHTML || root.innerHTML === '')) {
+          root.innerHTML = '<div style="padding: 24px; background: #FFF5F5; border: 2px solid #FEB2B2; color: #9B2C2C; font-family: system-ui, -apple-system, sans-serif; border-radius: 12px; margin: 32px auto; max-width: 640px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">' +
+            '<h2 style="margin-top:0; font-size: 18px; font-weight: 800; border-bottom: 2px solid #FED7D7; padding-bottom: 8px;">🌌 Cosmic Applet Diagnostic Active</h2>' +
+            '<p style="font-size:14px; margin: 12px 0;"><b>Unhandled Rejection:</b> <span style="background:#FFF; padding:2px 6px; border-radius:4px; font-family:monospace;">' + event.reason + '</span></p>' +
+            '<button onclick="localStorage.clear(); window.location.reload();" style="margin-top: 16px; background: #9B2C2C; color: white; border: none; padding: 8px 16px; font-size:12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Reset Storage & Force Reload</button>' +
+            '</div>';
+        }
+      });
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
