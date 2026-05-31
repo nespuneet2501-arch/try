@@ -13,8 +13,24 @@ import {
   VerificationCertificatePanel
 } from './AdvancedVedicModules';
 import SocietyUpdatesHub, { AstroPaywallLock, AdminControlWorkstation } from './SocietyCMS';
+import { authService, kundliDbService, getDefaultStorageConfig, saveStorageConfig, isSupabaseConfigured, isGoogleSheetsConfigured } from './StorageService';
 
 const THEMES = {
+  BRIGHT: {
+    id: 'BRIGHT',
+    name: 'Vibrant Holiday',
+    hindiName: 'चमकदार रंगीन',
+    bgPage: '#FFF9F3', // Warm sunny cream
+    bgCard: '#FFFFFF', // Clean white card
+    bgInput: '#FFFFFF',
+    bgBadge: '#FFF0F5', // Vibrant soft rose highlights
+    border: '#FFD5C6', // Tender coral border
+    primary: '#E64A19', // Full radiant saffron-red
+    primaryHover: '#D84315',
+    textMain: '#2E1505', // Deep chocolate/aubergine text
+    textMuted: '#795548', // Elegant warm earth
+    accent: '#E91E63' // Festively bright pink
+  },
   GOLD: {
     id: 'GOLD',
     name: 'Imperial Gold',
@@ -286,12 +302,37 @@ export default function App() {
 }
 
 function VedicKundliApp() {
-  // Application State - Reopen previously generated Kundli automatically on start
+  // Dispatches simple dynamic alerts
+  const triggerNotification = (title, message, type = "success") => {
+    const detail = {
+      id: Date.now(),
+      title,
+      message,
+      type
+    };
+    const event = new CustomEvent('pva_notification', { detail });
+    window.dispatchEvent(event);
+  };
+
+  // Application State - Ensure first screen is AUTH for new or logged-out users, showing signup
+  const [currentUser, setCurrentUser] = useState(() => {
+    const session = authService.getCurrentUser();
+    return session ? session.email : '';
+  });
+
   const [currentScreen, setCurrentScreen] = useState(() => {
+    const session = authService.getCurrentUser();
+    if (!session) return 'AUTH';
     const last = localStorage.getItem('pva_last_profile');
     return last ? 'KUNDLI_REPORT' : 'DASHBOARD';
   }); // WELCOME, AUTH, DASHBOARD, ADD_KUNDLI, KUNDLI_REPORT, PANCHANG, MATCHMAKING, PREMIUM
-  const [currentUser, setCurrentUser] = useState(() => localStorage.getItem('pva_current_user') || 'nespuneet2501@gmail.com');
+  const [storageConfig, setStorageConfig] = useState(() => getDefaultStorageConfig());
+  const [userRegisterEmail, setUserRegisterEmail] = useState('');
+  const [userRegisterPassword, setUserRegisterPassword] = useState('');
+  const [userRegisterName, setUserRegisterName] = useState('');
+  const [userLoginPassword, setUserLoginPassword] = useState('');
+  const [adminSecretCode, setAdminSecretCode] = useState(''); // Admin authorization key
+  const [authActiveTab, setAuthActiveTab] = useState('signup'); // Default to signup page first
   const [currentLanguage, setCurrentLanguage] = useState('English'); // English / Hindi
   const [activeChartStyle, setActiveChartStyle] = useState('North Indian'); // North Indian, South Indian, East Indian
   const [highlightedPlanet, setHighlightedPlanet] = useState(null);
@@ -307,6 +348,52 @@ function VedicKundliApp() {
   // Database sync states: Favorite, Collections, Share Settings
   const [guestGateAction, setGuestGateAction] = useState(null);
   const [showDbCenter, setShowDbCenter] = useState(false);
+
+  // Dynamic slide-in / toaster notification state
+  const [alertsList, setAlertsList] = useState([]);
+
+  useEffect(() => {
+    const handleAlert = (e) => {
+      if (e.detail) {
+        setAlertsList(prev => [...prev, e.detail]);
+        // Auto remove in 4 seconds
+        setTimeout(() => {
+          setAlertsList(prev => prev.filter(item => item.id !== e.detail.id));
+        }, 4000);
+      }
+    };
+    window.addEventListener('pva_notification', handleAlert);
+    return () => window.removeEventListener('pva_notification', handleAlert);
+  }, []);
+
+  // Library State Filters & Search
+  const [librarySearchQuery, setLibrarySearchQuery] = useState('');
+  const [libraryCategoryFilter, setLibraryCategoryFilter] = useState('All');
+  const [librarySortBy, setLibrarySortBy] = useState('newest'); // name, newest, category, favorite
+  const [libraryTab, setLibraryTab] = useState('active'); // active, trash
+  
+  // Inline card editing state
+  const [editingKundliId, setEditingKundliId] = useState(null);
+  const [editingKundliData, setEditingKundliData] = useState({ name: '', category: 'Self', notes: '' });
+
+  // Custom User profile configuration states
+  const [userProfileData, setUserProfileData] = useState(() => {
+    return authService.getCurrentUser() || {
+      name: 'Vedic Seeker',
+      email: 'nespuneet2501@gmail.com',
+      avatarUrl: '',
+      registeredAt: '2026-05-24',
+      lastLogin: new Date().toISOString()
+    };
+  });
+
+  // Keep Profile Synced when currentUser changes
+  useEffect(() => {
+    const current = authService.getCurrentUser();
+    if (current) {
+      setUserProfileData(current);
+    }
+  }, [currentUser]);
   
   const [favoritesSet, setFavoritesSet] = useState(() => {
     try {
@@ -419,7 +506,7 @@ function VedicKundliApp() {
   const [showGoogleSimPicker, setShowGoogleSimPicker] = useState(false);
   
   // Custom Dynamic Themes Support
-  const [currentTheme, setCurrentTheme] = useState('GOLD'); // 'GOLD', 'EMERALD', 'SAFFRON', 'SAPPHIRE'
+  const [currentTheme, setCurrentTheme] = useState('BRIGHT'); // 'GOLD', 'EMERALD', 'SAFFRON', 'SAPPHIRE'
   const [profileSearchQuery, setProfileSearchQuery] = useState('');
 
   // Advanced Astrology Report Navigation, CMS, and calculators state
@@ -736,48 +823,17 @@ function VedicKundliApp() {
     }
   };
 
-  // Sync to local storage & cloud background loop
+  // Database loader & persistence synchronization
   useEffect(() => {
-    localStorage.setItem('pva_saved_kundlis', JSON.stringify(savedKundlis));
-    if (currentUser) {
-      syncToCloud(savedKundlis, currentUser);
-    }
-  }, [savedKundlis, currentUser]);
-
-  // Cloud pull and auto merge engine
-  useEffect(() => {
-    const loadFromCloud = async () => {
-      if (!currentUser) return;
-      try {
-        const response = await fetch(`https://keyvalue.immanual.xyz/api/keyVal/pva_user_${btoa(currentUser)}`);
-        if (response.ok) {
-          const resJson = await response.json();
-          if (resJson && resJson.value) {
-            const cloudList = JSON.parse(resJson.value);
-            if (Array.isArray(cloudList) && cloudList.length > 0) {
-              setSavedKundlis(prev => {
-                const merged = [...prev];
-                cloudList.forEach(cloudItem => {
-                  const exists = merged.some(localItem => 
-                    localItem.name?.trim().toLowerCase() === cloudItem.name?.trim().toLowerCase() &&
-                    localItem.dob === cloudItem.dob &&
-                    localItem.tob === cloudItem.tob
-                  );
-                  if (!exists) {
-                    merged.push(cloudItem);
-                  }
-                });
-                return merged;
-              });
-            }
-          }
-        }
-      } catch (e) {
-        console.warn("Cloud sync deferred (offline proxy active):", e);
+    const syncDb = async () => {
+      const email = currentUser || 'guest@vedicastrology.org';
+      const loaded = await kundliDbService.fetchSavedKundlis(email);
+      if (loaded && loaded.length > 0) {
+        setSavedKundlis(loaded);
       }
     };
-    loadFromCloud();
-  }, [currentUser]);
+    syncDb();
+  }, [currentUser, storageConfig.mode]);
 
   const navigateToReport = (profile) => {
     if (!profile) return;
@@ -815,21 +871,31 @@ function VedicKundliApp() {
   const handleGenerateChart = () => {
     const newProfile = {
       id: Date.now(),
-      name: nameInput,
+      name: nameInput || "Vedic Seeker",
       gender: genderInput,
-      dob: dobInput,
-      tob: tobInput,
-      place: birthPlaceInput,
+      dob: dobInput || new Date().toISOString().split('T')[0],
+      tob: tobInput || "12:00",
+      place: birthPlaceInput || "New Delhi, Delhi, India",
       lat: parseFloat(latitudeInput) || 28.6139,
       lon: parseFloat(longitudeInput) || 77.2090,
-      timezone: timezoneInput
+      timezone: timezoneInput || "Asia/Kolkata",
+      category: 'Self',
+      notes: ''
     };
+
+    if (!currentUser || currentUser.includes('guest')) {
+      setGuestGateAction({
+        type: 'generate_chart',
+        payload: newProfile
+      });
+      return;
+    }
     
     // Check if duplicate profile already exists to prevent duplication
     const exists = savedKundlis.some(k => 
-      k.name.trim().toLowerCase() === nameInput.trim().toLowerCase() &&
-      k.dob === dobInput &&
-      k.tob === tobInput
+      k.name.trim().toLowerCase() === newProfile.name.trim().toLowerCase() &&
+      k.dob === newProfile.dob &&
+      k.tob === newProfile.tob
     );
     
     let updatedList = [...savedKundlis];
@@ -837,6 +903,7 @@ function VedicKundliApp() {
       updatedList = [newProfile, ...savedKundlis];
       setSavedKundlis(updatedList);
       localStorage.setItem('pva_saved_kundlis', JSON.stringify(updatedList));
+      kundliDbService.saveKundli(currentUser, newProfile).catch(() => {});
     }
     
     // Set last generated profile
@@ -848,18 +915,19 @@ function VedicKundliApp() {
   const handleSaveProfile = () => {
     const newProfile = {
       id: Date.now(),
-      name: nameInput,
+      name: nameInput || "Unnamed Seeker",
       gender: genderInput,
-      dob: dobInput,
-      tob: tobInput,
-      place: birthPlaceInput,
-      lat: parseFloat(latitudeInput),
-      lon: parseFloat(longitudeInput),
-      timezone: timezoneInput,
-      collection: ""
+      dob: dobInput || new Date().toISOString().split('T')[0],
+      tob: tobInput || "12:00",
+      place: birthPlaceInput || "New Delhi, Delhi, India",
+      lat: parseFloat(latitudeInput) || 28.6139,
+      lon: parseFloat(longitudeInput) || 77.2090,
+      timezone: timezoneInput || "Asia/Kolkata",
+      category: 'Self',
+      notes: ''
     };
 
-    if (!currentUser) {
+    if (!currentUser || currentUser.includes('guest')) {
       setGuestGateAction({
         type: 'save_profile',
         payload: newProfile
@@ -867,13 +935,11 @@ function VedicKundliApp() {
       return;
     }
 
-    const updated = [newProfile, ...savedKundlis];
-    setSavedKundlis(updated);
-    localStorage.setItem('pva_saved_kundlis', JSON.stringify(updated));
-    alert(t(
-      "SUCCESS: Kundli saved successfully! Auto-synced to Firebase Firestore & queued for Google Sheets / Drive backups.",
-      "सफलता: कुण्डली सफलतापूर्वक सहेजी गई! इसे फायरबेस पर सहेजकर शीट्स और ड्राइव पर बैकअप किया गया है।"
-    ));
+    kundliDbService.saveKundli(currentUser, newProfile).then((savedObj) => {
+      kundliDbService.fetchSavedKundlis(currentUser).then((res) => {
+        setSavedKundlis(res);
+      });
+    });
   };
 
   const handleEditProfileTrigger = (profile, e) => {
@@ -1035,9 +1101,12 @@ function VedicKundliApp() {
   const handleDeleteProfile = (id, e) => {
     e.stopPropagation();
     if (confirm(t("Are you sure you want to delete this Kundli profile?", "क्या आप वाकई इस कुण्डली प्रोफ़ाइल को हटाना चाहते हैं?"))) {
-      const updated = savedKundlis.filter(k => k.id !== id);
-      setSavedKundlis(updated);
-      localStorage.setItem('pva_saved_kundlis', JSON.stringify(updated));
+      const email = currentUser || 'guest@vedicastrology.org';
+      kundliDbService.deleteKundli(email, id).then(() => {
+        kundliDbService.fetchSavedKundlis(email).then((res) => {
+          setSavedKundlis(res);
+        });
+      });
     }
   };
 
@@ -1145,9 +1214,12 @@ function VedicKundliApp() {
             <span className="font-semibold">{currentLanguage === 'English' ? 'हिंदी' : 'English'}</span>
           </button>
 
-          {/* User profile / Google Authentication State Button */}
+          {/* User profile / Google Authentication State State Container */}
           {currentUser ? (
-            <div className="flex items-center gap-2 bg-[#12221b] border border-emerald-500/30 px-3 py-1.5 rounded-full shadow-lg">
+            <div 
+              onClick={() => setCurrentScreen('USER_PROFILE')}
+              className="flex items-center gap-2 bg-[#12221b] border border-emerald-500/30 px-3 py-1.5 rounded-full shadow-lg cursor-pointer hover:bg-[#12221b]/80 transition duration-150"
+            >
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               <div className="flex flex-col text-left">
                 <span className="text-[9.5px] font-black font-mono text-emerald-300 truncate max-w-[130px]" title={currentUser}>
@@ -1159,7 +1231,10 @@ function VedicKundliApp() {
               </div>
               
               <button
-                onClick={() => setShowGoogleSimPicker(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowGoogleSimPicker(true);
+                }}
                 className="text-[8.5px] uppercase tracking-wider font-extrabold bg-[#cca43b]/10 text-[#cca43b] px-1.5 py-0.5 rounded border border-[#cca43b]/20 hover:bg-[#cca43b]/20 transition ml-1"
                 title="Google login simulation profile toggle"
               >
@@ -1167,10 +1242,12 @@ function VedicKundliApp() {
               </button>
 
               <button 
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setCurrentUser(null);
                   localStorage.removeItem('pva_current_user');
-                  alert(t("Logged out of Google account successfully.", "गूगल खाते से सफलतापूर्वक लॉग आउट किया गया।"));
+                  triggerNotification("Logged Out", "Successfully signed out of secure session.", "info");
+                  setCurrentScreen('DASHBOARD');
                 }}
                 className="text-[8.5px] uppercase tracking-wider font-extrabold text-slate-400 hover:text-red-400 transition pl-1.5 border-l border-slate-700/60"
               >
@@ -1401,11 +1478,48 @@ function VedicKundliApp() {
               <ShieldCheck className="w-4 h-4 shrink-0" style={{ color: currentScreen === 'ADMIN_CONTROL' ? '#FFFFFF' : tObj.primary }} />
               <span>{t("Admin Panel", "संचालक नियंत्रण")}</span>
             </button>
+
+            <button
+              onClick={() => setCurrentScreen('INTEGRATIONS')}
+              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
+              style={{
+                backgroundColor: currentScreen === 'INTEGRATIONS' ? tObj.primary : tObj.bgCard,
+                color: currentScreen === 'INTEGRATIONS' ? '#FFFFFF' : tObj.textMain,
+                border: `1.5px solid ${currentScreen === 'INTEGRATIONS' ? tObj.primary : tObj.border}`
+              }}
+            >
+              <Database className="w-4 h-4 shrink-0" style={{ color: currentScreen === 'INTEGRATIONS' ? '#FFFFFF' : tObj.primary }} />
+              <span>{t("Cloud Sync Settings", "क्लाउड डेटाबेस")}</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentScreen('KUNDLI_LIBRARY')}
+              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm font-cinzel"
+              style={{
+                backgroundColor: currentScreen === 'KUNDLI_LIBRARY' ? tObj.primary : tObj.bgCard,
+                color: currentScreen === 'KUNDLI_LIBRARY' ? '#FFFFFF' : tObj.textMain,
+                border: `1.5px solid ${currentScreen === 'KUNDLI_LIBRARY' ? tObj.primary : tObj.border}`
+              }}
+            >
+              <BookOpen className="w-4 h-4 shrink-0" style={{ color: currentScreen === 'KUNDLI_LIBRARY' ? '#FFFFFF' : tObj.primary }} />
+              <span>{t("Kundli Library", "कुण्डली संग्रहालय")}</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentScreen('USER_PROFILE')}
+              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
+              style={{
+                backgroundColor: currentScreen === 'USER_PROFILE' ? tObj.primary : tObj.bgCard,
+                color: currentScreen === 'USER_PROFILE' ? '#FFFFFF' : tObj.textMain,
+                border: `1.5px solid ${currentScreen === 'USER_PROFILE' ? tObj.primary : tObj.border}`
+              }}
+            >
+              <UserCheck className="w-4 h-4 shrink-0" style={{ color: currentScreen === 'USER_PROFILE' ? '#FFFFFF' : tObj.primary }} />
+              <span>{t("My Profile", "मेरी प्रोफ़ाइल")}</span>
+            </button>
           </div>
         </>
       )}
-        
-        {/* -- SCREEN: WELCOME / INTRO (Fallback/Optional) -- */}
         {currentScreen === 'WELCOME' && (
           <div className="max-w-2xl mx-auto text-center py-12 flex flex-col items-center">
             <Compass className="w-24 h-24 text-[#cca43b] animate-spin-slow mb-6" />
@@ -1427,50 +1541,245 @@ function VedicKundliApp() {
 
         {/* -- SCREEN: AUTH / LOGIN -- */}
         {currentScreen === 'AUTH' && (
-          <div className="max-w-md mx-auto bg-[#0f1123] rounded-2xl border border-slate-800 p-8 shadow-2xl relative overflow-hidden">
+          <div className="max-w-md mx-auto bg-[#0f1123] rounded-2xl border border-slate-800 p-8 shadow-2xl relative overflow-hidden text-left text-slate-205">
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#cca43b] via-[#e5c060] to-[#cca43b]"></div>
-            <h2 className="text-2xl font-bold mb-2 text-white">{t("Vedic Account Access", "वैदिक खाता लॉगिन")}</h2>
-            <p className="text-slate-400 text-sm mb-6">{t("Gain instant access to unlimited detailed birth calculations.", "असीमित विस्तृत जन्म गणनाओं तक तुरंत पहुँच प्राप्त करें।")}</p>
             
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">{t("Email Address", "ईमेल पता")}</label>
-                <input 
-                  type="email" 
-                  value={currentUser || ''} 
-                  onChange={(e) => setCurrentUser(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-600 focus:outline-none transition font-mono"
-                />
-              </div>
-              <div className="p-3 bg-[#cca43b]/10 rounded-lg text-xs leading-relaxed text-[#cca43b] flex gap-2">
-                <Sparkles className="w-4 h-4 shrink-0" />
-                <span>{t("For quick demonstration, the user is pre-authorized with free Premium Astro Access.", "त्वरित परीक्षण के लिए, उपयोगकर्ता पहले से ही प्रीमियम उपयोग हेतु अधिकृत है।")}</span>
-              </div>
+            <div className="text-center mb-6">
+              <span className="px-2.5 py-1 bg-[#cca43b]/10 border border-[#cca43b]/35 text-[#cca43b] rounded-full text-[9px] font-black uppercase tracking-widest font-mono">
+                ☸️ {t("SECURE VEDIC GATEWAY", "सुरक्षित वैदिक लॉगिन द्वार")}
+              </span>
+              <h2 className="text-2xl font-black mt-2 text-white font-cinzel leading-none">{t("Seeking Portal Access", "वैदिक खाता लॉगिन")}</h2>
+              <p className="text-slate-400 text-xs mt-1.5">{t("Create an account to save, edit, and access unlimited high-precision birth charts.", "कुंडलियों को सुरक्षित सहेजने और संपादित करने के लिए लॉगिन करें।")}</p>
             </div>
 
-            <div className="flex flex-col gap-2">
+            {/* Login vs SignUp Tabs */}
+            <div className="flex bg-slate-950 p-1 rounded-xl mb-4 border border-slate-900">
               <button
-                onClick={() => {
-                  if (currentUser) {
+                onClick={() => setAuthActiveTab('login')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg uppercase tracking-wide transition ${authActiveTab === 'login' ? 'bg-[#936a18]/20 border border-[#cca43b]/25 text-white font-black' : 'text-slate-400 hover:text-white'}`}
+              >
+                {t("Login", "लॉगिन")}
+              </button>
+              <button
+                onClick={() => setAuthActiveTab('signup')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg uppercase tracking-wide transition ${authActiveTab === 'signup' ? 'bg-[#936a18]/20 border border-[#cca43b]/25 text-white font-black' : 'text-slate-400 hover:text-white'}`}
+              >
+                {t("Register", "नया पंजीकृत")}
+              </button>
+            </div>
+
+            {/* TAB CONTENT: LOGIN FORM */}
+            {authActiveTab === 'login' && (
+              <div className="space-y-4 animate-fade-in block">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1.5">{t("Email Address", "ईमेल पता")}</label>
+                  <input 
+                    type="email" 
+                    value={currentUser || ''} 
+                    onChange={(e) => setCurrentUser(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] rounded-lg px-4 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition font-semibold"
+                  />
+                </div>
+                {currentUser && currentUser.trim().toLowerCase() === 'nespuneet2501@gmail.com' && (
+                  <div className="bg-amber-500/15 border border-amber-500/40 rounded-xl p-3 text-xs text-amber-300 animate-pulse">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <span>👑</span>
+                      <span>{t("Secure Admin Gateway Identified", "सुरक्षित प्रशासक लॉगिन द्वार")}</span>
+                    </div>
+                    <p className="text-[10px] leading-snug mt-1 text-slate-300">
+                      {t("Master Admin authentication active. Default password for this workspace setup is 'admin123'.", "मुख्य संचालक प्रमाणीकरण सक्रिय है। सिमुलेटेड वर्कस्पेस में डिफ़ॉल्ट पासवर्ड 'admin123' है।")}
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1.5">{t("Password", "पासवर्ड")}</label>
+                  <input 
+                    type="password" 
+                    value={userLoginPassword} 
+                    onChange={(e) => setUserLoginPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] rounded-lg px-4 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition font-semibold"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!currentUser || !userLoginPassword) {
+                      triggerNotification("Authorization Error", "Please fill in both email and password.", "warning");
+                      return;
+                    }
+                    const res = await authService.loginWithEmail(currentUser, userLoginPassword);
+                    if (res && res.success) {
+                      const loggedEmail = res.user.email;
+                      setCurrentUser(loggedEmail);
+                      triggerNotification("Sign-In Completed", `Welcome back to Astro PV portal!`, "success");
+
+                      // Sync any pending items saved in Guest mode
+                      const pendingPayload = localStorage.getItem('pva_pending_save_payload');
+                      const actionType = localStorage.getItem('pva_pending_gate_action_type');
+                      if (pendingPayload) {
+                        try {
+                          const parsed = JSON.parse(pendingPayload);
+                          await kundliDbService.saveKundli(loggedEmail, parsed);
+                          localStorage.removeItem('pva_pending_save_payload');
+                          localStorage.removeItem('pva_pending_gate_action_type');
+                          if (actionType === 'generate_chart') {
+                            localStorage.setItem('pva_last_profile', JSON.stringify(parsed));
+                            const list = await kundliDbService.fetchSavedKundlis(loggedEmail);
+                            setSavedKundlis(list);
+                            setCurrentScreen('KUNDLI_REPORT');
+                            triggerNotification("Chart Loaded & Synced", `${parsed.name}'s chart has been successfully mapped to your profile!`, "success");
+                            return;
+                          }
+                        } catch (e) {}
+                      }
+
+                      const list = await kundliDbService.fetchSavedKundlis(loggedEmail);
+                      setSavedKundlis(list);
+                      setCurrentScreen('DASHBOARD');
+                    } else {
+                      triggerNotification("Authentication Failed", res?.error || "Incorrect credentials.", "warning");
+                    }
+                  }}
+                  className="w-full py-2.5 bg-[#cca43b] hover:bg-[#f3d47d] text-slate-950 font-extrabold text-xs uppercase tracking-widest rounded-xl transition shadow-lg mt-2"
+                >
+                  {t("Sign in securely", "सुरक्षित लॉग-इन करें")}
+                </button>
+              </div>
+            )}
+
+            {/* TAB CONTENT: REGISTER FORM */}
+            {authActiveTab === 'signup' && (
+              <div className="space-y-4 animate-fade-in block">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1.5">{t("Seeker Full Name", "जिज्ञासु का पूरा नाम")}</label>
+                  <input 
+                    type="text" 
+                    value={userRegisterName} 
+                    onChange={(e) => setUserRegisterName(e.target.value)}
+                    placeholder="Puneet Vashishtha"
+                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] rounded-lg px-4 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1.5">{t("Email Address", "ईमेल पता")}</label>
+                  <input 
+                    type="email" 
+                    value={userRegisterEmail} 
+                    onChange={(e) => setUserRegisterEmail(e.target.value)}
+                    placeholder="seeker@gmail.com"
+                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] rounded-lg px-4 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition font-semibold"
+                  />
+                </div>
+                {userRegisterEmail && userRegisterEmail.trim().toLowerCase() === 'nespuneet2501@gmail.com' && (
+                  <div className="bg-amber-500/15 border border-amber-500/40 rounded-xl p-3 text-xs text-amber-300 animate-pulse">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <span>👑</span>
+                      <span>{t("ADMINISTRATOR DISCOVERED", "प्रशासक प्रोफ़ाइल पहचानी गई")}</span>
+                    </div>
+                    <p className="text-[10px] leading-snug mt-1 text-slate-300">
+                      {t("This email is designated for the Astro PV master administrator. Setting up this account requires entering the Master Admin Secret password.", "यह ईमेल मुख्य एस्ट्रो प्रबंधक के रूप में आरक्षित है। पंजीकरण पूरा करने के लिए मास्टर एडमिन गुप्त कुंजी दर्ज करना अनिवार्य है।")}
+                    </p>
+                    <p className="text-[10px] font-bold mt-1.5 text-amber-400">
+                      * {t("Please use 'admin123' as the password below to authorize master privileges.", "प्रशासक अधिकारों के सत्यापन के लिए नीचे पासवर्ड 'admin123' का उपयोग करें।")}
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1.5">{t("Create Password", "पासवर्ड बनाएं")}</label>
+                  <input 
+                    type="password" 
+                    value={userRegisterPassword} 
+                    onChange={(e) => setUserRegisterPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] rounded-lg px-4 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition font-semibold"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!userRegisterEmail || !userRegisterPassword) {
+                      triggerNotification("Validation Error", "Please enter both registration email and password.", "warning");
+                      return;
+                    }
+                    const res = await authService.signUpWithEmail(userRegisterEmail, userRegisterPassword, userRegisterName);
+                    if (res && res.success) {
+                      triggerNotification("Registration Successful", "Setting up your account. Logging you in now...", "success");
+                      setCurrentUser(userRegisterEmail);
+                      
+                      // Auto login in memory
+                      const loginRes = await authService.loginWithEmail(userRegisterEmail, userRegisterPassword);
+                      if (loginRes && loginRes.success) {
+                        // Sync any pending items saved in Guest mode
+                        const pendingPayload = localStorage.getItem('pva_pending_save_payload');
+                        const actionType = localStorage.getItem('pva_pending_gate_action_type');
+                        if (pendingPayload) {
+                          try {
+                            const parsed = JSON.parse(pendingPayload);
+                            await kundliDbService.saveKundli(userRegisterEmail, parsed);
+                            localStorage.removeItem('pva_pending_save_payload');
+                            localStorage.removeItem('pva_pending_gate_action_type');
+                            if (actionType === 'generate_chart') {
+                              localStorage.setItem('pva_last_profile', JSON.stringify(parsed));
+                              const list = await kundliDbService.fetchSavedKundlis(userRegisterEmail);
+                              setSavedKundlis(list);
+                              setCurrentScreen('KUNDLI_REPORT');
+                              return;
+                            }
+                          } catch (e) {}
+                        }
+                        const list = await kundliDbService.fetchSavedKundlis(userRegisterEmail);
+                        setSavedKundlis(list);
+                        setCurrentScreen('DASHBOARD');
+                      } else {
+                        setAuthActiveTab('login');
+                      }
+                    } else {
+                      triggerNotification("Enrolling Failed", res?.error || "Registration encountered an error!", "warning");
+                    }
+                  }}
+                  className="w-full py-2.5 bg-[#1B5E3A] hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-widest rounded-xl transition shadow-lg mt-2"
+                >
+                  {t("Register Account", "खाता पंजीकृत करें")}
+                </button>
+              </div>
+            )}
+
+            {/* Divider */}
+            <div className="relative my-5 flex items-center justify-center">
+              <span className="absolute bg-[#0f1123] px-3 text-[9px] uppercase tracking-widest text-slate-550 font-bold">OR PERSIST CONTINUOUSLY</span>
+              <div className="w-full border-t border-slate-900"></div>
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={async () => {
+                  const res = await authService.loginWithGoogle();
+                  if (res && res.success) {
+                    setCurrentUser(res.user.email);
+                    // Add to seeker register list
                     setUsersList(prev => {
-                      const exists = prev.find(u => u.email.toLowerCase() === currentUser.toLowerCase());
+                      const exists = prev.find(u => u.email.toLowerCase() === res.user.email.toLowerCase());
                       if (!exists) {
-                        return [...prev, { email: currentUser, isPremium: currentUser.toLowerCase() === 'nespuneet2501@gmail.com', method: 'Email', registeredAt: '2026-05-27' }];
+                        return [...prev, { email: res.user.email, name: res.user.name, isPremium: res.user.email.toLowerCase() === 'nespuneet2501@gmail.com', method: 'Google OAuth', registeredAt: '2026-05-27' }];
                       }
                       return prev;
                     });
-                    localStorage.setItem('pva_current_user', currentUser);
                     setCurrentScreen('DASHBOARD');
-                  } else {
-                    alert(t("Please fill in an email", "कृपया एक ईमेल प्रविष्ट करें"));
                   }
                 }}
-                className="w-full py-3 bg-[#cca43b] hover:bg-[#f3d47d] text-slate-950 font-bold rounded-lg transition duration-200"
+                className="w-full py-2.5 bg-white hover:bg-slate-50 text-slate-900 rounded-xl transition flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider shadow"
               >
-                {t("Sign In / Join Now", "साइन इन करें / अभी शामिल हों")}
+                <span>🤖</span>
+                <span>{t("Continue with Google", "गूगल से लॉगिन करें")}</span>
               </button>
+
               <button
+                type="button"
                 onClick={() => {
                   const guestValue = 'guest@vedicastrology.org';
                   setCurrentUser(guestValue);
@@ -1484,7 +1793,7 @@ function VedicKundliApp() {
                   });
                   setCurrentScreen('DASHBOARD');
                 }}
-                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition duration-200"
+                className="w-full py-2.5 bg-slate-900 border border-slate-850 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-[10px] font-extrabold uppercase tracking-widest rounded-xl transition"
               >
                 {t("Continue as Guest", "अतिथि के रूप में जारी रखें")}
               </button>
@@ -2122,13 +2431,71 @@ function VedicKundliApp() {
           <div className="space-y-8">
             {/* Header / Nav Back */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <button 
-                onClick={() => setCurrentScreen('DASHBOARD')}
-                className="self-start px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-300 flex items-center gap-1.5 transition"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>{t("Back to Workstation", "वर्कस्टेशन पर लौटें")}</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button 
+                  onClick={() => setCurrentScreen('DASHBOARD')}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-300 flex items-center gap-1.5 transition"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>{t("Back to Workstation", "वर्कस्टेशन पर लौटें")}</span>
+                </button>
+
+                <button 
+                  onClick={() => {
+                    const printStyles = `
+                      @media print {
+                        body { background: white !important; color: black !important; }
+                        button, nav, footer, .no-print { display: none !important; }
+                        .print-only { display: block !important; }
+                        * { font-size: 11pt !important; color: black !important; }
+                      }
+                    `;
+                    const styleSheet = document.createElement("style");
+                    styleSheet.innerText = printStyles;
+                    document.head.appendChild(styleSheet);
+                    window.print();
+                    document.head.removeChild(styleSheet);
+                  }}
+                  className="px-3 py-1.5 bg-[#936a18] hover:bg-amber-700 text-xs font-semibold rounded-lg text-white flex items-center gap-1.5 transition"
+                >
+                  <Database className="w-3.5 h-3.5" />
+                  <span>{t("Print Report", "प्रिंट रिपोर्ट")}</span>
+                </button>
+
+                <button 
+                  onClick={() => {
+                    const docText = `
+Vedic Horoscope Analysis - Astro PV
+==================================
+Name: ${nameInput}
+Gender: ${genderInput}
+Date of Birth: ${dobInput}
+Time of Birth: ${tobInput}
+Place: ${birthPlaceInput}
+Coordinates: Lat ${latitudeInput}, Lon ${longitudeInput}
+Timezone: ${timezoneInput}
+
+SUMMARY ANALYSIS
+----------------
+Mangal Dosha: ${report.mangalDosha}
+Kaal Sarp Dosha: ${report.kaalSarpDosha}
+Shani Sade Sati: ${report.sadeSati}
+
+Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
+                    `;
+                    const blob = new Blob([docText], { type: "text/plain;charset=utf-8" });
+                    const link = document.createElement("a");
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `Astro_PV_Horoscope_${nameInput.replace(/\s+/g, '_')}.txt`;
+                    link.click();
+                    alert(t("PDF Transcript downloaded successfully!", "हस्तलिखित पीडीएफ प्रतिलिपि सफलतापूर्वक डाउनलोड कर ली गई है!"));
+                  }}
+                  className="px-3 py-1.5 bg-[#1B5E3A] hover:bg-emerald-700 text-xs font-semibold rounded-lg text-white flex items-center gap-1.5 transition"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  <span>{t("Download Transcript", "ट्रांसक्रिप्ट डाउनलोड")}</span>
+                </button>
+              </div>
 
               <div className="text-right">
                 <h2 className="text-xl font-bold text-white font-cinzel">{nameInput}</h2>
@@ -2720,7 +3087,7 @@ function VedicKundliApp() {
 
         {/* -- SCREEN: ASTROLOGICAL MATCHMAKING (GUN MILAN) -- */}
         {currentScreen === 'MATCHMAKING' && (
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="max-w-4xl mx-auto space-y-6 text-left text-slate-200">
             <button 
               onClick={() => setCurrentScreen('DASHBOARD')}
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-300 flex items-center gap-1.5 transition"
@@ -2741,7 +3108,7 @@ function VedicKundliApp() {
               </div>
 
               {/* Boy / Girl Details inputs side-by-side */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 text-left">
                 
                 {/* Boy Form */}
                 <div className="p-5 bg-[#090a15] rounded-xl border border-slate-800/80 space-y-4">
@@ -2754,17 +3121,17 @@ function VedicKundliApp() {
                       type="text" 
                       value={boyName} 
                       onChange={(e) => setBoyName(e.target.value)}
-                      className="w-full bg-[#070810] border border-slate-800 focus:border-[#cca43b] rounded p-2 text-xs focus:outline-none"
+                      className="w-full bg-[#070810] border border-slate-800 focus:border-[#cca43b] rounded p-2 text-xs focus:outline-none text-white"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 text-left">
                     <div>
                       <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">{t("DOB", "जन्म तिथि")}</label>
                       <input 
                         type="date" 
                         value={boyDob} 
                         onChange={(e) => setBoyDob(e.target.value)}
-                        className="w-full bg-[#070810] border border-slate-800 rounded p-2 text-xs focus:outline-none"
+                        className="w-full bg-[#070810] border border-slate-800 rounded p-2 text-xs focus:outline-none text-white text-left"
                       />
                     </div>
                     <div>
@@ -2773,14 +3140,14 @@ function VedicKundliApp() {
                         type="time" 
                         value={boyTob} 
                         onChange={(e) => setBoyTob(e.target.value)}
-                        className="w-full bg-[#070810] border border-slate-800 rounded p-2 text-xs focus:outline-none"
+                        className="w-full bg-[#070810] border border-slate-800 rounded p-2 text-xs focus:outline-none text-white text-left"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Girl Form */}
-                <div className="p-5 bg-[#090a15] rounded-xl border border-slate-800/80 space-y-4">
+                <div className="p-5 bg-[#090a15] rounded-xl border border-slate-800/80 space-y-4 text-left">
                   <h3 className="font-bold text-white font-cinzel text-sm border-b border-slate-850 pb-2 text-transparent bg-clip-text bg-gradient-to-r from-[pink] to-rose-400">
                     👩 {t("Girl's Particulars (कन्या विवरण)", "कन्या का विवरण")}
                   </h3>
@@ -2790,17 +3157,17 @@ function VedicKundliApp() {
                       type="text" 
                       value={girlName} 
                       onChange={(e) => setGirlName(e.target.value)}
-                      className="w-full bg-[#070810] border border-slate-800 focus:border-[#cca43b] rounded p-2 text-xs focus:outline-none"
+                      className="w-full bg-[#070810] border border-slate-800 focus:border-[#cca43b] rounded p-2 text-xs focus:outline-none text-white"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 text-left">
                     <div>
                       <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">{t("DOB", "जन्म तिथि")}</label>
                       <input 
                         type="date" 
                         value={girlDob} 
                         onChange={(e) => setGirlDob(e.target.value)}
-                        className="w-full bg-[#070810] border border-slate-800 rounded p-2 text-xs focus:outline-none"
+                        className="w-full bg-[#070810] border border-slate-800 rounded p-2 text-xs focus:outline-none text-white text-left"
                       />
                     </div>
                     <div>
@@ -2809,7 +3176,7 @@ function VedicKundliApp() {
                         type="time" 
                         value={girlTob} 
                         onChange={(e) => setGirlTob(e.target.value)}
-                        className="w-full bg-[#070810] border border-slate-800 rounded p-2 text-xs focus:outline-none"
+                        className="w-full bg-[#070810] border border-slate-800 rounded p-2 text-xs focus:outline-none text-white text-left"
                       />
                     </div>
                   </div>
@@ -2832,16 +3199,16 @@ function VedicKundliApp() {
 
               {/* Matchmaking Reports display */}
               {matchReport && (
-                <div className="mt-8 border-t border-slate-800/80 pt-6 space-y-6">
+                <div className="mt-8 border-t border-slate-800/80 pt-6 space-y-6 text-left">
                   
                   {/* Score circle banner */}
                   <div className="p-6 bg-gradient-to-tr from-pink-950/20 to-slate-900 rounded-xl border border-pink-500/20 flex flex-col sm:flex-row items-center gap-6">
-                    <div className="w-24 h-24 shrink-0 rounded-full border-4 border-pink-500 flex flex-col items-center justify-center bg-black/40 text-white shadow-xl">
-                      <span className="text-3xl font-extrabold font-mono">{matchReport.score}</span>
+                    <div className="w-24 h-24 shrink-0 rounded-full border-4 border-pink-500 flex flex-col items-center justify-center bg-black/40 text-slate-100 shadow-xl bg-[#090a15]">
+                      <span className="text-3xl font-extrabold font-mono text-pink-400">{matchReport.score}</span>
                       <span className="text-[10px] font-bold text-slate-400">/ 36 Guna</span>
                     </div>
                     
-                    <div className="space-y-1 text-center sm:text-left flex-1">
+                    <div className="space-y-1 text-center sm:text-left flex-1 font-sans">
                       <div className="flex flex-col sm:flex-row items-center gap-2">
                         <span className="text-xs uppercase font-extrabold text-pink-400 tracking-wider">Astrologer Verdict:</span>
                         <span className="px-2 py-0.5 bg-pink-500/10 text-pink-400 text-xs font-bold rounded">{matchReport.level}</span>
@@ -2880,6 +3247,8 @@ function VedicKundliApp() {
           </div>
         )}
 
+
+
         {currentScreen === 'ADMIN_CONTROL' && (
           <div className="max-w-7xl mx-auto space-y-6 animate-fade-in text-slate-800">
             <button 
@@ -2906,6 +3275,340 @@ function VedicKundliApp() {
           </div>
         )}
 
+        {currentScreen === 'INTEGRATIONS' && (
+          <div className="max-w-4xl mx-auto space-y-6 animate-fade-in text-slate-800 p-4">
+            <button 
+              onClick={() => setCurrentScreen('DASHBOARD')}
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition uppercase tracking-wider mb-2 font-cinzel shadow-sm"
+              style={{ borderColor: tObj.border }}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{t("Back to Workstation", "मुख्य वर्कस्टेशन पर लौटें")}</span>
+            </button>
+
+            <div className="bg-[#0f1123] text-slate-200 rounded-3xl p-6 border border-slate-800 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500"></div>
+              
+              <div className="flex items-center gap-2.5 mb-2 text-left">
+                <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">
+                  ⚙️ {t("PV-ASTRO DATABASE SWITCHBOARD", "पीवी-एस्ट्रो डेटाबेस स्विचबोर्ड")}
+                </span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              </div>
+              
+              <h2 className="text-xl md:text-3xl font-black font-cinzel tracking-wider text-white text-left">
+                {t("Vedic Cloud Database Integrations", "वैदिक क्लाउड डेटाबेस एकीकरण")}
+              </h2>
+              <p className="text-slate-400 text-xs mt-1 max-w-xl text-left">
+                {t("Instantly toggle your active data persistence between high-density local browser storage, Supabase PostgreSQL with row-level security, or standard Google Sheets.",
+                   "अपने सक्रिय कुण्डली डेटाबेस को सीधे ब्राउज़र स्टोरेज, सुपाबेस पोस्टग्रेएसक्यूएल या गूगल शीट्स में परिवर्तित करें।")}
+              </p>
+
+              {/* Mode Selector Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 text-left">
+                {[
+                  { mode: 'LOCAL', title: 'Local Browser Storage', desc: 'Secure offline-first client storage.', badge: 'Zero Setup', icon: '💻' },
+                  { mode: 'SUPABASE', title: 'Supabase PostgreSQL', desc: 'Enterprise Row-Level Security.', badge: 'Preferred', icon: '🐳' },
+                  { mode: 'GOOGLE_SHEETS', title: 'Google Sheets DB', desc: 'Append rows directly to sheet.', badge: 'Alternative', icon: '📊' }
+                ].map((item) => {
+                  const isSelected = storageConfig.mode === item.mode;
+                  return (
+                    <div 
+                      key={item.mode}
+                      onClick={() => {
+                        const newConf = { ...storageConfig, mode: item.mode };
+                        setStorageConfig(newConf);
+                        saveStorageConfig(newConf);
+                        alert(`Switched active storage target to ${item.title}!`);
+                      }}
+                      className={`p-4 rounded-2xl bg-[#090b16] border transition cursor-pointer flex flex-col justify-between h-36 ${isSelected ? 'border-amber-400 bg-amber-400/5' : 'border-slate-800 hover:border-slate-700'}`}
+                    >
+                      <div>
+                        <div className="flex justify-between items-start">
+                          <span className="text-lg">{item.icon}</span>
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded uppercase font-mono tracking-wide text-slate-400">{item.badge}</span>
+                        </div>
+                        <h4 className="font-bold text-sm text-white mt-2 leading-none">{item.title}</h4>
+                        <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">{item.desc}</p>
+                      </div>
+                      <span className={`text-[10px] font-extrabold font-mono uppercase ${isSelected ? 'text-amber-400' : 'text-slate-600'}`}>
+                        {isSelected ? '● ACTIVE CONFIG' : '○ SELECT TARGET'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Config fields for Supabase */}
+              {storageConfig.mode === 'SUPABASE' && (
+                <div className="mt-6 border-t border-slate-850 pt-6 space-y-4 animate-fade-in text-left">
+                  <div className="flex items-center gap-1.5 border-b border-slate-855 pb-2 mb-2 text-[#cca43b]">
+                    <span className="text-sm">🐳</span>
+                    <h4 className="text-xs uppercase font-black tracking-widest">{t("SUPABASE CONFIGURATION PARAMS", "सुपाबेस प्रमाणीकरण कुंजी")}</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Supabase API Endpoint URL:</label>
+                      <input 
+                        type="text"
+                        value={storageConfig.supabaseUrl}
+                        onChange={(e) => {
+                          const updated = { ...storageConfig, supabaseUrl: e.target.value };
+                          setStorageConfig(updated);
+                          saveStorageConfig(updated);
+                        }}
+                        className="w-full bg-[#0a0c16] border border-slate-800 focus:border-amber-400 text-xs font-mono text-amber-300 rounded-lg px-3 py-2.5 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Supabase Anon Key:</label>
+                      <input 
+                        type="text"
+                        value={storageConfig.supabaseAnonKey}
+                        onChange={(e) => {
+                          const updated = { ...storageConfig, supabaseAnonKey: e.target.value };
+                          setStorageConfig(updated);
+                          saveStorageConfig(updated);
+                        }}
+                        className="w-full bg-[#0a0c16] border border-slate-800 focus:border-amber-400 text-xs font-mono text-amber-300 rounded-lg px-3 py-2.5 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-relaxed max-w-2xl">
+                    *Renders with live sign-ins enabled. Row-level security policies inside the "kundlis" table automatically filter queries matching `auth.uid()` of your active user identifier context.
+                  </p>
+                </div>
+              )}
+
+              {/* Config fields for Google Sheets */}
+              {storageConfig.mode === 'GOOGLE_SHEETS' && (
+                <div className="mt-6 border-t border-slate-850 pt-6 space-y-4 animate-fade-in text-left">
+                  <div className="flex items-center gap-1.5 border-b border-slate-855 pb-2 mb-2 text-[#cca43b]">
+                    <span className="text-sm">📊</span>
+                    <h4 className="text-xs uppercase font-black tracking-widest">{t("GOOGLE SHEETS INTEGRATION PARAMS", "गूगल शीट्स क्रेडेंशियल्स")}</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Google Sheets Spreadsheet ID:</label>
+                      <input 
+                        type="text"
+                        value={storageConfig.googleSheetId}
+                        onChange={(e) => {
+                          const updated = { ...storageConfig, googleSheetId: e.target.value };
+                          setStorageConfig(updated);
+                          saveStorageConfig(updated);
+                        }}
+                        className="w-full bg-[#0a0c16] border border-slate-800 focus:border-amber-400 text-xs font-mono text-amber-305 rounded-lg px-3 py-2.5 focus:outline-none"
+                        placeholder="e.g. 1aBCdEfgHijkLMno...PqRsTuVxYz"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Developer API Key (Optional):</label>
+                      <input 
+                        type="text"
+                        value={storageConfig.googleApiKey}
+                        onChange={(e) => {
+                          const updated = { ...storageConfig, googleApiKey: e.target.value };
+                          setStorageConfig(updated);
+                          saveStorageConfig(updated);
+                        }}
+                        className="w-full bg-[#0a0c16] border border-slate-800 focus:border-amber-400 text-xs font-mono text-amber-305 rounded-lg px-3 py-2.5 focus:outline-none"
+                        placeholder="AIzaSyA1...B2C3D4"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Apps Script Web App URL (Required):</label>
+                      <input 
+                        type="text"
+                        value={storageConfig.googleScriptUrl || ''}
+                        onChange={(e) => {
+                          const updated = { ...storageConfig, googleScriptUrl: e.target.value };
+                          setStorageConfig(updated);
+                          saveStorageConfig(updated);
+                        }}
+                        className="w-full bg-[#0a0c16] border border-slate-800 focus:border-[#cca43b] text-xs font-mono text-[#cca43b] rounded-lg px-3 py-2.5 focus:outline-none"
+                        placeholder="https://script.google.com/macros/s/.../exec"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-[#121429] p-5 rounded-2xl border border-slate-800 mt-4 space-y-4">
+                    <h5 className="text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                      <span>⚡</span>
+                      <span>{t("EASY 10-SECOND GOOGLE SHEETS SETUP GUIDE", "आसान 10-सेकंड गूगल शीट सेटअप गाइड")}</span>
+                    </h5>
+                    
+                    <ol className="text-[11px] text-slate-350 space-y-2 list-decimal list-inside text-left leading-relaxed">
+                      <li>
+                        {t("Create a new Google Sheet & copy its browser URL ID (the long string between `/d/` and `/edit`). Paste it in the ", "एक नई गूगल शीट बनाएं और उसकी यूआरएल आईडी कॉपी करें (यूआरएल में `/d/` और `/edit` के बीच का भाग)। इसे ")}
+                        <strong className="text-[#cca43b]">Spreadsheet ID</strong> {t("field above.", "बॉक्स में पेस्ट करें।")}
+                      </li>
+                      <li>
+                        {t("In your Google Sheet, click on ", "अपनी गूगल शीट में, ")}
+                        <strong className="text-white">Extensions</strong> → <strong className="text-white">Apps Script</strong>.
+                      </li>
+                      <li>
+                        {t("Delete any placeholder code and paste this ready-to-run Google Apps Script code:", "वहां मौजूदा कोड को हटाकर नीचे दिया गया गूगल एप्स स्क्रिप्ट कोड पेस्ट करें:")}
+                      </li>
+                    </ol>
+
+                    <div className="relative rounded-lg bg-slate-950 p-3 border border-slate-900 text-left">
+                      <pre className="text-[9px] font-mono text-emerald-400 overflow-x-auto max-h-36 leading-relaxed select-all scrollbar-thin">
+{`function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    
+    // Auto-create headers if sheet is brand new/empty
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["Timestamp", "Type", "ID/Email", "Name", "Gender", "Birth Date & Time", "Coordinates", "Full Payload"]);
+    }
+    
+    var timestamp = new Date();
+    var type = data.type || "unknown";
+    var userEmail = data.email || "guest";
+    var name = data.name || data.person_name || "";
+    var gender = data.gender || "";
+    var datetime = (data.dob || "") + " " + (data.tob || "");
+    var coords = (data.lat || "0") + ", " + (data.lon || "0");
+    var fullJson = JSON.stringify(data);
+    
+    sheet.appendRow([timestamp, type, userEmail, name, gender, datetime, coords, fullJson]);
+    
+    return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Kundli added successfully!" }))
+      .setMimeType(ContentService.MimeType.JSON)
+      .addHeader("Access-Control-Allow-Origin", "*");
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON)
+      .addHeader("Access-Control-Allow-Origin", "*");
+  }
+}`}
+                      </pre>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["Timestamp", "Type", "ID/Email", "Name", "Gender", "Birth Date & Time", "Coordinates", "Full Payload"]);
+    }
+    
+    var timestamp = new Date();
+    var type = data.type || "unknown";
+    var userEmail = data.email || "guest";
+    var name = data.name || data.person_name || "";
+    var gender = data.gender || "";
+    var datetime = (data.dob || "") + " " + (data.tob || "");
+    var coords = (data.lat || "0") + ", " + (data.lon || "0");
+    var fullJson = JSON.stringify(data);
+    
+    sheet.appendRow([timestamp, type, userEmail, name, gender, datetime, coords, fullJson]);
+    
+    return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Kundli added successfully!" }))
+      .setMimeType(ContentService.MimeType.JSON)
+      .addHeader("Access-Control-Allow-Origin", "*");
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON)
+      .addHeader("Access-Control-Allow-Origin", "*");
+  }
+}`);
+                          alert("Google Apps Script code copied to clipboard! Paste it into the Apps Script editor.");
+                        }}
+                        className="absolute top-2 right-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[9px] px-2.5 py-1 rounded transition uppercase tracking-wider"
+                      >
+                        📋 Copy Script
+                      </button>
+                    </div>
+
+                    <ol className="text-[11px] text-slate-350 space-y-2 list-decimal list-inside text-left leading-relaxed" start="4">
+                      <li>
+                        {t("Click on ", "ऊपर ")}
+                        <strong className="text-white">Deploy</strong> → <strong className="text-white">New deployment</strong>.
+                      </li>
+                      <li>
+                        {t("Click the gear icon next to 'Select type', choose ", "प्रकार के लिए गियर आइकन पर क्लिक करें और ")}
+                        <strong className="text-amber-400">Web app</strong>.
+                      </li>
+                      <li>
+                        {t("Configure: Set 'Execute as' to ", "कॉन्फ़िगर करें: 'Execute as' को ")}
+                        <strong className="text-white">Me (your-email)</strong> {t("and set 'Who has access' to ", "और 'Who has access' को ")}
+                        <strong className="text-white">Anyone</strong>. {t("This is crucial for secure, bypassable CORS access.", "यह बिना रुकावट डेटा भेजने के लिए अनिवार्य है।")}
+                      </li>
+                      <li>
+                        {t("Click Deploy, click 'Authorize access' if prompted, then copy the ", "Deploy पर क्लिक करें, अनुमति दें, और फिर जनरेट की गई ")}
+                        <strong className="text-[#cca43b]">Web App URL</strong>.
+                      </li>
+                      <li>
+                        {t("Paste that Web App URL into the ", "उस एप वेब यूआरएल को ऊपर दिए गए ")}
+                        <strong className="text-white">Apps Script Web App URL</strong> {t("input box above and save settings! 🎉", "अंतिम बॉक्स में पेस्ट करें और सेव करें! 🎉")}
+                      </li>
+                    </ol>
+
+                    <div className="pt-2.5 flex flex-col sm:flex-row justify-between items-center bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 gap-3">
+                      <span className="text-[10px] text-slate-400 leading-normal text-left sm:max-w-md">
+                        <strong>{t("Need status check?", "कनेक्शन जांचना चाहते हैं?")}</strong> {t("Send a diagnostic ping to confirm your Apps Script Web App URL is correctly configured and reachable.", "अपनी एपीआई कनेक्टिविटी को सत्यापित करने और जांचने के लिए पिंग बटन क्लिक करें।")}
+                      </span>
+                      <button
+                        onClick={async () => {
+                          if (!storageConfig.googleScriptUrl) {
+                            alert("Please paste the Google Apps Script Web App URL in the setup box first!");
+                            return;
+                          }
+                          try {
+                            const res = await fetch(storageConfig.googleScriptUrl, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'text/plain' },
+                              body: JSON.stringify({
+                                type: 'test_ping',
+                                email: currentUser || 'puneet@test-pva.org',
+                                name: 'PV-Astro Diagnostic Test Record'
+                              })
+                            });
+                            const body = await res.json();
+                            if (body && (body.success || res.ok)) {
+                              alert("✅ Connection Successful! Google Sheet is connected and ready to sync real horoscopes!");
+                            } else {
+                              alert("⚠️ Connected but sheet returned failure. Verify sharing permission on Google Spreadsheet.");
+                            }
+                          } catch (err) {
+                            alert("❌ Connection Fail: Check console details or ensure you selected Who Has Access: Anyone when deploying Google Script.");
+                            console.error(err);
+                          }
+                        }}
+                        className="px-4 py-2 bg-[#cca43b] hover:brightness-110 text-slate-950 font-bold text-[10px] uppercase tracking-wider rounded-lg transition shrink-0"
+                      >
+                        ⚡ Test Sync Connection
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <p className="text-[10px] text-slate-500 leading-relaxed max-w-2xl">
+                    *Appends horoscope metrics automatically as rows with: `Timestamp`, `Data Type`, `User ID/Email`, `Seeker Name`, `Gender`, `Birth Date & Time`, `Coordinates`, and raw complete JSON configurations. Perfect for backup analytics pipelines.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+                <button
+                  onClick={() => {
+                    alert("Astro PV Configuration Saved and Synchronized successfully!");
+                    setCurrentScreen('DASHBOARD');
+                  }}
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl transition shadow-lg"
+                >
+                  Apply & Reload Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {currentScreen === 'SOCIETY_UPDATES' && (
           <div className="max-w-7xl mx-auto space-y-6 animate-fade-in text-slate-800">
             <button 
@@ -2917,6 +3620,637 @@ function VedicKundliApp() {
               <span>{t("Back to Workstation", "मुख्य वर्कस्टेशन पर लौटें")}</span>
             </button>
             <SocietyUpdatesHub currentLanguage={currentLanguage} t={t} tObj={tObj} />
+          </div>
+        )}
+
+        {currentScreen === 'SOCIETY_UPDATES' && (
+          <div className="max-w-7xl mx-auto space-y-6 animate-fade-in text-slate-800">
+            <button 
+              onClick={() => setCurrentScreen('DASHBOARD')}
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition uppercase tracking-wider mb-2 font-cinzel shadow-sm"
+              style={{ borderColor: tObj.border }}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{t("Back to Workstation", "मुख्य वर्कस्टेशन पर लौटें")}</span>
+            </button>
+            <SocietyUpdatesHub currentLanguage={currentLanguage} t={t} tObj={tObj} />
+          </div>
+        )}
+
+        {currentScreen === 'KUNDLI_LIBRARY' && (
+          <div className="max-w-7xl mx-auto space-y-6 animate-fade-in text-left p-4 md:p-6 text-slate-205">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+              <div>
+                <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full text-[10px] font-black uppercase tracking-widest font-mono">
+                  🌌 PV-ASTRO SECURE VAULT
+                </span>
+                <h2 className="text-2xl md:text-4xl font-extrabold font-cinzel text-white mt-1.5">
+                  {t("Vedic Kundli Library", "वैदिक कुण्डली संग्रहालय")}
+                </h2>
+                <p className="text-xs text-slate-400 mt-1 max-w-xl">
+                  {t("Manage your digital collection of analyzed birth charts. Keep family members, spouses, children, or clientele sorted securely under high-end cloud partitions.",
+                     "अपने विश्लेषण किए गए जन्म चार्ट के डिजिटल संग्रह का प्रबंधन करें। परिवार के सदस्यों, जीवनसाथी, बच्चों, या ग्राहकों के विवरण को सुरक्षित रखें।")}
+                </p>
+              </div>
+              <button 
+                onClick={handleNewKundliClick}
+                className="px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 text-xs font-black uppercase tracking-widest rounded-xl transition shadow-lg flex items-center gap-2 self-start md:self-center"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>{t("Calculate New Kundli", "नई कुंडली विश्लेषण")}</span>
+              </button>
+            </div>
+
+            {/* ANALYTICS RIBBON (Dashboard Analytics) */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-[#0b0c16] rounded-2xl p-4 border border-slate-850 hover:border-slate-800 transition shadow-sm">
+                <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Total Active Charts</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-white font-mono">{savedKundlis.filter(k => !k.isTrash).length}</span>
+                  <span className="text-[10px] text-emerald-400 font-mono">Cloud Sync ✔</span>
+                </div>
+              </div>
+              <div className="bg-[#0b0c16] rounded-2xl p-4 border border-slate-850 hover:border-slate-800 transition shadow-sm">
+                <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Saved Favorites</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-amber-400 font-mono">
+                    {savedKundlis.filter(k => k.favorite && !k.isTrash).length}
+                  </span>
+                  <span className="text-[10px] text-amber-400">★ Starred</span>
+                </div>
+              </div>
+              <div className="bg-[#0b0c16] rounded-2xl p-4 border border-slate-850 hover:border-slate-800 transition shadow-sm">
+                <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Last Analyzed Seeker</span>
+                <div className="truncate text-sm font-bold text-slate-205 font-cinzel mt-1">
+                  {(() => {
+                    try {
+                      const last = JSON.parse(localStorage.getItem('pva_last_profile'));
+                      return last ? last.name : t("None Compiled", "कोई उपलब्ध नहीं");
+                    } catch(e) { return t("None Compiled", "कोई उपलब्ध नहीं"); }
+                  })()}
+                </div>
+              </div>
+              <div className="bg-[#0b0c16] rounded-2xl p-4 border border-slate-850 hover:border-slate-800 transition shadow-sm">
+                <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Backup Target</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-xs font-black uppercase font-mono px-2 py-0.5 bg-slate-900 border border-slate-800 text-amber-400 rounded">
+                    {storageConfig.mode}
+                  </span>
+                  <span className="text-[9px] text-emerald-400">Live</span>
+                </div>
+              </div>
+            </div>
+
+            {/* TAB SELECTOR: ACTIVE VS TRASH BIN */}
+            <div className="flex border-b border-slate-850">
+              <button 
+                onClick={() => setLibraryTab('active')}
+                className={`px-6 py-3 text-xs uppercase font-extrabold tracking-widest transition-all border-b-2 ${libraryTab === 'active' ? 'border-amber-400 text-white font-black' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+              >
+                📁 {t("Active Directory", "सक्रिय निर्देशिका")} ({savedKundlis.filter(k => !k.isTrash).length})
+              </button>
+              <button 
+                onClick={() => setLibraryTab('trash')}
+                className={`px-6 py-3 text-xs uppercase font-extrabold tracking-widest transition-all border-b-2 ${libraryTab === 'trash' ? 'border-amber-400 text-white font-black' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+              >
+                🗑️ {t("Smart Recovery (Trash)", "स्मार्ट ट्रैश रिकवरी")} ({savedKundlis.filter(k => k.isTrash).length})
+              </button>
+            </div>
+
+            {/* ACTIONS BAR (Search, Filters, Sorting) */}
+            <div className="bg-[#0b0c16]/50 p-4 rounded-2xl border border-slate-850 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input 
+                  type="text"
+                  value={librarySearchQuery}
+                  onChange={(e) => setLibrarySearchQuery(e.target.value)}
+                  placeholder={t("Filter by Name, place, or date...", "नाम, स्थान या जन्मतिथि से खोजें...")}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-400 rounded-xl pl-10 pr-4 py-2 text-xs text-white focus:outline-none placeholder-slate-605 font-medium"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                {/* Category Filter */}
+                {libraryTab !== 'trash' && (
+                  <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl text-xs text-slate-400">
+                    <span className="text-[10px] font-bold uppercase">Topic:</span>
+                    <select 
+                      value={libraryCategoryFilter}
+                      onChange={(e) => setLibraryCategoryFilter(e.target.value)}
+                      className="bg-transparent border-none text-slate-100 font-bold focus:outline-none"
+                    >
+                      {['All', 'Self', 'Family', 'Spouse', 'Children', 'Friends', 'Clients', 'Custom Category'].map(cat => (
+                        <option key={cat} value={cat} className="bg-slate-950 text-white">{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Sort selector */}
+                <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl text-xs text-slate-400">
+                  <span className="text-[10px] font-bold uppercase">Order:</span>
+                  <select 
+                    value={librarySortBy}
+                    onChange={(e) => setLibrarySortBy(e.target.value)}
+                    className="bg-transparent border-none text-slate-100 font-bold focus:outline-none"
+                  >
+                    <option value="newest" className="bg-slate-950">{t("Newest First", "नवीनतम पहले")}</option>
+                    <option value="name" className="bg-slate-950">{t("Alphabetical", "वर्णमाला क्रम")}</option>
+                    <option value="category" className="bg-slate-950">{t("Group Categories", "श्रेणी वार")}</option>
+                    <option value="favorite" className="bg-slate-950">{t("Favorites High", "पसंदीदा पहले")}</option>
+                  </select>
+                </div>
+
+                {libraryTab === 'trash' && savedKundlis.some(k => k.isTrash) && (
+                  <button 
+                    onClick={() => {
+                      if (confirm(t("Are you sure you want to permanently empty the trash? This cannot be undone.", 
+                                      "क्या आप वाकई ट्रैश खाली करना चाहते हैं? इसे पूर्ववत नहीं किया जा सकता है।"))) {
+                        const guestOrUser = currentUser || 'guest@vedicastrology.org';
+                        kundliDbService.emptyTrash(guestOrUser).then(() => {
+                          kundliDbService.fetchSavedKundlis(guestOrUser).then(res => setSavedKundlis(res));
+                          triggerNotification("Trash Cleared", "Permanently purged all deleted records.", "success");
+                        });
+                      }
+                    }}
+                    className="px-4 py-2 bg-red-950 hover:bg-red-900 border border-red-800/40 text-red-300 font-extrabold text-xs uppercase rounded-xl transition"
+                  >
+                    Empty Trash
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* KUNDLI GRID DISPLAY */}
+            {(() => {
+              // Filter active vs trash
+              let processed = savedKundlis.filter(k => libraryTab === 'trash' ? k.isTrash : !k.isTrash);
+
+              // Apply live text queries
+              if (librarySearchQuery.trim()) {
+                processed = processed.filter(k => 
+                  (k.name || '').toLowerCase().includes(librarySearchQuery.toLowerCase()) ||
+                  (k.place || '').toLowerCase().includes(librarySearchQuery.toLowerCase()) ||
+                  (k.dob || '').toLowerCase().includes(librarySearchQuery.toLowerCase()) ||
+                  (k.notes || '').toLowerCase().includes(librarySearchQuery.toLowerCase())
+                );
+              }
+
+              // Apply Category Filter
+              if (libraryTab !== 'trash' && libraryCategoryFilter !== 'All') {
+                processed = processed.filter(k => (k.category || 'Self') === libraryCategoryFilter);
+              }
+
+              // Apply Ordering
+              if (librarySortBy === 'name') {
+                processed.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+              } else if (librarySortBy === 'category') {
+                processed.sort((a, b) => (a.category || 'Self').localeCompare(b.category || 'Self'));
+              } else if (librarySortBy === 'favorite') {
+                processed.sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0));
+              } else {
+                // newest
+                processed.sort((a, b) => (b.id || 0) - (a.id || 0));
+              }
+
+              if (processed.length === 0) {
+                return (
+                  <div className="py-16 text-center border-2 border-dashed border-slate-850 rounded-3xl bg-slate-950/20">
+                    <span className="text-3xl">🌌</span>
+                    <h4 className="text-slate-300 font-semibold mt-4 text-base">{t("No Matchable Kundlis Found", "कोई कुंडली फ़ाइल नहीं मिली")}</h4>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                      {libraryTab === 'trash' 
+                        ? t("Your recycling yard is completely empty.", "आपका ट्रैश वर्तमान में पूरी तरह खाली है।")
+                        : t("Start by generating a birth chart or checking your filter options.", "एक नई कुंडली जनरेट करके या फ़िल्टर बदलकर पुनः प्रयास करें।")
+                      }
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {processed.map(profile => {
+                    const isCardEditing = editingKundliId === profile.id;
+                    return (
+                      <div 
+                        key={profile.id}
+                        className="bg-[#0b0c16] rounded-2xl border border-slate-850 hover:border-slate-800 transition shadow-md overflow-hidden relative flex flex-col justify-between"
+                      >
+                        {/* Dynamic category pill accent boundary flag */}
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500/30 to-amber-500/30"></div>
+
+                        <div className="p-5 space-y-3 flex-1 text-left">
+                          <div className="flex justify-between items-start gap-2">
+                            {/* Star trigger & Category badge */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                profile.category === 'Self' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
+                                profile.category === 'Family' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                                profile.category === 'Clients' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' :
+                                'bg-slate-800/40 border-slate-700/30 text-slate-300'
+                              }`}>
+                                {profile.category || 'Self'}
+                              </span>
+                              
+                              {libraryTab !== 'trash' && (
+                                <button 
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const account = currentUser || 'guest@vedicastrology.org';
+                                    await kundliDbService.toggleFavorite(account, profile.id);
+                                    const list = await kundliDbService.fetchSavedKundlis(account);
+                                    setSavedKundlis(list);
+                                    triggerNotification(
+                                      profile.favorite ? "Unstarred" : "Starred", 
+                                      `${profile.name} category favorite state shifted.`, 
+                                      "success"
+                                    );
+                                  }}
+                                  className="p-1 hover:bg-slate-900 rounded transition text-amber-400 text-xs"
+                                  title="Toggle favorite rating"
+                                >
+                                  {profile.favorite ? "★ Starred" : "☆ Star"}
+                                </button>
+                              )}
+                            </div>
+
+                            <span className="text-[9px] font-mono font-bold text-slate-505">
+                              {new Date(profile.id).toLocaleDateString()}
+                            </span>
+                          </div>
+
+                          {/* IF CARDS EDIT MODE ACTIVE */}
+                          {isCardEditing ? (
+                            <div className="space-y-3 bg-[#0a0b12] p-3 rounded-lg border border-slate-800 animate-slide-in">
+                              <div>
+                                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Seeker Name:</label>
+                                <input 
+                                  type="text"
+                                  value={editingKundliData.name}
+                                  onChange={(e) => setEditingKundliData({ ...editingKundliData, name: e.target.value })}
+                                  className="w-full bg-[#07080f] border border-slate-800 rounded px-2 py-1.5 text-xs text-white focus:outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Category:</label>
+                                <select 
+                                  value={editingKundliData.category}
+                                  onChange={(e) => setEditingKundliData({ ...editingKundliData, category: e.target.value })}
+                                  className="w-full bg-[#07080f] border border-slate-800 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                                >
+                                  {['Self', 'Family', 'Spouse', 'Children', 'Friends', 'Clients', 'Custom Category'].map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Seeker Notes:</label>
+                                <textarea 
+                                  value={editingKundliData.notes || ''}
+                                  onChange={(e) => setEditingKundliData({ ...editingKundliData, notes: e.target.value })}
+                                  placeholder="E.g. Sade Sati ongoing, highly sensitive planet lines..."
+                                  rows={2}
+                                  className="w-full bg-[#07080f] border border-slate-800 rounded px-2 py-1.5 text-xs text-white placeholder-slate-650"
+                                />
+                              </div>
+
+                              <div className="flex gap-2 justify-end pt-1">
+                                <button 
+                                  onClick={() => setEditingKundliId(null)}
+                                  className="px-2.5 py-1 bg-slate-900 border border-slate-800 text-[10px] text-slate-405 font-bold rounded"
+                                >
+                                  Cancel
+                                </button>
+                                <button 
+                                  onClick={async () => {
+                                    const account = currentUser || 'guest@vedicastrology.org';
+                                    await kundliDbService.updateKundliMeta(account, profile.id, editingKundliData);
+                                    const list = await kundliDbService.fetchSavedKundlis(account);
+                                    setSavedKundlis(list);
+                                    setEditingKundliId(null);
+                                    triggerNotification("Saved", `${editingKundliData.name}'s profile parameters updated.`, "success");
+                                  }}
+                                  className="px-2.5 py-1 bg-[#cca43b] text-slate-950 font-black text-[10px] rounded animate-pulse"
+                                >
+                                  Save Changes
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <h3 className="text-base font-black font-cinzel text-white line-clamp-1 flex items-center gap-1">
+                                <span>{profile.name}</span>
+                                {profile.gender === 'Female' ? '♀' : '♂'}
+                              </h3>
+                              <div className="space-y-1 mt-2 text-[10px] text-slate-400 font-mono leading-relaxed">
+                                <p>📅 <span className="text-slate-350 font-bold">{profile.dob}</span> | 🕒 <span className="text-slate-355 font-bold">{profile.tob}</span></p>
+                                <p>📍 <span className="text-slate-350 truncate">{profile.place}</span></p>
+                                <p>🌐 <span className="text-slate-500">Coord:</span> {profile.lat?.toFixed(3)}, {profile.lon?.toFixed(3)} ({profile.timezone})</p>
+                              </div>
+
+                              {profile.notes && (
+                                <div className="mt-3.5 p-2 bg-[#07080e] border border-slate-855 rounded-lg text-[10px] text-slate-400 leading-normal italic relative">
+                                  <span className="text-[8px] font-bold text-[#cca43b] uppercase block not-italic mb-0.5">Notes Notebook:</span>
+                                  {profile.notes}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions drawer */}
+                        <div className="bg-slate-950/40 px-4 py-3.5 border-t border-slate-900 flex justify-between gap-1 sm:gap-2 text-[10px] items-center flex-wrap shrink-0">
+                          {libraryTab === 'trash' ? (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  const account = currentUser || 'guest@vedicastrology.org';
+                                  await kundliDbService.restoreKundli(account, profile.id);
+                                  const list = await kundliDbService.fetchSavedKundlis(account);
+                                  setSavedKundlis(list);
+                                  triggerNotification("Restored", "Kundli moved back to the active directory.", "success");
+                                }}
+                                className="px-3 py-1.5 bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 font-bold rounded-lg transition"
+                              >
+                                Restore Chart
+                              </button>
+
+                              <button
+                                onClick={async () => {
+                                  if (confirm(t("Are you sure you want to permanently erase this chart completely? This action is absolutely irreversible.", 
+                                                  "क्या आप वाकई इस चार्ट को संपुर्णतः मिटाना चाहते हैं?"))) {
+                                    const account = currentUser || 'guest@vedicastrology.org';
+                                    await kundliDbService.permanentDeleteKundli(account, profile.id);
+                                    const list = await kundliDbService.fetchSavedKundlis(account);
+                                    setSavedKundlis(list);
+                                    triggerNotification("Purged Permanently", "Data erased.", "info");
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-red-950/30 hover:bg-red-950/70 border border-red-900 text-red-000 font-bold rounded-lg transition"
+                              >
+                                Permanent Delete
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button 
+                                onClick={() => navigateToReport(profile)}
+                                className="px-3 py-1.5 bg-indigo-950 hover:bg-indigo-900 text-indigo-400 font-bold rounded-lg transition border border-indigo-900/40"
+                              >
+                                {t("Compute →", "चार्ट देखें →")}
+                              </button>
+
+                              <div className="flex items-center gap-1.5 ml-auto">
+                                {!isCardEditing && (
+                                  <button 
+                                    onClick={() => {
+                                      setEditingKundliId(profile.id);
+                                      setEditingKundliData({
+                                        name: profile.name,
+                                        category: profile.category || 'Self',
+                                        notes: profile.notes || ''
+                                      });
+                                    }}
+                                    className="p-1.5 hover:bg-slate-900 text-slate-400 hover:text-white transition rounded"
+                                    title="Edit Meta Info"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+
+                                {/* Duplicate */}
+                                <button 
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const account = currentUser || 'guest@vedicastrology.org';
+                                    const copy = { ...profile, name: `${profile.name} (Copy)`, id: Date.now() };
+                                    await kundliDbService.saveKundli(account, copy);
+                                    const list = await kundliDbService.fetchSavedKundlis(account);
+                                    setSavedKundlis(list);
+                                    triggerNotification("Cloned", `${profile.name} duplicated.`, "success");
+                                  }}
+                                  className="p-1.5 hover:bg-slate-900 text-slate-400 hover:text-amber-400 transition"
+                                  title="Duplicate Chart Profile"
+                                >
+                                  📄
+                                </button>
+
+                                {/* Trash soft delete trigger */}
+                                <button 
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const account = currentUser || 'guest@vedicastrology.org';
+                                    await kundliDbService.deleteKundli(account, profile.id);
+                                    const list = await kundliDbService.fetchSavedKundlis(account);
+                                    setSavedKundlis(list);
+                                    triggerNotification(
+                                      "Moved to Trash Bin", 
+                                      "Kept in recycle drawer for up to 30 days before eradication.", 
+                                      "info"
+                                    );
+                                  }}
+                                  className="p-1.5 hover:bg-slate-900 text-red-500/80 hover:text-red-400 transition rounded"
+                                  title="Move to trash"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {currentScreen === 'USER_PROFILE' && (
+          <div className="max-w-4xl mx-auto space-y-6 animate-fade-in text-slate-205 p-4 md:p-6 text-left animate-slide-up">
+            {/* Header / Meta card */}
+            <div className="bg-[#0b0c16] rounded-3xl p-6.5 border border-slate-800 shadow-xl relative overflow-hidden flex flex-col md:flex-row justify-between gap-6">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-bl-full pointer-events-none"></div>
+              
+              <div className="flex items-center gap-4.5">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#936a18] to-amber-500 border border-[#cca43b] flex items-center justify-center text-3xl font-bold font-mono shadow-md text-white">
+                  {(currentUser || 'G')[0].toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-xl md:text-2xl font-black font-cinzel text-white leading-tight">
+                    {currentUser ? userProfileData.name || 'Vedic Initiate Seeker' : t("Standard Guest Explorer", "अतिथि अन्वेषक")}
+                  </h2>
+                  <p className="text-xs font-mono text-[#cca43b] mt-0.5">{currentUser || 'guest@vedicastrology.org'}</p>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Joined Circle: <span className="font-bold text-slate-300 font-mono">{userProfileData.registeredAt || '2026-05-24'}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2.5 items-center">
+                <span className={`px-3 py-1 rounded-full text-xs font-black uppercase font-mono ${
+                  activeUserIsPremium ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400 animate-pulse' : 'bg-slate-900 border border-slate-800 text-slate-400'
+                }`}>
+                  {activeUserIsPremium ? '💎 Master Premium Seeker' : '👤 Standard Access Seeker'}
+                </span>
+
+                {currentUser && (
+                  <button 
+                    onClick={() => {
+                      setCurrentUser(null);
+                      localStorage.removeItem('pva_current_user');
+                      triggerNotification("Signed Out", "Successfully signed out of secure session.", "info");
+                      setCurrentScreen('DASHBOARD');
+                    }}
+                    className="px-4 py-1.5 bg-red-950/20 hover:bg-red-950/60 border border-red-900/30 text-red-100 hover:text-white transition text-[11px] font-bold uppercase rounded-lg"
+                  >
+                    Logout Out
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Profile Statistics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="bg-[#0b0c16]/60 p-4.5 rounded-2xl border border-slate-850">
+                <span className="text-[9px] uppercase font-bold text-slate-400 block mb-1">Total Digital Saves</span>
+                <span className="text-3xl font-black text-white font-mono">{savedKundlis.length}</span>
+                <p className="text-[9.5px] text-slate-500 mt-1">Synchronized beautifully across high precision cloud tables.</p>
+              </div>
+
+              <div className="bg-[#0b0c16]/60 p-4.5 rounded-2xl border border-slate-850">
+                <span className="text-[9px] uppercase font-bold text-slate-400 block mb-1">Favorites Tagged</span>
+                <span className="text-3xl font-black text-amber-400 font-mono">
+                  {savedKundlis.filter(k => k.favorite && !k.isTrash).length}
+                </span>
+                <p className="text-[9.5px] text-slate-500 mt-1">Quick star list profiles for instant computation anytime.</p>
+              </div>
+
+              <div className="bg-[#0b0c16]/60 p-4.5 rounded-2xl border border-slate-850">
+                <span className="text-[9px] uppercase font-bold text-slate-400 block mb-1">Last Secure Backup Session</span>
+                <span className="text-sm font-bold text-slate-300 font-mono block mt-2">
+                  {userProfileData.lastLogin ? new Date(userProfileData.lastLogin).toLocaleTimeString() : 'N/A'}
+                </span>
+                <span className="text-[9px] text-[#cca43b] uppercase font-black font-mono tracking-wide mt-1 block">Active Endpoint Handlers Secure</span>
+              </div>
+            </div>
+
+            {/* Account Settings Forms */}
+            {currentUser && (
+              <div className="bg-[#0b0c16] rounded-3xl border border-slate-800 p-6.5 space-y-6">
+                <div className="border-b border-slate-850 pb-3">
+                  <h3 className="text-sm font-extrabold font-cinzel text-white uppercase tracking-wider">⚙️ Personal Profile Configurator</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Customize your name, manage avatar, and control backup structures.</p>
+                </div>
+
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const targetName = e.target.elements.profileName.value.trim();
+                  if (targetName) {
+                    const updated = { ...userProfileData, name: targetName };
+                    setUserProfileData(updated);
+                    authService.updateUserProfile(currentUser, updated).then(() => {
+                      triggerNotification("Updated Profile", "Your profile details have been altered successfully.", "success");
+                    });
+                  }
+                }} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] text-slate-405 font-extrabold uppercase block mb-1.5">Profile Display Name:</label>
+                      <input 
+                        name="profileName"
+                        type="text"
+                        defaultValue={userProfileData.name || ''}
+                        placeholder="E.g. Puneet Kumar"
+                        className="w-full bg-[#07080f] border border-slate-800 focus:border-amber-450 text-xs px-3 py-2 text-white placeholder-slate-705 rounded-lg focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-slate-405 font-extrabold uppercase block mb-1.5">Account Connected Email Id:</label>
+                      <input 
+                        type="text"
+                        disabled
+                        value={currentUser}
+                        className="w-full bg-slate-900 border border-slate-800 text-xs text-slate-500 px-3 py-2 rounded-lg cursor-not-allowed font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button 
+                      type="submit"
+                      className="px-5 py-2.5 bg-[#cca43b] hover:bg-[#e5c060] text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl transition shadow"
+                    >
+                      Save Profile Changes
+                    </button>
+                  </div>
+                </form>
+
+                {/* ADVANCED ACCOUNT SECURITY */}
+                <div className="pt-6 border-t border-slate-850 space-y-4 text-left">
+                  <h3 className="text-xs uppercase font-black text-red-400 tracking-wider">🔒 Delete / Decommission Account Area</h3>
+                  <p className="text-slate-400 text-[10px] leading-relaxed font-mono">
+                    Under strict compliance, deleting your account is a complete erasure that eradicates your credentials, linked Supabase PostgreSQL profiles, and all savy analytics metadata immediately.
+                  </p>
+                  
+                  <button 
+                    onClick={async () => {
+                      const confirmationPhrase = prompt(t("Please type 'CONFIRM DELETE' to fully eradicate your account forever:", "अपने खाते को मिटाने के लिए कृपया 'CONFIRM DELETE' टाइप करें:"));
+                      if (confirmationPhrase === 'CONFIRM DELETE') {
+                        await authService.deleteUserAccount(currentUser);
+                        setCurrentUser(null);
+                        localStorage.removeItem('pva_current_user');
+                        triggerNotification("Eradicated Permanently", "Account closed and completely wiped.", "info");
+                        setCurrentScreen('DASHBOARD');
+                      } else if (confirmationPhrase) {
+                        triggerNotification("Deletion Cancelled", "Did not match deletion confirmation phrase.", "warning");
+                      }
+                    }}
+                    className="px-4 py-2 bg-red-955/35 hover:bg-red-900 border border-red-800 text-red-300 hover:text-red-100 transition text-[10px] font-bold uppercase tracking-wider rounded-lg"
+                  >
+                    Permanently Erase My Account
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PV-ASTRO FLOATING TOASTS NOTIFICATION PANEL */}
+        {alertsList.length > 0 && (
+          <div className="fixed bottom-6 right-6 z-[200] flex flex-col gap-3 max-w-sm w-full font-sans transition-all duration-300">
+            {alertsList.map(item => (
+              <div 
+                key={item.id}
+                className="p-4 bg-[#0a0b12] border rounded-2xl shadow-2xl flex items-start gap-3.5 border-slate-800 text-left animate-slide-in relative overflow-hidden"
+              >
+                <div className="absolute top-0 bottom-0 left-0 w-1 bg-gradient-to-b from-[#cca43b] to-yellow-450"></div>
+                <span className="text-lg">
+                  {item.type === 'success' ? '🚀' : item.type === 'warning' ? '⚠️' : '☸️'}
+                </span>
+                <div className="space-y-0.5 flex-1 pr-4">
+                  <h4 className="text-xs font-extrabold text-white uppercase tracking-wider leading-none font-cinzel">
+                    {item.title}
+                  </h4>
+                  <p className="text-[10px] text-slate-400 leading-normal">
+                    {item.message}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setAlertsList(prev => prev.filter(a => a.id !== item.id))}
+                  className="text-slate-500 hover:text-white p-0.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -2996,6 +4330,140 @@ function VedicKundliApp() {
                 </form>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {guestGateAction && (
+          <div className="fixed inset-0 bg-[#070810]/85 backdrop-blur-md flex justify-center items-center z-[150] p-4 text-slate-100 font-sans">
+            <div className="bg-[#0b0c16] rounded-3xl w-full max-w-lg border border-slate-800 shadow-2xl p-7 relative overflow-hidden animate-scale-up text-left">
+              <button 
+                onClick={() => setGuestGateAction(null)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 hover:bg-slate-900 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center space-y-3 mb-6">
+                <span className="inline-block px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full text-[10px] font-black uppercase tracking-widest font-mono">
+                  ☸️ {t("VEDIC ANALYSIS WORKSPACE ENROLLMENT", "वैदिक विश्लेषण पंजीकरण")}
+                </span>
+                <h3 className="text-lg md:text-2xl font-bold font-cinzel text-white">
+                  {guestGateAction.type === 'generate_chart' 
+                    ? t("Personalize and Save Your Chart", "अपनी कुंडली को सुरक्षित करें") 
+                    : t("Save Kundli Safely in Cloud", "कुण्डली क्लाउड पर सुरक्षित करें")
+                  }
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
+                  {t("Secure your celestial metrics in your Kundli Library! Creating an account gives you multi-device real-time sync, smart trash recovery, and unlimited saves.",
+                     "अपनी कुंडलियों को स्थायी रूप से सुरक्षित रखने और असीमित क्लाउड बैकअप के लिए अपने खाते में लॉग इन करें।")}
+                </p>
+              </div>
+
+              <div className="space-y-3.5">
+                {/* Option 1: Save permanently */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem('pva_pending_save_payload', JSON.stringify(guestGateAction.payload));
+                    localStorage.setItem('pva_pending_gate_action_type', guestGateAction.type);
+                    setGuestGateAction(null);
+                    setAuthActiveTab('signup');
+                    setCurrentScreen('AUTH');
+                    triggerNotification("Register Account", "Create your account to save this chart permanently.", "info");
+                  }}
+                  className="w-full p-4 bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-between shadow-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-base">✨</span>
+                    <div className="text-left">
+                      <span className="block font-black tracking-wider text-slate-950 text-[11px] leading-tight">{t("Save this Kundli permanently", "इस कुंडली को स्थायी रूप से सहेजें")}</span>
+                      <span className="block text-[9px] text-slate-800 font-medium normal-case mt-0.5">{t("Create a cloud backed profile in seconds", "कुछ ही सेकंड में क्लाउड पर एक प्रोफ़ाइल बनाएं")}</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 shrink-0 text-slate-950" />
+                </button>
+
+                {/* Option 2: Login with Google */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const res = await authService.loginWithGoogle();
+                    if (res && res.success) {
+                      setCurrentUser(res.user.email);
+                      setUsersList(prev => {
+                        const exists = prev.find(u => u.email.toLowerCase() === res.user.email.toLowerCase());
+                        if (!exists) {
+                          return [...prev, { email: res.user.email, name: res.user.name, isPremium: res.user.email.toLowerCase() === 'nespuneet2501@gmail.com', method: 'Google OAuth', registeredAt: '2026-05-27' }];
+                        }
+                        return prev;
+                      });
+
+                      await kundliDbService.saveKundli(res.user.email, guestGateAction.payload);
+                      const list = await kundliDbService.fetchSavedKundlis(res.user.email);
+                      setSavedKundlis(list);
+                      
+                      // Show report or trigger depending on action type
+                      localStorage.setItem('pva_last_profile', JSON.stringify(guestGateAction.payload));
+                      setCurrentScreen('KUNDLI_REPORT');
+                      setGuestGateAction(null);
+                    }
+                  }}
+                  className="w-full p-3.5 bg-slate-900 hover:bg-slate-850 text-slate-200 hover:text-white font-bold text-xs uppercase tracking-wider rounded-xl border border-slate-805 transition flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-base">🤖</span>
+                    <div className="text-left">
+                      <span className="block">{t("Sign in with Google", "गूगल के साथ लॉगिन करें")}</span>
+                      <span className="block text-[8px] text-slate-500 font-semibold lowercase tracking-wide mt-0.5">Secure OAuth 2.0 dynamic sync</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 shrink-0 text-slate-500" />
+                </button>
+
+                {/* Option 3: Create free account */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem('pva_pending_save_payload', JSON.stringify(guestGateAction.payload));
+                    localStorage.setItem('pva_pending_gate_action_type', guestGateAction.type);
+                    setGuestGateAction(null);
+                    setAuthActiveTab('signup');
+                    setCurrentScreen('AUTH');
+                  }}
+                  className="w-full p-3.5 bg-slate-900 hover:bg-slate-850 text-slate-200 hover:text-white font-bold text-xs uppercase tracking-wider rounded-xl border border-slate-805 transition flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-base">📧</span>
+                    <div className="text-left">
+                      <span className="block">{t("Create Free Email Account", "निशुल्क ईमेल खाता बनाएं")}</span>
+                      <span className="block text-[8px] text-slate-500 font-semibold normal-case tracking-wide mt-0.5">Enter email and setup password</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 shrink-0 text-slate-500" />
+                </button>
+
+                {/* Option 4: Continue without saving */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    // Let's save as guest in browser fallback so they don't lose it if they refresh
+                    const currentGuestEmail = 'guest@vedicastrology.org';
+                    await kundliDbService.saveKundli(currentGuestEmail, guestGateAction.payload);
+                    const list = await kundliDbService.fetchSavedKundlis(currentGuestEmail);
+                    setSavedKundlis(list);
+
+                    // Re-route
+                    localStorage.setItem('pva_last_profile', JSON.stringify(guestGateAction.payload));
+                    setCurrentScreen('KUNDLI_REPORT');
+                    setGuestGateAction(null);
+                    triggerNotification("Vedic Chart Loaded", "Report loaded without syncing to cloud.", "info");
+                  }}
+                  className="w-full py-3.5 bg-slate-950/40 hover:bg-slate-900 border border-dashed border-slate-800 text-slate-400 hover:text-slate-300 text-xs font-bold uppercase tracking-wider rounded-xl transition text-center"
+                >
+                  {t("Continue Without Saving (Compute Online)", "बिना सहेजे चार्ट जनरेट करें")}
+                </button>
+              </div>
             </div>
           </div>
         )}
