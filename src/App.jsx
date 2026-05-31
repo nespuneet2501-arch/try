@@ -755,6 +755,40 @@ function VedicKundliApp() {
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [pendingKundliToSave, setPendingKundliToSave] = useState(null);
   const [storageConfig, setStorageConfig] = useState(() => getDefaultStorageConfig());
+
+  // Automatic URL Sharing Config Sync hook
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const sheetId = params.get('googleSheetId') || params.get('sheetId');
+      const scriptUrl = params.get('googleScriptUrl') || params.get('scriptUrl');
+      
+      if (sheetId || scriptUrl) {
+        const currentConfig = getDefaultStorageConfig();
+        const updated = {
+          ...currentConfig,
+          googleSheetId: sheetId ? decodeURIComponent(sheetId).trim() : currentConfig.googleSheetId,
+          googleScriptUrl: scriptUrl ? decodeURIComponent(scriptUrl).trim() : currentConfig.googleScriptUrl,
+          mode: 'GOOGLE_SHEETS'
+        };
+        setStorageConfig(updated);
+        saveStorageConfig(updated);
+        
+        setTimeout(() => {
+          triggerNotification(
+            "Live Database Connected!", 
+            "Connected to the shared Google Sheets database successfully! 🪐", 
+            "success"
+          );
+        }, 1200);
+        
+        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.replaceState({ path: newUrl }, '', newUrl);
+      }
+    } catch (e) {
+      console.warn("Failed to parse configurations from URL query params", e);
+    }
+  }, []);
   const [userRegisterEmail, setUserRegisterEmail] = useState('');
   const [userRegisterPassword, setUserRegisterPassword] = useState('');
   const [userRegisterName, setUserRegisterName] = useState('');
@@ -1663,6 +1697,28 @@ function VedicKundliApp() {
             <span className="font-semibold">{currentLanguage === 'English' ? 'हिंदी' : 'English'}</span>
           </button>
 
+          {/* Database Live Connected Badge */}
+          {storageConfig.mode === 'GOOGLE_SHEETS' && (
+            <div 
+              onClick={() => {
+                if (isUserAdmin) {
+                  setCurrentScreen('INTEGRATIONS');
+                } else {
+                  triggerNotification(
+                    "Database Connection Live", 
+                    "You are securely connected to the global Google Sheets live database. Only administrator has permissions to adjust Switchboard nodes.", 
+                    "info"
+                  );
+                }
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] rounded-full border cursor-pointer transition uppercase tracking-wider font-extrabold ${isGoogleSheetsConfigured() ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400 hover:bg-emerald-950/60' : 'bg-rose-950/40 border-rose-500/30 text-rose-450 hover:bg-rose-950/60'}`}
+              title={isGoogleSheetsConfigured() ? "Database: Connected Live" : "Database: Offline Sandbox fallback"}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isGoogleSheetsConfigured() ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500 animate-pulse'}`}></span>
+              <span>{isGoogleSheetsConfigured() ? t("database connected live", "डेटाबेस लाइव कनेक्टेड") : t("Database Offline (Sandbox)", "डेटाबेस ऑफलाइन (सैंडबॉक्स)")}</span>
+            </div>
+          )}
+
           {/* User profile / Google Authentication State State Container */}
           {currentUser ? (
             <div 
@@ -2168,7 +2224,6 @@ function VedicKundliApp() {
                     }
                     const res = await authService.signUpWithEmail(userRegisterEmail, userRegisterPassword, userRegisterName);
                     if (res && res.success) {
-                      triggerNotification("Registration Successful", "Setting up your account. Logging you in now...", "success");
                       setCurrentUser(userRegisterEmail);
                       setUsersList(prev => {
                         const exists = prev.find(u => u.email.toLowerCase() === userRegisterEmail.toLowerCase());
@@ -3912,6 +3967,41 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                       {t("Just paste the browser URL of your spreadsheet. Our system automatically extracts and configures the Spreadsheet ID for database saving.",
                          "बस अपनी गूगल शीट का सामान्य ब्राउज़र लिंक यहां पेस्ट करें। हमारी प्रणाली आईडी निकाल लेगी।")}
                     </p>
+                  </div>
+
+                  {/* Database sharing & synchronization module */}
+                  <div className="bg-[#cca43b]/5 p-4 rounded-2xl border border-[#cca43b]/40 mb-4 text-left space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] text-amber-400 font-extrabold uppercase flex items-center gap-1.5">
+                        <span>🔗</span> {t("SHARE DATABASE TO OTHER DEVICES", "डेटाबेस को अन्य उपकरणों में साझा करें")}
+                      </label>
+                      <span className="bg-amber-400/20 text-amber-300 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
+                        {t("Multi-Device Sync Enabled", "मल्टी-डिवाइस सिंक सक्षम")}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-350 leading-relaxed font-sans">
+                      {t("Since database settings are stored in your device's browser, users on other devices will register in Offline Sandbox fallback unless configured. Generate and send this configuration link to configure those devices instantly in one click!",
+                         "चूंकि डेटाबेस सेटिंग्स आपके ब्राउज़र लोकल स्टोरेज में हैं, अन्य उपकरणों के उपयोगकर्ता ऑफलाइन सैंडबॉक्स मोड में चले जाते हैं। इस शेयरिंग लिंक को अन्य उपकरणों पर खोलकर उन्हें तुरंत कॉन्फ़िगर करें!")}
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                      <input 
+                        type="text"
+                        readOnly
+                        value={`${window.location.protocol}//${window.location.host}${window.location.pathname}?sheetId=${encodeURIComponent(storageConfig.googleSheetId || '')}&scriptUrl=${encodeURIComponent(storageConfig.googleScriptUrl || '')}`}
+                        className="flex-1 bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-400 rounded-xl px-3 py-2 cursor-pointer focus:outline-none truncate"
+                        onClick={(e) => e.target.select()}
+                      />
+                      <button
+                        onClick={() => {
+                          const url = `${window.location.protocol}//${window.location.host}${window.location.pathname}?sheetId=${encodeURIComponent(storageConfig.googleSheetId || '')}&scriptUrl=${encodeURIComponent(storageConfig.googleScriptUrl || '')}`;
+                          navigator.clipboard.writeText(url);
+                          triggerNotification("Sync Link Copied!", "Send this synchronization URL to any other device or user to instantly connect them to your Google Sheet! 🪐", "success");
+                        }}
+                        className="px-4 py-2 bg-[#cca43b] hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl transition uppercase tracking-wider flex items-center justify-center gap-1.5"
+                      >
+                        {t("Copy Link", "लिंक कॉपी करें")}
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

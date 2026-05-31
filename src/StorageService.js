@@ -12,7 +12,7 @@ export const getDefaultStorageConfig = () => {
       const parsed = JSON.parse(local);
       return {
         mode: 'GOOGLE_SHEETS', // Google Sheets is locked as the ONLY database mode
-        googleSheetId: parsed.googleSheetId || import.meta.env?.VITE_GOOGLE_SHEETS_ID || '',
+        googleSheetId: parsed.googleSheetId || import.meta.env?.VITE_GOOGLE_SHEETS_ID || '1oaRCMHt85_ErjmSQ9kwAU0FtBpkETyllkwxxTP-yoy0',
         googleApiKey: parsed.googleApiKey || import.meta.env?.VITE_GOOGLE_API_KEY || '',
         googleScriptUrl: parsed.googleScriptUrl || import.meta.env?.VITE_GOOGLE_SCRIPT_URL || '',
         supabaseUrl: '',
@@ -26,7 +26,7 @@ export const getDefaultStorageConfig = () => {
 
   return {
     mode: 'GOOGLE_SHEETS', // Default mode must be GOOGLE_SHEETS
-    googleSheetId: import.meta.env?.VITE_GOOGLE_SHEETS_ID || '',
+    googleSheetId: import.meta.env?.VITE_GOOGLE_SHEETS_ID || '1oaRCMHt85_ErjmSQ9kwAU0FtBpkETyllkwxxTP-yoy0',
     googleApiKey: import.meta.env?.VITE_GOOGLE_API_KEY || '',
     googleScriptUrl: import.meta.env?.VITE_GOOGLE_SCRIPT_URL || '',
     supabaseUrl: '',
@@ -166,7 +166,7 @@ export const authService = {
         lastLogin: new Date().toISOString()
       };
       authService._persistUserSession(finalUser);
-      triggerNotification("Login Successful", "Successfully logged in via in-memory workspace session!", "success");
+      triggerNotification("Login (Sandbox Mode)", "Successfully logged in via temporary in-memory workspace session!", "warning");
       return { success: true, user: finalUser };
     }
 
@@ -337,7 +337,7 @@ export const authService = {
     }
 
     authService._persistUserSession(fallbackUser);
-    triggerNotification("Sandbox Enrolling Successful", "Registered with sandbox profile (Google Sheet connection is offline)!", "success");
+    triggerNotification("Sandbox Mode Enrolled", "Signed up with local sandbox profile (Google Sheet connection is offline)!", "warning");
     return { 
       success: true, 
       message: "Sandbox Registration Succeeded (In-Memory Fallback)", 
