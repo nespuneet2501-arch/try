@@ -90,6 +90,66 @@ const THEMES = {
     textMain: '#1A2332',
     textMuted: '#56657F',
     accent: '#2962FF'
+  },
+  CLASSIC_BW: {
+    id: 'CLASSIC_BW',
+    name: 'Black & White Classic',
+    hindiName: 'क्लासिक श्याम-श्वेत',
+    bgPage: '#FFFFFF', // Pure White
+    bgCard: '#FFFFFF', // Pure White
+    bgInput: '#FFFFFF',
+    bgBadge: '#F5F5F5', // Soft gray
+    border: '#000000', // Pure Black
+    primary: '#000000', // Pure Black
+    primaryHover: '#333333',
+    textMain: '#000000', // Pure Black
+    textMuted: '#333333', // Dark Slate
+    accent: '#000000'
+  },
+  CLASSIC_WB: {
+    id: 'CLASSIC_WB',
+    name: 'Classic White-on-Black',
+    hindiName: 'श्याम-श्वेत (उलटा)',
+    bgPage: '#000000', // Pure Black
+    bgCard: '#000000', // Pure Black
+    bgInput: '#000000',
+    bgBadge: '#1A1A1A', // Dark gray
+    border: '#FFFFFF', // Pure White
+    primary: '#FFFFFF', // Pure White
+    primaryHover: '#DDDDDD',
+    textMain: '#FFFFFF', // Pure White
+    textMuted: '#CCCCCC', // Light gray
+    accent: '#FFFFFF'
+  },
+  MATRIX_GREEN: {
+    id: 'MATRIX_GREEN',
+    name: 'Matrix Green Contrast',
+    hindiName: 'मैट्रिक्स हरा',
+    bgPage: '#000000', // Pure Black
+    bgCard: '#000000', // Pure Black
+    bgInput: '#000000',
+    bgBadge: '#0D2611',
+    border: '#00FF41', // Neon green
+    primary: '#00FF41',
+    primaryHover: '#00DD30',
+    textMain: '#00FF41', // Neon green
+    textMuted: '#00AA20', // Dim green
+    accent: '#00FF41'
+  },
+  CYBER_YELLOW: {
+    id: 'CYBER_YELLOW',
+    name: 'Cyber Yellow Contrast',
+    hindiName: 'साइबर पीला',
+    bgPage: '#000000', // Pure Black
+    bgCard: '#000000', // Pure Black
+    bgInput: '#000000',
+    bgBadge: '#262200',
+    border: '#FFEA00', // Neon yellow
+    primary: '#FFEA00',
+    primaryHover: '#D4C200',
+    textMain: '#FFEA00', // Neon yellow
+    textMuted: '#A89B00', // Dim yellow
+    accent: '#FFEA00'
   }
 };
 
@@ -321,11 +381,11 @@ function VedicKundliApp() {
   });
 
   const [currentScreen, setCurrentScreen] = useState(() => {
-    const session = authService.getCurrentUser();
-    if (!session) return 'AUTH';
     const last = localStorage.getItem('pva_last_profile');
     return last ? 'KUNDLI_REPORT' : 'DASHBOARD';
   }); // WELCOME, AUTH, DASHBOARD, ADD_KUNDLI, KUNDLI_REPORT, PANCHANG, MATCHMAKING, PREMIUM
+  const [showSavePrompt, setShowSavePrompt] = useState(false);
+  const [pendingKundliToSave, setPendingKundliToSave] = useState(null);
   const [storageConfig, setStorageConfig] = useState(() => getDefaultStorageConfig());
   const [userRegisterEmail, setUserRegisterEmail] = useState('');
   const [userRegisterPassword, setUserRegisterPassword] = useState('');
@@ -496,6 +556,25 @@ function VedicKundliApp() {
     return currentUser?.toLowerCase() === 'nespuneet2501@gmail.com';
   }, [currentUser, usersList]);
 
+  const isUserAdmin = useMemo(() => {
+    return currentUser?.trim().toLowerCase() === 'nespuneet2501@gmail.com';
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      const is_admin = currentUser.trim().toLowerCase() === 'nespuneet2501@gmail.com';
+      const restrictedScreens = ['PANCHANG', 'MATCHMAKING', 'SOCIETY_UPDATES', 'ADMIN_CONTROL', 'INTEGRATIONS'];
+      if (!is_admin && restrictedScreens.includes(currentScreen)) {
+        setCurrentScreen('DASHBOARD');
+        triggerNotification(
+          "Kundli Services Only",
+          "Advanced admin sections are locked. General users have access to save & calculate unlimited High-Precision Kundlis.",
+          "warning"
+        );
+      }
+    }
+  }, [currentUser, currentScreen]);
+
   // Upgrade Pay Modal Simulated Variables
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [payPlanId, setPayPlanId] = useState('ASTRO_PRO');
@@ -507,6 +586,12 @@ function VedicKundliApp() {
   
   // Custom Dynamic Themes Support
   const [currentTheme, setCurrentTheme] = useState('BRIGHT'); // 'GOLD', 'EMERALD', 'SAFFRON', 'SAPPHIRE'
+  const [fontScale, setFontScale] = useState(() => localStorage.getItem('pva_font_scale') || 'NORMAL');
+
+  useEffect(() => {
+    localStorage.setItem('pva_font_scale', fontScale);
+  }, [fontScale]);
+
   const [profileSearchQuery, setProfileSearchQuery] = useState('');
 
   // Advanced Astrology Report Navigation, CMS, and calculators state
@@ -741,54 +826,76 @@ function VedicKundliApp() {
   // Theme Styles computation block
   const themeStyles = useMemo(() => {
     const t = THEMES[currentTheme];
+    const isBW = currentTheme === 'CLASSIC_BW';
+    const isHC = ['CLASSIC_BW', 'CLASSIC_WB', 'MATRIX_GREEN', 'CYBER_YELLOW'].includes(currentTheme);
+    const borderWidthVal = isHC ? '1.8px' : '1px';
     return `
+      html {
+        font-size: ${
+          fontScale === 'SMALL' ? '14px' :
+          fontScale === 'LARGE' ? '18px' :
+          fontScale === 'XLARGE' ? '21px' :
+          '16px' // NORMAL
+        } !important;
+      }
       body {
         background-color: ${t.bgPage} !important;
         color: ${t.textMain} !important;
         font-family: 'Inter', sans-serif;
       }
       .theme-bg-page { background-color: ${t.bgPage} !important; }
-      .theme-bg-card { background-color: ${t.bgCard} !important; border-color: ${t.border} !important; }
+      .theme-bg-card { background-color: ${t.bgCard} !important; border-color: ${t.border} !important; border-width: ${borderWidthVal} !important; }
       .theme-bg-badge { background-color: ${t.bgBadge} !important; color: ${t.primary} !important; }
       .theme-text-main { color: ${t.textMain} !important; }
       .theme-text-muted { color: ${t.textMuted} !important; }
-      .theme-border { border-color: ${t.border} !important; }
+      .theme-border { border-color: ${t.border} !important; border-width: ${borderWidthVal} !important; }
       
       /* Remap background Tailwind classes dynamically at runtime! */
       .bg-\\[\\#090a15\\] { background-color: ${t.bgPage} !important; }
       .bg-\\[\\#070810\\] { background-color: ${t.bgBadge} !important; }
       .bg-\\[\\#0a0c1a\\] { background-color: ${t.bgPage} !important; }
-      .bg-\\[\\#0f1123\\] { background-color: ${t.bgCard} !important; border-color: ${t.border} !important; }
+      .bg-\\[\\#0f1123\\] { background-color: ${t.bgCard} !important; border-color: ${t.border} !important; border-width: ${borderWidthVal} !important; }
       .bg-\\[\\#0f1123\\/95\\] { background-color: ${t.bgCard}cc !important; border-color: ${t.border} !important; }
       .bg-\\[\\#0f1123\\/50\\] { background-color: ${t.bgCard}80 !important; border-color: ${t.border} !important; }
       .bg-slate-900 { background-color: ${t.bgBadge} !important; }
+      .bg-slate-950 { background-color: ${t.bgPage} !important; color: ${t.textMuted} !important; border-color: ${t.border} !important; }
       .bg-\\[\\#12142d\\] { background-color: ${t.bgBadge} !important; }
       .bg-\\[\\#161a35\\] { background-color: ${t.bgBadge} !important; }
-      .bg-slate-950 { background-color: ${t.bgPage} !important; color: ${t.textMuted} !important; border-color: ${t.border} !important; }
+      .bg-\\[\\#0b0c16\\] { background-color: ${t.bgCard} !important; border-color: ${t.border} !important; border-width: ${borderWidthVal} !important; }
+      .bg-\\[\\#0b0c16\\/50\\] { background-color: ${t.bgCard}80 !important; border-color: ${t.border} !important; }
       
-      /* Colors */
+      /* Colors to ensure perfect contrast on light themes */
       .text-slate-100 { color: ${t.textMain} !important; }
       .text-slate-200 { color: ${t.textMain}ee !important; }
       .text-slate-300 { color: ${t.textMain}cc !important; }
       .text-slate-400 { color: ${t.textMuted} !important; }
       .text-slate-500 { color: ${t.textMuted}cc !important; }
+      .text-slate-550 { color: ${t.textMuted} !important; }
+      .text-slate-205 { color: ${t.textMain} !important; }
       .text-white { color: ${t.textMain} !important; }
+      .text-amber-500 { color: ${t.primary} !important; }
       .text-\\[\\#cca43b\\] { color: ${t.primary} !important; }
       
+      /* Prevent low-contrast yellow/amber texts in light mode */
+      .text-amber-400 { color: ${isHC ? t.textMain : t.primary} !important; }
+      .text-emerald-400 { color: ${isHC ? t.textMain : t.accent} !important; }
+      .text-teal-400 { color: ${isHC ? t.textMain : t.primary} !important; }
+      
       /* Borders */
-      .border-slate-800 { border-color: ${t.border} !important; }
-      .border-slate-850 { border-color: ${t.border} !important; }
-      .border-slate-700 { border-color: ${t.border} !important; }
+      .border-slate-800 { border-color: ${t.border} !important; border-width: ${borderWidthVal} !important; }
+      .border-slate-850 { border-color: ${t.border} !important; border-width: ${borderWidthVal} !important; }
+      .border-slate-700 { border-color: ${t.border} !important; border-width: ${borderWidthVal} !important; }
+      .border-slate-900 { border-color: ${t.border} !important; border-width: ${borderWidthVal} !important; }
       .divide-slate-800 > :not([hidden]) ~ :not([hidden]) { border-color: ${t.border} !important; }
       
       /* Primary Dynamic Button and Gradients */
-      .bg-\\[\\#cca43b\\] { background-color: ${t.primary} !important; color: #FFFFFF !important; }
+      .bg-\\[\\#cca43b\\] { background-color: ${t.primary} !important; color: ${isHC ? (currentTheme === 'CLASSIC_BW' ? '#FFFFFF' : '#000000') : '#FFFFFF'} !important; }
       .bg-\\[\\#cca43b\\]:hover { background-color: ${t.primaryHover} !important; }
-      .bg-gradient-to-r.from-\\[\\#cca43b\\] { background-image: linear-gradient(to right, ${t.primary}, ${t.accent}) !important; color: #FFFFFF !important; }
-      .bg-gradient-to-r.from-\\[\\#11132e\\] { background-image: linear-gradient(to right, ${t.bgPage}, ${t.bgCard}) !important; border: 1px solid ${t.border} !important; }
+      .bg-gradient-to-r.from-\\[\\#cca43b\\] { background-image: linear-gradient(to right, ${t.primary}, ${t.accent}) !important; color: ${isHC ? (currentTheme === 'CLASSIC_BW' ? '#FFFFFF' : '#000000') : '#000000'} !important; }
+      .bg-gradient-to-r.from-\\[\\#11132e\\] { background-image: linear-gradient(to right, ${t.bgPage}, ${t.bgCard}) !important; border: ${borderWidthVal} solid ${t.border} !important; }
       .bg-gradient-to-tr.from-\\[\\#cca43b\\/10\\] { background-image: linear-gradient(to top right, ${t.bgBadge}, ${t.bgCard}) !important; }
     `;
-  }, [currentTheme]);
+  }, [currentTheme, fontScale]);
 
   // Profile Search Filter list computation
   const filteredSavedKundlis = useMemo(() => {
@@ -883,33 +990,46 @@ function VedicKundliApp() {
       notes: ''
     };
 
-    if (!currentUser || currentUser.includes('guest')) {
-      setGuestGateAction({
-        type: 'generate_chart',
-        payload: newProfile
-      });
-      return;
-    }
-    
-    // Check if duplicate profile already exists to prevent duplication
-    const exists = savedKundlis.some(k => 
-      k.name.trim().toLowerCase() === newProfile.name.trim().toLowerCase() &&
-      k.dob === newProfile.dob &&
-      k.tob === newProfile.tob
-    );
-    
-    let updatedList = [...savedKundlis];
-    if (!exists) {
-      updatedList = [newProfile, ...savedKundlis];
-      setSavedKundlis(updatedList);
-      localStorage.setItem('pva_saved_kundlis', JSON.stringify(updatedList));
-      kundliDbService.saveKundli(currentUser, newProfile).catch(() => {});
-    }
-    
     // Set last generated profile
     localStorage.setItem('pva_last_profile', JSON.stringify(newProfile));
     
+    // Check if logged in. If logged in, check duplication and save to cloud DB
+    if (currentUser && !currentUser.includes('guest')) {
+      const exists = savedKundlis.some(k => 
+        k.name.trim().toLowerCase() === newProfile.name.trim().toLowerCase() &&
+        k.dob === newProfile.dob &&
+        k.tob === newProfile.tob
+      );
+      
+      let updatedList = [...savedKundlis];
+      if (!exists) {
+        updatedList = [newProfile, ...savedKundlis];
+        setSavedKundlis(updatedList);
+        localStorage.setItem('pva_saved_kundlis', JSON.stringify(updatedList));
+        kundliDbService.saveKundli(currentUser, newProfile).catch(() => {});
+      }
+    } else {
+      // For guest users, save to local guest storage so it persists locally temporarily
+      const local = localStorage.getItem('pva_saved_kundlis');
+      let localList = [];
+      if (local) {
+        try { localList = JSON.parse(local); } catch(e){}
+      }
+      const exists = localList.some(k => 
+        k.name.trim().toLowerCase() === newProfile.name.trim().toLowerCase() &&
+        k.dob === newProfile.dob &&
+        k.tob === newProfile.tob
+      );
+      if (!exists) {
+        localList.unshift(newProfile);
+        localStorage.setItem('pva_saved_kundlis', JSON.stringify(localList));
+        setSavedKundlis(localList);
+      }
+    }
+
     setCurrentScreen('KUNDLI_REPORT');
+    setPendingKundliToSave(newProfile);
+    setShowSavePrompt(true);
   };
 
   const handleSaveProfile = () => {
@@ -1205,6 +1325,38 @@ function VedicKundliApp() {
             ))}
           </div>
 
+          {/* Font Size Selector */}
+          <div className="flex items-center gap-1 bg-[#12142d]/30 border border-slate-800 rounded-lg p-1" title={t("Adjust Text Size", "अक्षरों का आकार बदलें")}>
+            <button
+              onClick={() => setFontScale('SMALL')}
+              className={`px-2 py-0.5 text-[10px] font-black rounded transition-all ${fontScale === 'SMALL' ? 'bg-[#cca43b] text-slate-950 font-black' : 'text-slate-400 hover:text-white'}`}
+              title={t("Small Fonts", "छोटे अक्षर")}
+            >
+              A-
+            </button>
+            <button
+              onClick={() => setFontScale('NORMAL')}
+              className={`px-2 py-0.5 text-[10px] font-black rounded transition-all ${fontScale === 'NORMAL' ? 'bg-[#cca43b] text-slate-950 font-black' : 'text-slate-400 hover:text-white'}`}
+              title={t("Normal Fonts", "सामान्य अक्षर")}
+            >
+              A
+            </button>
+            <button
+              onClick={() => setFontScale('LARGE')}
+              className={`px-2 py-0.5 text-[10px] font-black rounded transition-all ${fontScale === 'LARGE' ? 'bg-[#cca43b] text-slate-950 font-black' : 'text-slate-400 hover:text-white'}`}
+              title={t("Large Fonts", "बड़े अक्षर")}
+            >
+              A+
+            </button>
+            <button
+              onClick={() => setFontScale('XLARGE')}
+              className={`px-2 py-0.5 text-[10px] font-black rounded transition-all ${fontScale === 'XLARGE' ? 'bg-[#cca43b] text-slate-950 font-black' : 'text-slate-400 hover:text-white'}`}
+              title={t("Extra Large Fonts", "अति बड़े अक्षर")}
+            >
+              A++
+            </button>
+          </div>
+
           {/* Language Toggle Button */}
           <button 
             onClick={() => setCurrentLanguage(l => l === 'English' ? 'Hindi' : 'English')}
@@ -1257,21 +1409,18 @@ function VedicKundliApp() {
           ) : (
             <button
               onClick={() => {
-                const email = prompt(t("Enter Google Email to authenticate:", "प्रमाणीकरण के लिए गूगल ईमेल दर्ज करें:"), "nespuneet2501@gmail.com");
-                if (email) {
-                  setCurrentUser(email);
-                  alert(t(`Authorized successfully! Real-time cloud synchronization is ACTIVE for ${email}`, `सफलतापूर्वक सिंक किया गया! ${email} के लिए रियल-टाइम क्लाउड सिंक्रोनाइजेशन सक्रिय है`));
-                }
+                setAuthActiveTab('signup');
+                setCurrentScreen('AUTH');
               }}
-              className="px-3.5 py-1.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-300 hover:border-slate-400 font-bold rounded-full text-xs transition flex items-center gap-1.5 shadow-sm font-sans"
+              className="px-4 py-1.5 bg-[#cca43b] hover:bg-[#ebd070] text-slate-950 font-black rounded-full text-xs transition flex items-center gap-1.5 shadow-md font-sans tracking-tight border border-black/15"
+              style={{
+                backgroundColor: tObj.primary,
+                color: currentTheme === 'CLASSIC_BW' ? '#FFFFFF' : '#000000',
+                borderColor: tObj.border
+              }}
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>
-              <span className="font-semibold text-[11px]">{t("Google Sign-In", "गूगल लॉगिन")}</span>
+              <span>👤</span>
+              <span className="font-extrabold text-[10.5px]">{t("Login / Sign Up", "लॉगिन / पंजीकरण")}</span>
             </button>
           )}
 
@@ -1466,31 +1615,35 @@ function VedicKundliApp() {
               <span>{t("Community Hub", "सामुदायिक अपडेट्स")}</span>
             </button>
 
-            <button
-              onClick={() => setCurrentScreen('ADMIN_CONTROL')}
-              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
-              style={{
-                backgroundColor: currentScreen === 'ADMIN_CONTROL' ? tObj.primary : tObj.bgCard,
-                color: currentScreen === 'ADMIN_CONTROL' ? '#FFFFFF' : tObj.textMain,
-                border: `1.5px solid ${currentScreen === 'ADMIN_CONTROL' ? tObj.primary : tObj.border}`
-              }}
-            >
-              <ShieldCheck className="w-4 h-4 shrink-0" style={{ color: currentScreen === 'ADMIN_CONTROL' ? '#FFFFFF' : tObj.primary }} />
-              <span>{t("Admin Panel", "संचालक नियंत्रण")}</span>
-            </button>
+            {isUserAdmin && (
+              <>
+                <button
+                  onClick={() => setCurrentScreen('ADMIN_CONTROL')}
+                  className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
+                  style={{
+                    backgroundColor: currentScreen === 'ADMIN_CONTROL' ? tObj.primary : tObj.bgCard,
+                    color: currentScreen === 'ADMIN_CONTROL' ? '#FFFFFF' : tObj.textMain,
+                    border: `1.5px solid ${currentScreen === 'ADMIN_CONTROL' ? tObj.primary : tObj.border}`
+                  }}
+                >
+                  <ShieldCheck className="w-4 h-4 shrink-0" style={{ color: currentScreen === 'ADMIN_CONTROL' ? '#FFFFFF' : tObj.primary }} />
+                  <span>{t("Admin Panel", "संचालक नियंत्रण")}</span>
+                </button>
 
-            <button
-              onClick={() => setCurrentScreen('INTEGRATIONS')}
-              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
-              style={{
-                backgroundColor: currentScreen === 'INTEGRATIONS' ? tObj.primary : tObj.bgCard,
-                color: currentScreen === 'INTEGRATIONS' ? '#FFFFFF' : tObj.textMain,
-                border: `1.5px solid ${currentScreen === 'INTEGRATIONS' ? tObj.primary : tObj.border}`
-              }}
-            >
-              <Database className="w-4 h-4 shrink-0" style={{ color: currentScreen === 'INTEGRATIONS' ? '#FFFFFF' : tObj.primary }} />
-              <span>{t("Cloud Sync Settings", "क्लाउड डेटाबेस")}</span>
-            </button>
+                <button
+                  onClick={() => setCurrentScreen('INTEGRATIONS')}
+                  className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
+                  style={{
+                    backgroundColor: currentScreen === 'INTEGRATIONS' ? tObj.primary : tObj.bgCard,
+                    color: currentScreen === 'INTEGRATIONS' ? '#FFFFFF' : tObj.textMain,
+                    border: `1.5px solid ${currentScreen === 'INTEGRATIONS' ? tObj.primary : tObj.border}`
+                  }}
+                >
+                  <Database className="w-4 h-4 shrink-0" style={{ color: currentScreen === 'INTEGRATIONS' ? '#FFFFFF' : tObj.primary }} />
+                  <span>{t("Cloud Sync Settings", "क्लाउड डेटाबेस")}</span>
+                </button>
+              </>
+            )}
 
             <button
               onClick={() => setCurrentScreen('KUNDLI_LIBRARY')}
@@ -1851,6 +2004,22 @@ function VedicKundliApp() {
                           style={{ backgroundColor: THEMES[themeKey].primary }}
                           title={`${THEMES[themeKey].name}`}
                         />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Font Sizer */}
+                  <div className="flex flex-col gap-1 border-l theme-border pl-3">
+                    <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">{t("Font Scale", "अक्षर का आकार")}</span>
+                    <div className="flex items-center gap-1.5 py-1">
+                      {['SMALL', 'NORMAL', 'LARGE', 'XLARGE'].map((scale) => (
+                        <button
+                          key={scale}
+                          onClick={() => setFontScale(scale)}
+                          className={`px-2 py-1 text-[9px] font-extrabold rounded-md uppercase tracking-wider border transition-all ${fontScale === scale ? 'bg-slate-900 border-slate-900 text-white font-black' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                        >
+                          {scale === 'SMALL' ? 'A-' : scale === 'NORMAL' ? 'A' : scale === 'LARGE' ? 'A+' : 'A++'}
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -3388,6 +3557,35 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                     <span className="text-sm">📊</span>
                     <h4 className="text-xs uppercase font-black tracking-widest">{t("GOOGLE SHEETS INTEGRATION PARAMS", "गूगल शीट्स क्रेडेंशियल्स")}</h4>
                   </div>
+
+                  {/* Easy URL link parsing card */}
+                  <div className="bg-[#121429] p-4 rounded-2xl border border-[#cca43b]/20 mb-4 text-left">
+                    <label className="text-[11px] text-amber-400 font-extrabold uppercase block mb-1">
+                      📋 {t("JUST GIVE GOOGLE SHEET BROWSER URL", "सीधा गूगल शीट का लिंक पेस्ट करें")}:
+                    </label>
+                    <input 
+                      type="text"
+                      className="w-full bg-slate-950 border border-[#cca43b]/30 focus:border-amber-400 text-xs font-semibold text-amber-300 rounded-xl px-4 py-3 focus:outline-none"
+                      placeholder="Paste your full google sheet link here... (e.g., https://docs.google.com/spreadsheets/d/1vA-XYZ.../edit)"
+                      onChange={(e) => {
+                        const val = e.target.value.trim();
+                        if (val) {
+                          const matches = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+                          const sheetId = matches ? matches[1] : val;
+                          const updated = { ...storageConfig, googleSheetId: sheetId };
+                          setStorageConfig(updated);
+                          saveStorageConfig(updated);
+                          if (matches) {
+                            triggerNotification("URL Parsed Successfully", "Extracted Google Spreadsheet ID: " + sheetId, "success");
+                          }
+                        }
+                      }}
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1.5 leading-relaxed font-sans">
+                      {t("Just paste the browser URL of your spreadsheet. Our system automatically extracts and configures the Spreadsheet ID for database saving.",
+                         "बस अपनी गूगल शीट का सामान्य ब्राउज़र लिंक यहां पेस्ट करें। हमारी प्रणाली आईडी निकाल लेगी।")}
+                    </p>
+                  </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
@@ -3455,29 +3653,164 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                     </ol>
 
                     <div className="relative rounded-lg bg-slate-950 p-3 border border-slate-900 text-left">
-                      <pre className="text-[9px] font-mono text-emerald-400 overflow-x-auto max-h-36 leading-relaxed select-all scrollbar-thin">
+                      <pre className="text-[9px] font-mono text-emerald-400 overflow-x-auto max-h-48 leading-relaxed select-all scrollbar-thin">
 {`function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // Auto-create headers if sheet is brand new/empty
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(["Timestamp", "Type", "ID/Email", "Name", "Gender", "Birth Date & Time", "Coordinates", "Full Payload"]);
+    // 1. Ensure "Users" sheet exists and has correct columns
+    var usersSheet = ss.getSheetByName("Users");
+    if (!usersSheet) {
+      usersSheet = ss.insertSheet("Users");
+      usersSheet.appendRow(["User ID", "Name", "Email", "Login Type", "Registration Date", "Last Login"]);
     }
     
-    var timestamp = new Date();
+    // 2. Ensure "Saved Kundlis" sheet exists and has correct columns
+    var kundlisSheet = ss.getSheetByName("Saved Kundlis");
+    if (!kundlisSheet) {
+      kundlisSheet = ss.insertSheet("Saved Kundlis");
+      kundlisSheet.appendRow([
+        "Kundli ID", "User ID", "Full Name", "Gender", "Birth Date", "Birth Time", 
+        "Birth Place", "Latitude", "Longitude", "Timezone", "Created Date", "Updated Date", "Kundli JSON Data"
+      ]);
+    }
+    
     var type = data.type || "unknown";
-    var userEmail = data.email || "guest";
-    var name = data.name || data.person_name || "";
-    var gender = data.gender || "";
-    var datetime = (data.dob || "") + " " + (data.tob || "");
-    var coords = (data.lat || "0") + ", " + (data.lon || "0");
-    var fullJson = JSON.stringify(data);
+    var result = { success: false, message: "Invalid command" };
     
-    sheet.appendRow([timestamp, type, userEmail, name, gender, datetime, coords, fullJson]);
+    if (type === "signup") {
+      var userId = data.id || Utilities.base64Encode(data.email || "");
+      var name = data.name || "";
+      var email = data.email || "";
+      var loginType = data.method || "Email/Password";
+      var regDate = data.registeredAt || new Date().toISOString().split('T')[0];
+      var lastLogin = new Date().toISOString();
+      
+      var usersData = usersSheet.getDataRange().getValues();
+      var foundIdx = -1;
+      for (var i = 1; i < usersData.length; i++) {
+        if (usersData[i][2].toString().toLowerCase() === email.toLowerCase()) {
+          foundIdx = i + 1;
+          break;
+        }
+      }
+      
+      if (foundIdx === -1) {
+        usersSheet.appendRow([userId, name, email, loginType, regDate, lastLogin]);
+      } else {
+        usersSheet.getRange(foundIdx, 2).setValue(name);
+        usersSheet.getRange(foundIdx, 4).setValue(loginType);
+        usersSheet.getRange(foundIdx, 6).setValue(lastLogin);
+      }
+      result = { success: true, message: "User registered/updated in spreadsheet!", user: { email: email, name: name, registeredAt: regDate } };
+      
+    } else if (type === "login") {
+      var email = data.email || "";
+      var lastLogin = new Date().toISOString();
+      var usersData = usersSheet.getDataRange().getValues();
+      var userFound = null;
+      var foundIdx = -1;
+      for (var i = 1; i < usersData.length; i++) {
+        if (usersData[i][2].toString().toLowerCase() === email.toLowerCase()) {
+          userFound = {
+            id: usersData[i][0],
+            name: usersData[i][1],
+            email: usersData[i][2],
+            loginType: usersData[i][3],
+            registeredAt: usersData[i][4],
+            lastLogin: lastLogin
+          };
+          foundIdx = i + 1;
+          break;
+        }
+      }
+      if (userFound) {
+        usersSheet.getRange(foundIdx, 6).setValue(lastLogin);
+        result = { success: true, message: "Logged in successfully!", user: userFound };
+      } else {
+        result = { success: false, error: "User not found in spreadsheet database!" };
+      }
+      
+    } else if (type === "save_kundli") {
+      var kundliId = data.id || "k_" + Date.now();
+      var userId = data.email || "guest";
+      var name = data.name || "Unnamed Seeker";
+      var gender = data.gender || "Male";
+      var birthDate = data.dob || "";
+      var birthTime = data.tob || "";
+      var birthPlace = data.place || "";
+      var lat = data.lat || 0;
+      var lon = data.lon || 0;
+      var tzone = data.timezone || "";
+      var createdDate = data.created_at || new Date().toISOString();
+      var updatedDate = new Date().toISOString();
+      var jsonPayload = JSON.stringify(data);
+      
+      var kundlisData = kundlisSheet.getDataRange().getValues();
+      var foundIdx = -1;
+      for (var i = 1; i < kundlisData.length; i++) {
+        if (kundlisData[i][0].toString() === kundliId.toString()) {
+          foundIdx = i + 1;
+          break;
+        }
+      }
+      
+      var rowData = [kundliId, userId, name, gender, birthDate, birthTime, birthPlace, lat, lon, tzone, createdDate, updatedDate, jsonPayload];
+      if (foundIdx === -1) {
+        kundlisSheet.appendRow(rowData);
+      } else {
+        kundlisSheet.getRange(foundIdx, 1, 1, rowData.length).setValues([rowData]);
+      }
+      result = { success: true, message: "Kundli saved to spreadsheet!" };
+      
+    } else if (type === "fetch_kundlis") {
+      var email = data.email || "";
+      var kundlisData = kundlisSheet.getDataRange().getValues();
+      var list = [];
+      for (var i = 1; i < kundlisData.length; i++) {
+        var row = kundlisData[i];
+        if (row[1].toString().toLowerCase() === email.toLowerCase()) {
+          var parsedObj = {};
+          try {
+            parsedObj = JSON.parse(row[12]);
+          } catch(e) {
+            parsedObj = {
+              id: row[0],
+              name: row[2],
+              gender: row[3],
+              dob: row[4],
+              tob: row[5],
+              place: row[6],
+              lat: parseFloat(row[7]),
+              lon: parseFloat(row[8]),
+              timezone: row[9],
+              created_at: row[10],
+              updated_at: row[11]
+            };
+          }
+          list.push(parsedObj);
+        }
+      }
+      result = { success: true, list: list };
+      
+    } else if (type === "delete_kundli") {
+      var kundliId = data.id || "";
+      var kundlisData = kundlisSheet.getDataRange().getValues();
+      var foundIdx = -1;
+      for (var i = 1; i < kundlisData.length; i++) {
+        if (kundlisData[i][0].toString() === kundliId.toString()) {
+          foundIdx = i + 1;
+          break;
+        }
+      }
+      if (foundIdx !== -1) {
+        kundlisSheet.deleteRow(foundIdx);
+        result = { success: true, message: "Kundli deleted from sheet!" };
+      }
+    }
     
-    return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Kundli added successfully!" }))
+    return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON)
       .addHeader("Access-Control-Allow-Origin", "*");
   } catch (error) {
@@ -3492,24 +3825,157 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                           navigator.clipboard.writeText(`function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(["Timestamp", "Type", "ID/Email", "Name", "Gender", "Birth Date & Time", "Coordinates", "Full Payload"]);
+    // Ensure "Users" and "Saved Kundlis" sheets exist
+    var usersSheet = ss.getSheetByName("Users") || ss.insertSheet("Users");
+    if (usersSheet.getLastRow() === 0) {
+      usersSheet.appendRow(["User ID", "Name", "Email", "Login Type", "Registration Date", "Last Login"]);
     }
     
-    var timestamp = new Date();
+    var kundlisSheet = ss.getSheetByName("Saved Kundlis") || ss.insertSheet("Saved Kundlis");
+    if (kundlisSheet.getLastRow() === 0) {
+      kundlisSheet.appendRow([
+        "Kundli ID", "User ID", "Full Name", "Gender", "Birth Date", "Birth Time", 
+        "Birth Place", "Latitude", "Longitude", "Timezone", "Created Date", "Updated Date", "Kundli JSON Data"
+      ]);
+    }
+    
     var type = data.type || "unknown";
-    var userEmail = data.email || "guest";
-    var name = data.name || data.person_name || "";
-    var gender = data.gender || "";
-    var datetime = (data.dob || "") + " " + (data.tob || "");
-    var coords = (data.lat || "0") + ", " + (data.lon || "0");
-    var fullJson = JSON.stringify(data);
+    var result = { success: false, message: "Invalid command" };
     
-    sheet.appendRow([timestamp, type, userEmail, name, gender, datetime, coords, fullJson]);
+    if (type === "signup") {
+      var userId = data.id || Utilities.base64Encode(data.email || "");
+      var name = data.name || "";
+      var email = data.email || "";
+      var loginType = data.method || "Email/Password";
+      var regDate = data.registeredAt || new Date().toISOString().split('T')[0];
+      var lastLogin = new Date().toISOString();
+      
+      var usersData = usersSheet.getDataRange().getValues();
+      var foundIdx = -1;
+      for (var i = 1; i < usersData.length; i++) {
+        if (usersData[i][2].toString().toLowerCase() === email.toLowerCase()) {
+          foundIdx = i + 1;
+          break;
+        }
+      }
+      
+      if (foundIdx === -1) {
+        usersSheet.appendRow([userId, name, email, loginType, regDate, lastLogin]);
+      } else {
+        usersSheet.getRange(foundIdx, 2).setValue(name);
+        usersSheet.getRange(foundIdx, 4).setValue(loginType);
+        usersSheet.getRange(foundIdx, 6).setValue(lastLogin);
+      }
+      result = { success: true, message: "User registered/updated in spreadsheet!", user: { email: email, name: name, registeredAt: regDate } };
+      
+    } else if (type === "login") {
+      var email = data.email || "";
+      var lastLogin = new Date().toISOString();
+      var usersData = usersSheet.getDataRange().getValues();
+      var userFound = null;
+      var foundIdx = -1;
+      for (var i = 1; i < usersData.length; i++) {
+        if (usersData[i][2].toString().toLowerCase() === email.toLowerCase()) {
+          userFound = {
+            id: usersData[i][0],
+            name: usersData[i][1],
+            email: usersData[i][2],
+            loginType: usersData[i][3],
+            registeredAt: usersData[i][4],
+            lastLogin: lastLogin
+          };
+          foundIdx = i + 1;
+          break;
+        }
+      }
+      if (userFound) {
+        usersSheet.getRange(foundIdx, 6).setValue(lastLogin);
+        result = { success: true, message: "Logged in successfully!", user: userFound };
+      } else {
+        result = { success: false, error: "User not found in spreadsheet database!" };
+      }
+      
+    } else if (type === "save_kundli") {
+      var kundliId = data.id || "k_" + Date.now();
+      var userId = data.email || "guest";
+      var name = data.name || "Unnamed Seeker";
+      var gender = data.gender || "Male";
+      var birthDate = data.dob || "";
+      var birthTime = data.tob || "";
+      var birthPlace = data.place || "";
+      var lat = data.lat || 0;
+      var lon = data.lon || 0;
+      var tzone = data.timezone || "";
+      var createdDate = data.created_at || new Date().toISOString();
+      var updatedDate = new Date().toISOString();
+      var jsonPayload = JSON.stringify(data);
+      
+      var kundlisData = kundlisSheet.getDataRange().getValues();
+      var foundIdx = -1;
+      for (var i = 1; i < kundlisData.length; i++) {
+        if (kundlisData[i][0].toString() === kundliId.toString()) {
+          foundIdx = i + 1;
+          break;
+        }
+      }
+      
+      var rowData = [kundliId, userId, name, gender, birthDate, birthTime, birthPlace, lat, lon, tzone, createdDate, updatedDate, jsonPayload];
+      if (foundIdx === -1) {
+        kundlisSheet.appendRow(rowData);
+      } else {
+        kundlisSheet.getRange(foundIdx, 1, 1, rowData.length).setValues([rowData]);
+      }
+      result = { success: true, message: "Kundli saved to spreadsheet!" };
+      
+    } else if (type === "fetch_kundlis") {
+      var email = data.email || "";
+      var kundlisData = kundlisSheet.getDataRange().getValues();
+      var list = [];
+      for (var i = 1; i < kundlisData.length; i++) {
+        var row = kundlisData[i];
+        if (row[1].toString().toLowerCase() === email.toLowerCase()) {
+          var parsedObj = {};
+          try {
+            parsedObj = JSON.parse(row[12]);
+          } catch(e) {
+            parsedObj = {
+              id: row[0],
+              name: row[2],
+              gender: row[3],
+              dob: row[4],
+              tob: row[5],
+              place: row[6],
+              lat: parseFloat(row[7]),
+              lon: parseFloat(row[8]),
+              timezone: row[9],
+              created_at: row[10],
+              updated_at: row[11]
+            };
+          }
+          list.push(parsedObj);
+        }
+      }
+      result = { success: true, list: list };
+      
+    } else if (type === "delete_kundli") {
+      var kundliId = data.id || "";
+      var kundlisData = kundlisSheet.getDataRange().getValues();
+      var foundIdx = -1;
+      for (var i = 1; i < kundlisData.length; i++) {
+        if (kundlisData[i][0].toString() === kundliId.toString()) {
+          foundIdx = i + 1;
+          break;
+        }
+      }
+      if (foundIdx !== -1) {
+        kundlisSheet.deleteRow(foundIdx);
+        result = { success: true, message: "Kundli deleted from sheet!" };
+      }
+    }
     
-    return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Kundli added successfully!" }))
+    return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON)
       .addHeader("Access-Control-Allow-Origin", "*");
   } catch (error) {
@@ -4330,6 +4796,107 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                 </form>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {showSavePrompt && pendingKundliToSave && (
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex justify-center items-center z-[140] p-4 font-sans text-slate-100">
+            <div className="bg-[#0b0c16] theme-bg-card rounded-3xl w-full max-w-md border border-slate-800 theme-border shadow-2xl p-6.5 relative overflow-hidden animate-scale-up text-left">
+              <button 
+                onClick={() => {
+                  setShowSavePrompt(false);
+                  setPendingKundliToSave(null);
+                }}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 hover:bg-slate-900 rounded-full"
+              >
+                <X className="w-5 h-5 theme-text-main" />
+              </button>
+              
+              <div className="space-y-4">
+                <div className="text-center space-y-2">
+                  <span className="text-3xl">✨</span>
+                  <h3 className="text-xl font-black text-white theme-text-main font-cinzel leading-none">
+                    {t("Save Your Kundli", "अपनी कुंडली सहेजें")}
+                  </h3>
+                  <p className="text-xs text-slate-400 theme-text-muted leading-relaxed">
+                    {t("Your Kundli has been generated successfully. Would you like to save it for future access?",
+                       "आपकी कुंडली सफलतापूर्वक जनरेट हो गई है। क्या आप भविष्य में उपयोग के लिए इसे सुरक्षित रखना चाहते हैं?")}
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-slate-900 theme-bg-card rounded-xl border border-slate-800 theme-border text-xs space-y-1">
+                  <p className="font-extrabold text-[#cca43b] theme-text-main">{t("Kundli Profile Draft:", "कुंडली प्रोफ़ाइल ड्राफ्ट:")}</p>
+                  <p className="text-white theme-text-main"><span className="text-slate-400 theme-text-muted">{t("Name:", "नाम:")}</span> {pendingKundliToSave.name}</p>
+                  <p className="text-white theme-text-main"><span className="text-slate-400 theme-text-muted">{t("Birth Date & Time:", "जन्म समय व तिथि:")}</span> {pendingKundliToSave.dob} | {pendingKundliToSave.tob}</p>
+                  <p className="text-white theme-text-main"><span className="text-slate-400 theme-text-muted">{t("Birth Place:", "जन्म स्थान:")}</span> {pendingKundliToSave.place}</p>
+                </div>
+
+                <div className="flex flex-col gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!currentUser || currentUser.includes('guest')) {
+                        // Not logged in. Open signup/login.
+                        localStorage.setItem('pva_pending_save_payload', JSON.stringify(pendingKundliToSave));
+                        localStorage.setItem('pva_pending_gate_action_type', 'generate_chart');
+                        setShowSavePrompt(false);
+                        setPendingKundliToSave(null);
+                        setAuthActiveTab('signup');
+                        setCurrentScreen('AUTH');
+                        triggerNotification(
+                          t("Create Free Account", "निशुल्क खाता बनाएं"),
+                          t("Please sign up or login with Email/Google to save unlimited Kundlis into your profile.", "कृपया अपने प्रोफ़ाइल में असीमित कुंडलियों को सुरक्षित रखने के लिए ईमेल या गूगल से लॉगिन करें।"),
+                          "info"
+                        );
+                      } else {
+                        // Already logged in! Save it directly.
+                        try {
+                          await kundliDbService.saveKundli(currentUser, pendingKundliToSave);
+                          const list = await kundliDbService.fetchSavedKundlis(currentUser);
+                          setSavedKundlis(list);
+                          triggerNotification(
+                            t("Kundli Saved Successfully", "कुंडली सुरक्षित हो गई"),
+                            t("Kundli has been synced to your personal cloud directory.", "कुंडली आपके व्यक्तिगत क्लाउड संग्रह में सुरक्षित कर दी गई है।"),
+                            "success"
+                          );
+                        } catch (err) {
+                          triggerNotification("Error Saving", "Could not write to cloud storage database.", "warning");
+                        }
+                        setShowSavePrompt(false);
+                        setPendingKundliToSave(null);
+                      }
+                    }}
+                    className="w-full py-3 bg-[#cca43b] hover:brightness-110 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition shadow-lg text-center"
+                    style={{
+                      backgroundColor: tObj.primary,
+                      color: currentTheme === 'CLASSIC_BW' ? '#FFFFFF' : '#FFFFFF'
+                    }}
+                  >
+                    {t("Save Kundli", "कुंडली सहेजें")}
+                  </button>
+
+                  <button
+                    type="button"
+                    style={{
+                      borderColor: tObj.border,
+                      color: tObj.textMain
+                    }}
+                    onClick={() => {
+                      setShowSavePrompt(false);
+                      setPendingKundliToSave(null);
+                      triggerNotification(
+                        t("Calculated Without Saving", "बिना सहेजे गणना"),
+                        t("You can now read predictions, download PDF, and view all charts freely in anonymous mode.", "आप निःशुल्क रूप से भविष्यफल पढ़ सकते हैं, पीडीएफ डाउनलोड कर सकते हैं और चार्ट देख सकते हैं।"),
+                        "info"
+                      );
+                    }}
+                    className="w-full py-2.5 bg-transparent border theme-border font-bold text-xs uppercase tracking-wider rounded-xl transition text-center"
+                  >
+                    {t("Continue Without Saving", "बिना सहेजे जारी रखें")}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
