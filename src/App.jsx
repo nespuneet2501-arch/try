@@ -13,7 +13,7 @@ import {
   VerificationCertificatePanel
 } from './AdvancedVedicModules';
 import SocietyUpdatesHub, { AstroPaywallLock, AdminControlWorkstation } from './SocietyCMS';
-import { authService, kundliDbService, getDefaultStorageConfig, saveStorageConfig, isSupabaseConfigured, isGoogleSheetsConfigured } from './StorageService';
+import { authService, kundliDbService, feedbackService, getDefaultStorageConfig, saveStorageConfig, isSupabaseConfigured, isGoogleSheetsConfigured } from './StorageService';
 
 const THEMES = {
   BRIGHT: {
@@ -352,6 +352,327 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+const GOOGLE_APPS_SCRIPT_CODE = `function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Self-healing schema builder that handles dynamic column injection
+    function ensureSheetWithColumns(ss, name, requiredCols) {
+      var sheet = ss.getSheetByName(name);
+      if (!sheet) {
+        sheet = ss.insertSheet(name);
+      }
+      if (sheet.getLastRow() === 0) {
+        sheet.appendRow(requiredCols);
+        return sheet;
+      }
+      var currentHeaders = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0];
+      var headerMap = {};
+      for (var i = 0; i < currentHeaders.length; i++) {
+        headerMap[currentHeaders[i]] = i;
+      }
+      for (var j = 0; j < requiredCols.length; j++) {
+        var col = requiredCols[j];
+        if (headerMap[col] === undefined) {
+          sheet.getRange(1, sheet.getLastColumn() + 1).setValue(col);
+        }
+      }
+      return sheet;
+    }
+
+    // Dynamic creation & auto-schema healthcheck
+    var usersSheet = ensureSheetWithColumns(ss, "Users", ["User ID", "Name", "Email", "Google ID", "Registration Date", "Last Login", "Login Count", "Status"]);
+    var kundlisSheet = ensureSheetWithColumns(ss, "Kundli Records", ["Record ID", "User ID", "Name", "Gender", "Date of Birth", "Time of Birth", "Place of Birth", "Kundli JSON", "PDF URL", "Created Date"]);
+    var feedbackSheet = ensureSheetWithColumns(ss, "Feedback", ["Feedback ID", "User ID", "Feedback Message", "Date"]);
+    var analyticsSheet = ensureSheetWithColumns(ss, "Analytics", ["Total Users", "Total Kundli Generated", "Total Saved Kundli", "Total Logins", "Last Updated"]);
+    var settingsSheet = ensureSheetWithColumns(ss, "Settings", ["Key", "Value"]);
+
+    var type = data.type || "unknown";
+    var result = { success: false, message: "Invalid command" };
+
+    function getSettingVal(key) {
+      if (settingsSheet.getLastRow() < 1) return null;
+      var rows = settingsSheet.getDataRange().getValues();
+      for (var i = 1; i < rows.length; i++) {
+        if (rows[i][0] === key) return rows[i][1];
+      }
+      return null;
+    }
+
+    function saveSettingVal(key, val) {
+      var lastRow = settingsSheet.getLastRow();
+      var foundIdx = -1;
+      if (lastRow > 0) {
+        var rows = settingsSheet.getDataRange().getValues();
+        for (var i = 1; i < rows.length; i++) {
+          if (rows[i][0] === key) {
+            foundIdx = i + 1;
+            break;
+          }
+        }
+      }
+      if (foundIdx === -1) {
+        settingsSheet.appendRow([key, val]);
+      } else {
+        settingsSheet.getRange(foundIdx, 2).setValue(val);
+      }
+    }
+
+    function updateAnalyticsRecord() {
+      var totalUsers = Math.max(0, usersSheet.getLastRow() - 1);
+      var totalSavedKundli = Math.max(0, kundlisSheet.getLastRow() - 1);
+      var totalLogins = getSettingVal("total_logins") || totalUsers || 1;
+      var totalKundliGenerated = getSettingVal("total_generated") || totalSavedKundli || 1;
+      
+      // Clear secondary rows if present to preserve exact layout
+      if (analyticsSheet.getLastRow() > 1) {
+        analyticsSheet.getRange(2, 1).setValue(totalUsers);
+        analyticsSheet.getRange(2, 2).setValue(totalKundliGenerated);
+        analyticsSheet.getRange(2, 3).setValue(totalSavedKundli);
+        analyticsSheet.getRange(2, 4).setValue(totalLogins);
+        analyticsSheet.getRange(2, 5).setValue(new Date().toISOString());
+      } else {
+        analyticsSheet.appendRow([totalUsers, totalKundliGenerated, totalSavedKundli, totalLogins, new Date().toISOString()]);
+      }
+    }
+
+    if (type === "signup" || type === "login") {
+      var email = (data.email || "").trim().toLowerCase();
+      var name = data.name || email.split("@")[0];
+      var googleId = data.googleId || "";
+      var regDate = data.registeredAt || new Date().toISOString().split("T")[0];
+      var lastLogin = new Date().toISOString();
+      var loginType = data.method || "Email/Password";
+      
+      var usersData = usersSheet.getDataRange().getValues();
+      var headers = usersData[0];
+      var emailCol = headers.indexOf("Email");
+      var foundIdx = -1;
+      
+      for (var i = 1; i < usersData.length; i++) {
+        if (usersData[i][emailCol].toString().toLowerCase() === email) {
+          foundIdx = i + 1;
+          break;
+        }
+      }
+
+      var userFound = null;
+      var loginCount = 1;
+      
+      if (foundIdx === -1) {
+        var rowValues = [];
+        for (var colIdx = 0; colIdx < headers.length; colIdx++) {
+          var header = headers[colIdx];
+          if (header === "User ID") rowValues.push(data.id || Utilities.base64Encode(email));
+          else if (header === "Name") rowValues.push(name);
+          else if (header === "Email") rowValues.push(email);
+          else if (header === "Google ID") rowValues.push(googleId);
+          else if (header === "Registration Date") rowValues.push(regDate);
+          else if (header === "Last Login") rowValues.push(lastLogin);
+          else if (header === "Login Count") rowValues.push(1);
+          else if (header === "Status") rowValues.push("Active");
+          else rowValues.push("");
+        }
+        usersSheet.appendRow(rowValues);
+        userFound = { id: data.id || Utilities.base64Encode(email), name: name, email: email, loginType: loginType, registeredAt: regDate };
+      } else {
+        var countCol = headers.indexOf("Login Count");
+        var nameCol = headers.indexOf("Name");
+        var lastLoginCol = headers.indexOf("Last Login");
+        var gIdCol = headers.indexOf("Google ID");
+        var statusCol = headers.indexOf("Status");
+        
+        loginCount = parseInt(usersData[foundIdx-1][countCol] || 0) + 1;
+        
+        usersSheet.getRange(foundIdx, nameCol + 1).setValue(name);
+        usersSheet.getRange(foundIdx, lastLoginCol + 1).setValue(lastLogin);
+        usersSheet.getRange(foundIdx, countCol + 1).setValue(loginCount);
+        usersSheet.getRange(foundIdx, statusCol + 1).setValue("Active");
+        if (googleId) {
+          usersSheet.getRange(foundIdx, gIdCol + 1).setValue(googleId);
+        }
+        
+        userFound = {
+          id: usersData[foundIdx-1][headers.indexOf("User ID")],
+          name: name,
+          email: email,
+          loginType: loginType,
+          registeredAt: usersData[foundIdx-1][headers.indexOf("Registration Date")],
+          lastLogin: lastLogin
+        };
+      }
+      
+      var totalLogins = parseInt(getSettingVal("total_logins") || 0) + 1;
+      saveSettingVal("total_logins", totalLogins);
+      updateAnalyticsRecord();
+      
+      result = { success: true, message: "Authorized successfully!", user: userFound };
+
+    } else if (type === "save_kundli") {
+      var kundliId = data.id || "k_" + Date.now();
+      var userId = data.email || "guest";
+      var name = data.name || "Unnamed Seeker";
+      var gender = data.gender || "Male";
+      var dob = data.dob || "";
+      var tob = data.tob || "";
+      var place = data.place || "";
+      var createdDate = data.created_at || new Date().toISOString();
+      var jsonPayload = JSON.stringify(data);
+      var pdfUrl = data.pdfUrl || "";
+      
+      var kundlisData = kundlisSheet.getDataRange().getValues();
+      var headers = kundlisData[0];
+      var foundIdx = -1;
+      
+      for (var i = 1; i < kundlisData.length; i++) {
+        if (kundlisData[i][0].toString() === kundliId.toString()) {
+          foundIdx = i + 1;
+          break;
+        }
+      }
+      
+      var rowValues = [];
+      for (var colIdx = 0; colIdx < headers.length; colIdx++) {
+        var header = headers[colIdx];
+        if (header === "Record ID" || header === "Kundli ID") rowValues.push(kundliId);
+        else if (header === "User ID") rowValues.push(userId);
+        else if (header === "Name" || header === "Full Name") rowValues.push(name);
+        else if (header === "Gender") rowValues.push(gender);
+        else if (header === "Date of Birth" || header === "Birth Date") rowValues.push(dob);
+        else if (header === "Time of Birth" || header === "Birth Time") rowValues.push(tob);
+        else if (header === "Place of Birth" || header === "Birth Place") rowValues.push(place);
+        else if (header === "Kundli JSON" || header === "Kundli JSON Data") rowValues.push(jsonPayload);
+        else if (header === "PDF URL") rowValues.push(pdfUrl);
+        else if (header === "Created Date" || header === "Created date") rowValues.push(createdDate);
+        else rowValues.push("");
+      }
+      
+      if (foundIdx === -1) {
+        kundlisSheet.appendRow(rowValues);
+        var totalGen = parseInt(getSettingVal("total_generated") || 0) + 1;
+        saveSettingVal("total_generated", totalGen);
+      } else {
+        kundlisSheet.getRange(foundIdx, 1, 1, rowValues.length).setValues([rowValues]);
+      }
+      
+      updateAnalyticsRecord();
+      result = { success: true, message: "Kundli saved inside spreadsheet successfully!" };
+
+    } else if (type === "fetch_kundlis") {
+      var email = (data.email || "").trim().toLowerCase();
+      var kundlisData = kundlisSheet.getDataRange().getValues();
+      var headers = kundlisData[0];
+      var userCol = headers.indexOf("User ID");
+      var list = [];
+      
+      for (var i = 1; i < kundlisData.length; i++) {
+        var row = kundlisData[i];
+        if (row[userCol].toString().toLowerCase() === email || email === "nespuneet2501@gmail.com") {
+          var parsedObj = {};
+          var jsonCol = headers.indexOf("Kundli JSON");
+          if (jsonCol === -1) jsonCol = headers.indexOf("Kundli JSON Data");
+          
+          try {
+            parsedObj = JSON.parse(row[jsonCol]);
+          } catch(e) {
+            parsedObj = {
+              id: row[0],
+              user_id: row[1],
+              name: row[2],
+              gender: row[3],
+              dob: row[4],
+              tob: row[5],
+              place: row[6],
+              created_at: row[headers.indexOf("Created Date")]
+            };
+          }
+          list.push(parsedObj);
+        }
+      }
+      result = { success: true, list: list };
+
+    } else if (type === "delete_kundli") {
+      var kundliId = data.id || "";
+      var kundlisData = kundlisSheet.getDataRange().getValues();
+      var foundIdx = -1;
+      for (var i = 1; i < kundlisData.length; i++) {
+        if (kundlisData[i][0].toString() === kundliId.toString()) {
+          foundIdx = i + 1;
+          break;
+        }
+      }
+      if (foundIdx !== -1) {
+        kundlisSheet.deleteRow(foundIdx);
+        updateAnalyticsRecord();
+        result = { success: true, message: "Kundli erased from database!" };
+      }
+
+    } else if (type === "submit_feedback") {
+      var fId = "f_" + Date.now();
+      var fEmail = (data.email || "guest@vedicastrology.org").trim();
+      var message = data.message || "";
+      var fDate = new Date().toISOString();
+      
+      feedbackSheet.appendRow([fId, fEmail, message, fDate]);
+      result = { success: true, message: "Feedback submitted successfully!" };
+
+    } else if (type === "fetch_feedback") {
+      if (feedbackSheet.getLastRow() < 2) {
+        result = { success: true, list: [] };
+      } else {
+        var rows = feedbackSheet.getDataRange().getValues();
+        var list = [];
+        for (var i = 1; i < rows.length; i++) {
+          list.push({
+            id: rows[i][0],
+            email: rows[i][1],
+            message: rows[i][2],
+            date: rows[i][3]
+          });
+        }
+        result = { success: true, list: list };
+      }
+
+    } else if (type === "get_analytics") {
+      updateAnalyticsRecord();
+      var rows = analyticsSheet.getDataRange().getValues();
+      var usersRows = usersSheet.getDataRange().getValues();
+      var listUsers = [];
+      for (var j = 1; j < Math.min(25, usersRows.length); j++) {
+        listUsers.push({
+          email: usersRows[j][2],
+          name: usersRows[j][1],
+          method: usersRows[j][3] || "Email/Password",
+          registeredAt: usersRows[j][4] ? usersRows[j][4].substr(0,10) : "2026-05-24",
+          lastLogin: usersRows[j][5],
+          loginCount: usersRows[j][6] || 1,
+          status: usersRows[j][7] || "Active"
+        });
+      }
+      
+      result = {
+        success: true,
+        metrics: {
+          totalUsers: parseInt(rows[1][0] || 0),
+          totalKundlisGenerated: parseInt(rows[1][1] || 0),
+          totalSavedSavedKundli: parseInt(rows[1][2] || 0),
+          totalSavedKundlis: parseInt(rows[1][2] || 0),
+          totalLogins: parseInt(rows[1][3] || 0),
+          lastUpdated: rows[1][4]
+        },
+        users: listUsers
+      };
+    }
+
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+
 // Wrapper to export the crash-proof App
 export default function App() {
   return (
@@ -561,17 +882,15 @@ function VedicKundliApp() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (currentUser) {
-      const is_admin = currentUser.trim().toLowerCase() === 'nespuneet2501@gmail.com';
-      const restrictedScreens = ['PANCHANG', 'MATCHMAKING', 'SOCIETY_UPDATES', 'ADMIN_CONTROL', 'INTEGRATIONS'];
-      if (!is_admin && restrictedScreens.includes(currentScreen)) {
-        setCurrentScreen('DASHBOARD');
-        triggerNotification(
-          "Kundli Services Only",
-          "Advanced admin sections are locked. General users have access to save & calculate unlimited High-Precision Kundlis.",
-          "warning"
-        );
-      }
+    const is_admin = currentUser?.trim().toLowerCase() === 'nespuneet2501@gmail.com';
+    const restrictedScreens = ['ADMIN_CONTROL', 'INTEGRATIONS'];
+    if (!is_admin && restrictedScreens.includes(currentScreen)) {
+      setCurrentScreen('DASHBOARD');
+      triggerNotification(
+        "Admin Privileges Required",
+        "This section is restricted to the administrator. Please log in with correct credentials.",
+        "warning"
+      );
     }
   }, [currentUser, currentScreen]);
 
@@ -3570,6 +3889,14 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                       onChange={(e) => {
                         const val = e.target.value.trim();
                         if (val) {
+                          if (val.includes('script.google.com')) {
+                            // The user pasted a Script URL here instead of a Google Sheet link!
+                            const updated = { ...storageConfig, googleScriptUrl: val };
+                            setStorageConfig(updated);
+                            saveStorageConfig(updated);
+                            triggerNotification("Auto-Routing Link", "Detected Apps Script Web App URL! Placed it into the correct box automatically. 🎉", "success");
+                            return;
+                          }
                           const matches = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
                           const sheetId = matches ? matches[1] : val;
                           const updated = { ...storageConfig, googleSheetId: sheetId };
@@ -3594,7 +3921,18 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                         type="text"
                         value={storageConfig.googleSheetId}
                         onChange={(e) => {
-                          const updated = { ...storageConfig, googleSheetId: e.target.value };
+                          const val = e.target.value.trim();
+                          if (val.includes('script.google.com')) {
+                            // User pasted Script URL in Spreadsheet ID
+                            const updated = { ...storageConfig, googleScriptUrl: val, googleSheetId: '' };
+                            setStorageConfig(updated);
+                            saveStorageConfig(updated);
+                            triggerNotification("Auto-Corrected URL", "Oops! Placed the Web App URL into the proper field below instead. 😀", "success");
+                            return;
+                          }
+                          const matches = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+                          const sheetId = matches ? matches[1] : val;
+                          const updated = { ...storageConfig, googleSheetId: sheetId };
                           setStorageConfig(updated);
                           saveStorageConfig(updated);
                         }}
@@ -3622,7 +3960,18 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                         type="text"
                         value={storageConfig.googleScriptUrl || ''}
                         onChange={(e) => {
-                          const updated = { ...storageConfig, googleScriptUrl: e.target.value };
+                          const val = e.target.value.trim();
+                          if (val.includes('/spreadsheets/d/') || val.includes('spreadsheets')) {
+                            // User pasted Spreadsheet URL in Web App URL
+                            const matches = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+                            const sheetId = matches ? matches[1] : val;
+                            const updated = { ...storageConfig, googleSheetId: sheetId, googleScriptUrl: '' };
+                            setStorageConfig(updated);
+                            saveStorageConfig(updated);
+                            triggerNotification("Auto-Corrected URL", "Detected Spreadsheet URL! Updated your Spreadsheet ID above instead. 👍", "success");
+                            return;
+                          }
+                          const updated = { ...storageConfig, googleScriptUrl: val };
                           setStorageConfig(updated);
                           saveStorageConfig(updated);
                         }}
@@ -3654,336 +4003,11 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
 
                     <div className="relative rounded-lg bg-slate-950 p-3 border border-slate-900 text-left">
                       <pre className="text-[9px] font-mono text-emerald-400 overflow-x-auto max-h-48 leading-relaxed select-all scrollbar-thin">
-{`function doPost(e) {
-  try {
-    var data = JSON.parse(e.postData.contents);
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // 1. Ensure "Users" sheet exists and has correct columns
-    var usersSheet = ss.getSheetByName("Users");
-    if (!usersSheet) {
-      usersSheet = ss.insertSheet("Users");
-      usersSheet.appendRow(["User ID", "Name", "Email", "Login Type", "Registration Date", "Last Login"]);
-    }
-    
-    // 2. Ensure "Saved Kundlis" sheet exists and has correct columns
-    var kundlisSheet = ss.getSheetByName("Saved Kundlis");
-    if (!kundlisSheet) {
-      kundlisSheet = ss.insertSheet("Saved Kundlis");
-      kundlisSheet.appendRow([
-        "Kundli ID", "User ID", "Full Name", "Gender", "Birth Date", "Birth Time", 
-        "Birth Place", "Latitude", "Longitude", "Timezone", "Created Date", "Updated Date", "Kundli JSON Data"
-      ]);
-    }
-    
-    var type = data.type || "unknown";
-    var result = { success: false, message: "Invalid command" };
-    
-    if (type === "signup") {
-      var userId = data.id || Utilities.base64Encode(data.email || "");
-      var name = data.name || "";
-      var email = data.email || "";
-      var loginType = data.method || "Email/Password";
-      var regDate = data.registeredAt || new Date().toISOString().split('T')[0];
-      var lastLogin = new Date().toISOString();
-      
-      var usersData = usersSheet.getDataRange().getValues();
-      var foundIdx = -1;
-      for (var i = 1; i < usersData.length; i++) {
-        if (usersData[i][2].toString().toLowerCase() === email.toLowerCase()) {
-          foundIdx = i + 1;
-          break;
-        }
-      }
-      
-      if (foundIdx === -1) {
-        usersSheet.appendRow([userId, name, email, loginType, regDate, lastLogin]);
-      } else {
-        usersSheet.getRange(foundIdx, 2).setValue(name);
-        usersSheet.getRange(foundIdx, 4).setValue(loginType);
-        usersSheet.getRange(foundIdx, 6).setValue(lastLogin);
-      }
-      result = { success: true, message: "User registered/updated in spreadsheet!", user: { email: email, name: name, registeredAt: regDate } };
-      
-    } else if (type === "login") {
-      var email = data.email || "";
-      var lastLogin = new Date().toISOString();
-      var usersData = usersSheet.getDataRange().getValues();
-      var userFound = null;
-      var foundIdx = -1;
-      for (var i = 1; i < usersData.length; i++) {
-        if (usersData[i][2].toString().toLowerCase() === email.toLowerCase()) {
-          userFound = {
-            id: usersData[i][0],
-            name: usersData[i][1],
-            email: usersData[i][2],
-            loginType: usersData[i][3],
-            registeredAt: usersData[i][4],
-            lastLogin: lastLogin
-          };
-          foundIdx = i + 1;
-          break;
-        }
-      }
-      if (userFound) {
-        usersSheet.getRange(foundIdx, 6).setValue(lastLogin);
-        result = { success: true, message: "Logged in successfully!", user: userFound };
-      } else {
-        result = { success: false, error: "User not found in spreadsheet database!" };
-      }
-      
-    } else if (type === "save_kundli") {
-      var kundliId = data.id || "k_" + Date.now();
-      var userId = data.email || "guest";
-      var name = data.name || "Unnamed Seeker";
-      var gender = data.gender || "Male";
-      var birthDate = data.dob || "";
-      var birthTime = data.tob || "";
-      var birthPlace = data.place || "";
-      var lat = data.lat || 0;
-      var lon = data.lon || 0;
-      var tzone = data.timezone || "";
-      var createdDate = data.created_at || new Date().toISOString();
-      var updatedDate = new Date().toISOString();
-      var jsonPayload = JSON.stringify(data);
-      
-      var kundlisData = kundlisSheet.getDataRange().getValues();
-      var foundIdx = -1;
-      for (var i = 1; i < kundlisData.length; i++) {
-        if (kundlisData[i][0].toString() === kundliId.toString()) {
-          foundIdx = i + 1;
-          break;
-        }
-      }
-      
-      var rowData = [kundliId, userId, name, gender, birthDate, birthTime, birthPlace, lat, lon, tzone, createdDate, updatedDate, jsonPayload];
-      if (foundIdx === -1) {
-        kundlisSheet.appendRow(rowData);
-      } else {
-        kundlisSheet.getRange(foundIdx, 1, 1, rowData.length).setValues([rowData]);
-      }
-      result = { success: true, message: "Kundli saved to spreadsheet!" };
-      
-    } else if (type === "fetch_kundlis") {
-      var email = data.email || "";
-      var kundlisData = kundlisSheet.getDataRange().getValues();
-      var list = [];
-      for (var i = 1; i < kundlisData.length; i++) {
-        var row = kundlisData[i];
-        if (row[1].toString().toLowerCase() === email.toLowerCase()) {
-          var parsedObj = {};
-          try {
-            parsedObj = JSON.parse(row[12]);
-          } catch(e) {
-            parsedObj = {
-              id: row[0],
-              name: row[2],
-              gender: row[3],
-              dob: row[4],
-              tob: row[5],
-              place: row[6],
-              lat: parseFloat(row[7]),
-              lon: parseFloat(row[8]),
-              timezone: row[9],
-              created_at: row[10],
-              updated_at: row[11]
-            };
-          }
-          list.push(parsedObj);
-        }
-      }
-      result = { success: true, list: list };
-      
-    } else if (type === "delete_kundli") {
-      var kundliId = data.id || "";
-      var kundlisData = kundlisSheet.getDataRange().getValues();
-      var foundIdx = -1;
-      for (var i = 1; i < kundlisData.length; i++) {
-        if (kundlisData[i][0].toString() === kundliId.toString()) {
-          foundIdx = i + 1;
-          break;
-        }
-      }
-      if (foundIdx !== -1) {
-        kundlisSheet.deleteRow(foundIdx);
-        result = { success: true, message: "Kundli deleted from sheet!" };
-      }
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON)
-      .addHeader("Access-Control-Allow-Origin", "*");
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON)
-      .addHeader("Access-Control-Allow-Origin", "*");
-  }
-}`}
+{GOOGLE_APPS_SCRIPT_CODE}
                       </pre>
                       <button
                         onClick={() => {
-                          navigator.clipboard.writeText(`function doPost(e) {
-  try {
-    var data = JSON.parse(e.postData.contents);
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // Ensure "Users" and "Saved Kundlis" sheets exist
-    var usersSheet = ss.getSheetByName("Users") || ss.insertSheet("Users");
-    if (usersSheet.getLastRow() === 0) {
-      usersSheet.appendRow(["User ID", "Name", "Email", "Login Type", "Registration Date", "Last Login"]);
-    }
-    
-    var kundlisSheet = ss.getSheetByName("Saved Kundlis") || ss.insertSheet("Saved Kundlis");
-    if (kundlisSheet.getLastRow() === 0) {
-      kundlisSheet.appendRow([
-        "Kundli ID", "User ID", "Full Name", "Gender", "Birth Date", "Birth Time", 
-        "Birth Place", "Latitude", "Longitude", "Timezone", "Created Date", "Updated Date", "Kundli JSON Data"
-      ]);
-    }
-    
-    var type = data.type || "unknown";
-    var result = { success: false, message: "Invalid command" };
-    
-    if (type === "signup") {
-      var userId = data.id || Utilities.base64Encode(data.email || "");
-      var name = data.name || "";
-      var email = data.email || "";
-      var loginType = data.method || "Email/Password";
-      var regDate = data.registeredAt || new Date().toISOString().split('T')[0];
-      var lastLogin = new Date().toISOString();
-      
-      var usersData = usersSheet.getDataRange().getValues();
-      var foundIdx = -1;
-      for (var i = 1; i < usersData.length; i++) {
-        if (usersData[i][2].toString().toLowerCase() === email.toLowerCase()) {
-          foundIdx = i + 1;
-          break;
-        }
-      }
-      
-      if (foundIdx === -1) {
-        usersSheet.appendRow([userId, name, email, loginType, regDate, lastLogin]);
-      } else {
-        usersSheet.getRange(foundIdx, 2).setValue(name);
-        usersSheet.getRange(foundIdx, 4).setValue(loginType);
-        usersSheet.getRange(foundIdx, 6).setValue(lastLogin);
-      }
-      result = { success: true, message: "User registered/updated in spreadsheet!", user: { email: email, name: name, registeredAt: regDate } };
-      
-    } else if (type === "login") {
-      var email = data.email || "";
-      var lastLogin = new Date().toISOString();
-      var usersData = usersSheet.getDataRange().getValues();
-      var userFound = null;
-      var foundIdx = -1;
-      for (var i = 1; i < usersData.length; i++) {
-        if (usersData[i][2].toString().toLowerCase() === email.toLowerCase()) {
-          userFound = {
-            id: usersData[i][0],
-            name: usersData[i][1],
-            email: usersData[i][2],
-            loginType: usersData[i][3],
-            registeredAt: usersData[i][4],
-            lastLogin: lastLogin
-          };
-          foundIdx = i + 1;
-          break;
-        }
-      }
-      if (userFound) {
-        usersSheet.getRange(foundIdx, 6).setValue(lastLogin);
-        result = { success: true, message: "Logged in successfully!", user: userFound };
-      } else {
-        result = { success: false, error: "User not found in spreadsheet database!" };
-      }
-      
-    } else if (type === "save_kundli") {
-      var kundliId = data.id || "k_" + Date.now();
-      var userId = data.email || "guest";
-      var name = data.name || "Unnamed Seeker";
-      var gender = data.gender || "Male";
-      var birthDate = data.dob || "";
-      var birthTime = data.tob || "";
-      var birthPlace = data.place || "";
-      var lat = data.lat || 0;
-      var lon = data.lon || 0;
-      var tzone = data.timezone || "";
-      var createdDate = data.created_at || new Date().toISOString();
-      var updatedDate = new Date().toISOString();
-      var jsonPayload = JSON.stringify(data);
-      
-      var kundlisData = kundlisSheet.getDataRange().getValues();
-      var foundIdx = -1;
-      for (var i = 1; i < kundlisData.length; i++) {
-        if (kundlisData[i][0].toString() === kundliId.toString()) {
-          foundIdx = i + 1;
-          break;
-        }
-      }
-      
-      var rowData = [kundliId, userId, name, gender, birthDate, birthTime, birthPlace, lat, lon, tzone, createdDate, updatedDate, jsonPayload];
-      if (foundIdx === -1) {
-        kundlisSheet.appendRow(rowData);
-      } else {
-        kundlisSheet.getRange(foundIdx, 1, 1, rowData.length).setValues([rowData]);
-      }
-      result = { success: true, message: "Kundli saved to spreadsheet!" };
-      
-    } else if (type === "fetch_kundlis") {
-      var email = data.email || "";
-      var kundlisData = kundlisSheet.getDataRange().getValues();
-      var list = [];
-      for (var i = 1; i < kundlisData.length; i++) {
-        var row = kundlisData[i];
-        if (row[1].toString().toLowerCase() === email.toLowerCase()) {
-          var parsedObj = {};
-          try {
-            parsedObj = JSON.parse(row[12]);
-          } catch(e) {
-            parsedObj = {
-              id: row[0],
-              name: row[2],
-              gender: row[3],
-              dob: row[4],
-              tob: row[5],
-              place: row[6],
-              lat: parseFloat(row[7]),
-              lon: parseFloat(row[8]),
-              timezone: row[9],
-              created_at: row[10],
-              updated_at: row[11]
-            };
-          }
-          list.push(parsedObj);
-        }
-      }
-      result = { success: true, list: list };
-      
-    } else if (type === "delete_kundli") {
-      var kundliId = data.id || "";
-      var kundlisData = kundlisSheet.getDataRange().getValues();
-      var foundIdx = -1;
-      for (var i = 1; i < kundlisData.length; i++) {
-        if (kundlisData[i][0].toString() === kundliId.toString()) {
-          foundIdx = i + 1;
-          break;
-        }
-      }
-      if (foundIdx !== -1) {
-        kundlisSheet.deleteRow(foundIdx);
-        result = { success: true, message: "Kundli deleted from sheet!" };
-      }
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON)
-      .addHeader("Access-Control-Allow-Origin", "*");
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON)
-      .addHeader("Access-Control-Allow-Origin", "*");
-  }
-}`);
+                          navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
                           alert("Google Apps Script code copied to clipboard! Paste it into the Apps Script editor.");
                         }}
                         className="absolute top-2 right-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[9px] px-2.5 py-1 rounded transition uppercase tracking-wider"

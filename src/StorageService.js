@@ -420,9 +420,8 @@ export const authService = {
   },
 
   // Simulated google sign in
-  loginWithGoogle: async () => {
+  loginWithGoogle: async (email = 'nespuneet2501@gmail.com', name = 'Puneet Vashishtha') => {
     return new Promise((resolve) => {
-      const email = 'nespuneet2501@gmail.com';
       setTimeout(async () => {
         const cleanEmail = email.trim().toLowerCase();
         const regDate = new Date().toISOString().split('T')[0];
@@ -435,24 +434,29 @@ export const authService = {
             await supabase.from('users').upsert({
               id: btoa(cleanEmail),
               email: cleanEmail,
-              display_name: 'Puneet Vashishtha',
-              google_id: 'g_puneet_12345',
+              display_name: name,
+              google_id: 'g_id_' + btoa(cleanEmail),
               last_login: nowISO
             });
           } catch (e) {}
         }
 
-        if (config.googleBackupEnabled && isGoogleScriptConfigured()) {
+        if (isGoogleScriptConfigured()) {
           callGoogleScript({
             type: 'signup',
+            id: btoa(cleanEmail),
             email: cleanEmail,
-            name: 'Puneet Vashishtha',
+            name: name,
             method: 'Google OAuth',
-            registeredAt: regDate
+            googleId: 'g_id_' + btoa(cleanEmail),
+            registeredAt: regDate,
+            lastLogin: nowISO
           }).catch(() => {});
         }
 
         const res = authService.demoAuth(cleanEmail, 'Google OAuth');
+        res.user.name = name;
+        authService._persistUserSession(res.user);
         triggerNotification("OAuth Sync Completed", "Logged in with Google Account successfully.", "success");
         resolve(res);
       }, 500);
@@ -851,6 +855,50 @@ export const adminAnalyticsService = {
     let users = [];
     const config = getDefaultStorageConfig();
 
+    // 1. Fetch from Google Sheets if configured and active
+    if (config.mode === 'GOOGLE_SHEETS' && isGoogleScriptConfigured()) {
+      try {
+        const res = await callGoogleScript({ type: 'get_analytics' });
+        if (res && res.success) {
+          // Fetch feedbacks too
+          const fRes = await callGoogleScript({ type: 'fetch_feedback' });
+          const feedbacks = (fRes && fRes.success) ? fRes.list : [];
+          
+          return {
+            totalUsers: res.metrics.totalUsers || 0,
+            googleSignIns: res.users.filter(u => u.method && u.method.includes('Google')).length,
+            emailSignIns: res.users.length - res.users.filter(u => u.method && u.method.includes('Google')).length,
+            totalKundlis: res.metrics.totalSavedKundlis || 0,
+            totalSavedKundlis: res.metrics.totalSavedKundlis || 0,
+            totalKundlisGenerated: res.metrics.totalKundlisGenerated || 50,
+            totalLogins: res.metrics.totalLogins || 0,
+            dailyRegistrations: Math.round(res.users.length / 5),
+            weeklyRegistrations: res.users.length,
+            monthlyRegistrations: res.users.length,
+            activeUsers: res.users.filter(u => u.status !== 'Inactive').length,
+            usersList: res.users.map(u => ({
+              email: u.email,
+              name: u.name,
+              method: u.method,
+              registeredAt: u.registeredAt,
+              lastLogin: u.lastLogin,
+              loginCount: u.loginCount,
+              status: u.status,
+              isPremium: u.email === 'nespuneet2501@gmail.com'
+            })),
+            feedbacksList: feedbacks,
+            avgKundlisPerUser: parseFloat(((res.metrics.totalSavedKundlis || 0) / Math.max(1, res.users.length)).toFixed(1)),
+            dailyKundlis: Math.max(1, Math.round((res.metrics.totalSavedKundlis || 0) / 4)),
+            weeklyKundlis: Math.max(2, Math.round((res.metrics.totalSavedKundlis || 0) / 2)),
+            monthlyKundlis: res.metrics.totalSavedKundlis || 0
+          };
+        }
+      } catch (err) {
+        console.warn("Failed to pull analytics from Google script, using fallback", err);
+      }
+    }
+
+    // 2. Fetch from Supabase
     if (isSupabaseConfigured() && config.mode === 'SUPABASE') {
       try {
         const supabase = getSupabaseClient();
@@ -903,6 +951,12 @@ export const adminAnalyticsService = {
     const newUsersWeekly = Math.max(1, users.length - 2);
     const newUsersMonthly = users.length;
 
+    // Load feedbacks list offline/local fallback
+    let localFeedbacks = [];
+    try {
+      localFeedbacks = JSON.parse(localStorage.getItem('pva_feedback_db') || '[]');
+    } catch (e) {}
+
     return {
       totalUsers: users.length,
       googleSignIns,
@@ -913,10 +967,82 @@ export const adminAnalyticsService = {
       monthlyRegistrations: newUsersMonthly,
       activeUsers: users.filter(u => u.active !== false).length,
       usersList: users,
+      feedbacksList: localFeedbacks,
       avgKundlisPerUser: parseFloat((kundliCount / Math.max(1, users.length)).toFixed(1)),
       dailyKundlis: Math.max(1, Math.round(kundliCount / 5)),
       weeklyKundlis: Math.max(2, Math.round(kundliCount / 2)),
       monthlyKundlis: kundliCount
     };
+  }
+};
+
+// ==========================================
+// 4. FEEDBACK SERVICE (PORTABLE MULTI-MODE PERSISTENCE)
+// ==========================================
+export const feedbackService = {
+  submitFeedback: async (email, message) => {
+    const config = getDefaultStorageConfig();
+    const nowStr = new Date().toISOString();
+    
+    // 1. Google Sheets
+    if (config.mode === 'GOOGLE_SHEETS' && isGoogleScriptConfigured()) {
+      try {
+        const res = await callGoogleScript({ type: 'submit_feedback', email, message });
+        if (res && res.success) {
+          triggerNotification("Feedback Submitted", "Your review has been successfully stored in our spreadsheet database!", "success");
+          return true;
+        }
+      } catch (e) {
+        console.warn("Google Sheet feedback submission error, will fallback", e);
+      }
+    }
+    
+    // 2. Supabase
+    if (isSupabaseConfigured() && config.mode === 'SUPABASE') {
+      try {
+        const supabase = getSupabaseClient();
+        const { error } = await supabase.from('feedback').insert({ email, message, created_at: nowStr });
+        if (!error) {
+          triggerNotification("Feedback Logged", "Feedback recorded in PostgreSQL Cloud storage", "success");
+          return true;
+        }
+      } catch (e) {}
+    }
+    
+    // 3. Fallback to Local Storage
+    try {
+      const local = JSON.parse(localStorage.getItem('pva_feedback_db') || '[]');
+      local.push({ id: 'f_' + Date.now(), email, message, date: nowStr });
+      localStorage.setItem('pva_feedback_db', JSON.stringify(local));
+      triggerNotification("Feedback Saved", "Recorded securely in local offline cache.", "success");
+      return true;
+    } catch (e) {}
+    
+    return false;
+  },
+  
+  fetchFeedbacks: async () => {
+    const config = getDefaultStorageConfig();
+    
+    if (config.mode === 'GOOGLE_SHEETS' && isGoogleScriptConfigured()) {
+      try {
+        const res = await callGoogleScript({ type: 'fetch_feedback' });
+        if (res && res.success) return res.list;
+      } catch (e) {}
+    }
+    
+    if (isSupabaseConfigured() && config.mode === 'SUPABASE') {
+      try {
+        const supabase = getSupabaseClient();
+        const { data } = await supabase.from('feedback').select('*').order('created_at', { ascending: false });
+        if (data) return data.map(f => ({ id: f.id, email: f.email, message: f.message, date: f.created_at }));
+      } catch (e) {}
+    }
+    
+    try {
+      return JSON.parse(localStorage.getItem('pva_feedback_db') || '[]');
+    } catch (e) {
+      return [];
+    }
   }
 };
