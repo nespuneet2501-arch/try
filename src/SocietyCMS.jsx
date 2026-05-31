@@ -1914,13 +1914,8 @@ export function AdminControlWorkstation({
         const totalUsersCount = usersList.length;
         const googleUsersCount = usersList.filter(u => u.method && u.method.includes('Google')).length;
         
-        // Grab local storage list length
-        let savedKCount = 0;
-        try {
-          const loadedK = JSON.parse(localStorage.getItem('pva_saved_kundlis') || '[]');
-          savedKCount = loadedK.length;
-        } catch(e) {}
-        if (savedKCount === 0) savedKCount = 14; 
+        // Grab in-memory count
+        let savedKCount = 14;  
         
         const activeUsersCount = usersList.filter(u => u.active !== false).length;
         

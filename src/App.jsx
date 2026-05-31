@@ -13,7 +13,7 @@ import {
   VerificationCertificatePanel
 } from './AdvancedVedicModules';
 import SocietyUpdatesHub, { AstroPaywallLock, AdminControlWorkstation } from './SocietyCMS';
-import { authService, kundliDbService, feedbackService, getDefaultStorageConfig, saveStorageConfig, isSupabaseConfigured, isGoogleSheetsConfigured } from './StorageService';
+import { authService, kundliDbService, feedbackService, adminAnalyticsService, getDefaultStorageConfig, saveStorageConfig, isSupabaseConfigured, isGoogleSheetsConfigured } from './StorageService';
 
 const THEMES = {
   BRIGHT: {
@@ -355,7 +355,33 @@ class ErrorBoundary extends React.Component {
 const GOOGLE_APPS_SCRIPT_CODE = `function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = null;
+    
+    // Multi-criteria Spreadsheet resolution
+    if (data.googleSheetId || data.spreadsheetId) {
+      var targetId = data.googleSheetId || data.spreadsheetId;
+      try {
+        ss = SpreadsheetApp.openById(targetId);
+      } catch (err) {
+        // Fallback to active spreadsheet if openById fails/unauthorized
+      }
+    }
+    
+    if (!ss) {
+      try {
+        ss = SpreadsheetApp.getActiveSpreadsheet();
+      } catch (err) {}
+    }
+    
+    if (!ss) {
+      try {
+        ss = SpreadsheetApp.getActive();
+      } catch (err) {}
+    }
+    
+    if (!ss) {
+      throw new Error("Could not access Google Spreadsheet. Please verify your Spreadsheet ID is correct and your Apps Script has permissions.");
+    }
     
     // Self-healing schema builder that handles dynamic column injection
     function ensureSheetWithColumns(ss, name, requiredCols) {
@@ -437,7 +463,10 @@ const GOOGLE_APPS_SCRIPT_CODE = `function doPost(e) {
       }
     }
 
-    if (type === "signup" || type === "login") {
+    if (type === "test_ping") {
+      updateAnalyticsRecord();
+      result = { success: true, message: "Authorization & database synchronization diagnostic ping completed successfully!" };
+    } else if (type === "signup" || type === "login") {
       var email = (data.email || "").trim().toLowerCase();
       var name = data.name || email.split("@")[0];
       var googleId = data.googleId || "";
@@ -639,13 +668,31 @@ const GOOGLE_APPS_SCRIPT_CODE = `function doPost(e) {
       var rows = analyticsSheet.getDataRange().getValues();
       var usersRows = usersSheet.getDataRange().getValues();
       var listUsers = [];
-      for (var j = 1; j < Math.min(25, usersRows.length); j++) {
+      for (var j = 1; j < Math.min(500, usersRows.length); j++) {
+        var rawRegDate = usersRows[j][4];
+        var regDateStr = "2026-05-24";
+        if (rawRegDate) {
+          if (typeof rawRegDate.toISOString === 'function') {
+            regDateStr = rawRegDate.toISOString().substring(0, 10);
+          } else {
+            regDateStr = rawRegDate.toString().substring(0, 10);
+          }
+        }
+        var rawLastLogin = usersRows[j][5];
+        var lastLoginStr = "";
+        if (rawLastLogin) {
+          if (typeof rawLastLogin.toISOString === 'function') {
+            lastLoginStr = rawLastLogin.toISOString();
+          } else {
+            lastLoginStr = rawLastLogin.toString();
+          }
+        }
         listUsers.push({
           email: usersRows[j][2],
           name: usersRows[j][1],
           method: usersRows[j][3] || "Email/Password",
-          registeredAt: usersRows[j][4] ? usersRows[j][4].substr(0,10) : "2026-05-24",
-          lastLogin: usersRows[j][5],
+          registeredAt: regDateStr,
+          lastLogin: lastLoginStr,
           loginCount: usersRows[j][6] || 1,
           status: usersRows[j][7] || "Active"
         });
@@ -701,10 +748,10 @@ function VedicKundliApp() {
     return session ? session.email : '';
   });
 
-  const [currentScreen, setCurrentScreen] = useState(() => {
-    const last = localStorage.getItem('pva_last_profile');
-    return last ? 'KUNDLI_REPORT' : 'DASHBOARD';
-  }); // WELCOME, AUTH, DASHBOARD, ADD_KUNDLI, KUNDLI_REPORT, PANCHANG, MATCHMAKING, PREMIUM
+  const [currentScreen, setCurrentScreen] = useState('DASHBOARD'); // WELCOME, AUTH, DASHBOARD, ADD_KUNDLI, KUNDLI_REPORT, PANCHANG, MATCHMAKING, PREMIUM
+  const [activeProfileMemory, setActiveProfileMemory] = useState(null);
+  const [memoryPendingSavePayload, setMemoryPendingSavePayload] = useState(null);
+  const [memoryPendingGateActionType, setMemoryPendingGateActionType] = useState('');
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [pendingKundliToSave, setPendingKundliToSave] = useState(null);
   const [storageConfig, setStorageConfig] = useState(() => getDefaultStorageConfig());
@@ -776,47 +823,13 @@ function VedicKundliApp() {
     }
   }, [currentUser]);
   
-  const [favoritesSet, setFavoritesSet] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('pva_favorites_set') || '[]');
-    } catch (e) {
-      return [];
-    }
-  });
+  const [favoritesSet, setFavoritesSet] = useState([]);
 
-  const [collectionsList, setCollectionsList] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('pva_collections_list') || '["Family", "Friends", "Clients"]');
-    } catch (e) {
-      return ["Family", "Friends", "Clients"];
-    }
-  });
+  const [collectionsList, setCollectionsList] = useState(["Family", "Friends", "Clients"]);
 
-  const [kundliShareSettings, setKundliShareSettings] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('pva_share_settings') || '{}');
-    } catch (e) {
-      return {};
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem('pva_favorites_set', JSON.stringify(favoritesSet));
-  }, [favoritesSet]);
-
-  useEffect(() => {
-    localStorage.setItem('pva_collections_list', JSON.stringify(collectionsList));
-  }, [collectionsList]);
-
-  useEffect(() => {
-    localStorage.setItem('pva_share_settings', JSON.stringify(kundliShareSettings));
-  }, [kundliShareSettings]);
+  const [kundliShareSettings, setKundliShareSettings] = useState({});
 
   const [usersList, setUsersList] = useState(() => {
-    const saved = localStorage.getItem('pva_users_list');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
-    }
     return [
       { email: 'nespuneet2501@gmail.com', isPremium: true, method: 'Google Sync', registeredAt: '2026-05-24' },
       { email: 'guest@vedicastrology.org', isPremium: false, method: 'Email', registeredAt: '2026-05-26' },
@@ -824,9 +837,41 @@ function VedicKundliApp() {
     ];
   });
 
+  // Zero-footprint memory state initialization for user roster lists
+
+  const [isAdminSyncing, setIsAdminSyncing] = useState(false);
+
   useEffect(() => {
-    localStorage.setItem('pva_users_list', JSON.stringify(usersList));
-  }, [usersList]);
+    const isCurrentUserAdmin = currentUser && currentUser.trim().toLowerCase() === 'nespuneet2501@gmail.com';
+    if (isCurrentUserAdmin && (currentScreen === 'ADMIN_CONTROL' || currentScreen === 'DASHBOARD')) {
+      let isSubscribed = true;
+      const loadRealtimeMetrics = async () => {
+        setIsAdminSyncing(true);
+        try {
+          // Fetch live telemetry metrics and registered users from specified DB mode
+          const metrics = await adminAnalyticsService.getSystemMetrics();
+          if (isSubscribed && metrics && Array.isArray(metrics.usersList)) {
+            setUsersList(metrics.usersList);
+          }
+          // Fetch live saved Kundlis across the entire database
+          const liveKundlis = await kundliDbService.fetchSavedKundlis(currentUser);
+          if (isSubscribed && Array.isArray(liveKundlis)) {
+            setSavedKundlis(liveKundlis);
+          }
+        } catch (err) {
+          console.warn("Real-time admin sync had error:", err);
+        } finally {
+          if (isSubscribed) {
+            setIsAdminSyncing(false);
+          }
+        }
+      };
+      loadRealtimeMetrics();
+      return () => {
+        isSubscribed = false;
+      };
+    }
+  }, [currentScreen, currentUser, storageConfig.mode]);
 
   const [moduleSettings, setModuleSettings] = useState(() => {
     const saved = localStorage.getItem('pva_module_settings');
@@ -960,62 +1005,14 @@ function VedicKundliApp() {
   };
 
   // Auto load last generated profile data
-  const [nameInput, setNameInput] = useState(() => {
-    const last = localStorage.getItem('pva_last_profile');
-    if (last) {
-      try { return JSON.parse(last).name; } catch (e) {}
-    }
-    return 'Astro Seeker';
-  });
-  const [genderInput, setGenderInput] = useState(() => {
-    const last = localStorage.getItem('pva_last_profile');
-    if (last) {
-      try { return JSON.parse(last).gender || 'Male'; } catch (e) {}
-    }
-    return 'Male';
-  });
-  const [dobInput, setDobInput] = useState(() => {
-    const last = localStorage.getItem('pva_last_profile');
-    if (last) {
-      try { return JSON.parse(last).dob; } catch (e) {}
-    }
-    return '1995-10-24';
-  });
-  const [tobInput, setTobInput] = useState(() => {
-    const last = localStorage.getItem('pva_last_profile');
-    if (last) {
-      try { return JSON.parse(last).tob; } catch (e) {}
-    }
-    return '12:00';
-  });
-  const [birthPlaceInput, setBirthPlaceInput] = useState(() => {
-    const last = localStorage.getItem('pva_last_profile');
-    if (last) {
-      try { return JSON.parse(last).place; } catch (e) {}
-    }
-    return 'New Delhi, Delhi, India';
-  });
-  const [latitudeInput, setLatitudeInput] = useState(() => {
-    const last = localStorage.getItem('pva_last_profile');
-    if (last) {
-      try { return parseFloat(JSON.parse(last).lat); } catch (e) {}
-    }
-    return 28.6139;
-  });
-  const [longitudeInput, setLongitudeInput] = useState(() => {
-    const last = localStorage.getItem('pva_last_profile');
-    if (last) {
-      try { return parseFloat(JSON.parse(last).lon); } catch (e) {}
-    }
-    return 77.2090;
-  });
-  const [timezoneInput, setTimezoneInput] = useState(() => {
-    const last = localStorage.getItem('pva_last_profile');
-    if (last) {
-      try { return JSON.parse(last).timezone || 'Asia/Kolkata'; } catch (e) {}
-    }
-    return 'Asia/Kolkata';
-  });
+  const [nameInput, setNameInput] = useState('Astro Seeker');
+  const [genderInput, setGenderInput] = useState('Male');
+  const [dobInput, setDobInput] = useState('1995-10-24');
+  const [tobInput, setTobInput] = useState('12:00');
+  const [birthPlaceInput, setBirthPlaceInput] = useState('New Delhi, Delhi, India');
+  const [latitudeInput, setLatitudeInput] = useState(28.6139);
+  const [longitudeInput, setLongitudeInput] = useState(77.2090);
+  const [timezoneInput, setTimezoneInput] = useState('Asia/Kolkata');
 
   const [citySearchFocused, setCitySearchFocused] = useState(false);
 
@@ -1031,16 +1028,8 @@ function VedicKundliApp() {
   // Panchang states
   const [panchangDate, setPanchangDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Saved profiles with local storage state initialization
+  // Saved profiles with memory state initialization
   const [savedKundlis, setSavedKundlis] = useState(() => {
-    const saved = localStorage.getItem('pva_saved_kundlis');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
     return [
       { id: 1, name: 'Puneet Vashishtha', dob: '1979-02-16', tob: '00:05', place: 'Muzaffarnagar, UP, India', lat: 29.4727, lon: 77.7085 },
       { id: 2, name: 'Nisha (AstroSage Verified)', dob: '1979-12-10', tob: '07:10', place: 'Muzaffarnagar, UP, India', lat: 29.4727, lon: 77.7085 },
@@ -1273,8 +1262,8 @@ function VedicKundliApp() {
     setTimezoneInput(profile.timezone || 'Asia/Kolkata');
     setCurrentScreen('KUNDLI_REPORT');
     
-    // Set as last profile
-    localStorage.setItem('pva_last_profile', JSON.stringify(profile));
+    // Set as last active memory profile
+    setActiveProfileMemory(profile);
   };
 
   const handleNewKundliClick = () => {
@@ -1288,8 +1277,8 @@ function VedicKundliApp() {
     setLongitudeInput(77.2090);
     setTimezoneInput("Asia/Kolkata");
     
-    // Remove the last profile cache to ensure a completely fresh start
-    localStorage.removeItem('pva_last_profile');
+    // Remove the last active memory profile
+    setActiveProfileMemory(null);
     
     setCurrentScreen('ADD_KUNDLI');
   };
@@ -1309,8 +1298,8 @@ function VedicKundliApp() {
       notes: ''
     };
 
-    // Set last generated profile
-    localStorage.setItem('pva_last_profile', JSON.stringify(newProfile));
+    // Set last active memory profile
+    setActiveProfileMemory(newProfile);
     
     // Check if logged in. If logged in, check duplication and save to cloud DB
     if (currentUser && !currentUser.includes('guest')) {
@@ -1324,24 +1313,17 @@ function VedicKundliApp() {
       if (!exists) {
         updatedList = [newProfile, ...savedKundlis];
         setSavedKundlis(updatedList);
-        localStorage.setItem('pva_saved_kundlis', JSON.stringify(updatedList));
         kundliDbService.saveKundli(currentUser, newProfile).catch(() => {});
       }
     } else {
-      // For guest users, save to local guest storage so it persists locally temporarily
-      const local = localStorage.getItem('pva_saved_kundlis');
-      let localList = [];
-      if (local) {
-        try { localList = JSON.parse(local); } catch(e){}
-      }
-      const exists = localList.some(k => 
+      // In-memory state only per critical database constraints
+      const exists = savedKundlis.some(k => 
         k.name.trim().toLowerCase() === newProfile.name.trim().toLowerCase() &&
         k.dob === newProfile.dob &&
         k.tob === newProfile.tob
       );
       if (!exists) {
-        localList.unshift(newProfile);
-        localStorage.setItem('pva_saved_kundlis', JSON.stringify(localList));
+        const localList = [newProfile, ...savedKundlis];
         setSavedKundlis(localList);
       }
     }
@@ -1435,7 +1417,6 @@ function VedicKundliApp() {
       return p;
     });
     setSavedKundlis(updated);
-    localStorage.setItem('pva_saved_kundlis', JSON.stringify(updated));
   };
 
   const handleCreateCollectionTrigger = (optId) => {
@@ -1475,7 +1456,6 @@ function VedicKundliApp() {
     // If user logged in, let's set current user session
     if (authEmail) {
       setCurrentUser(authEmail);
-      localStorage.setItem('pva_current_user', authEmail);
       
       // Sync pre-existing guest profiles to their new account!
       const currentList = [...savedKundlis];
@@ -1486,19 +1466,17 @@ function VedicKundliApp() {
         }
       }
       setSavedKundlis(currentList);
-      localStorage.setItem('pva_saved_kundlis', JSON.stringify(currentList));
     }
 
     if (action.type === 'save_profile') {
       const p = action.payload;
       if (!authEmail) {
-        // skipped / save offline
+        // In-memory state format
         const updated = [p, ...savedKundlis];
         setSavedKundlis(updated);
-        localStorage.setItem('pva_saved_kundlis', JSON.stringify(updated));
         alert(t(
-          `SAVED LOCALLY: "${p.name}" has been saved in your browser client storage. Register with Google to backup in cloud.`,
-          `सहेज लिया गया: "${p.name}" ब्राउज़र मेमोरी में सहेजा गया है। इसे क्लाउड बैकअप करने के लिए गूगल साइन-इन करें।`
+          `In-Memory Session: "${p.name}" has been loaded in current workstation memory. Register/Login to save permanently in Google Sheets.`,
+          `सत्र लोड: "${p.name}" वर्कस्टेशन मेमोरी में लोड है। सुरक्षित बैकअप के लिए लॉग इन करें।`
         ));
       } else {
         alert(t(
@@ -1713,11 +1691,10 @@ function VedicKundliApp() {
               </button>
 
               <button 
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation();
+                  await authService.logout();
                   setCurrentUser(null);
-                  localStorage.removeItem('pva_current_user');
-                  triggerNotification("Logged Out", "Successfully signed out of secure session.", "info");
                   setCurrentScreen('DASHBOARD');
                 }}
                 className="text-[8.5px] uppercase tracking-wider font-extrabold text-slate-400 hover:text-red-400 transition pl-1.5 border-l border-slate-700/60"
@@ -2086,23 +2063,35 @@ function VedicKundliApp() {
                     if (res && res.success) {
                       const loggedEmail = res.user.email;
                       setCurrentUser(loggedEmail);
+                      setUsersList(prev => {
+                        const exists = prev.find(u => u.email.toLowerCase() === loggedEmail.toLowerCase());
+                        if (!exists) {
+                          return [...prev, { 
+                            email: loggedEmail, 
+                            name: res.user.name || loggedEmail.split('@')[0], 
+                            isPremium: loggedEmail.toLowerCase() === 'nespuneet2501@gmail.com', 
+                            method: storageConfig.mode === 'GOOGLE_SHEETS' ? 'Google Sheets DB' : 'Email/Password', 
+                            registeredAt: res.user.registeredAt || new Date().toISOString().split('T')[0] 
+                          }];
+                        }
+                        return prev;
+                      });
                       triggerNotification("Sign-In Completed", `Welcome back to Astro PV portal!`, "success");
 
                       // Sync any pending items saved in Guest mode
-                      const pendingPayload = localStorage.getItem('pva_pending_save_payload');
-                      const actionType = localStorage.getItem('pva_pending_gate_action_type');
+                      const pendingPayload = memoryPendingSavePayload;
+                      const actionType = memoryPendingGateActionType;
                       if (pendingPayload) {
                         try {
-                          const parsed = JSON.parse(pendingPayload);
-                          await kundliDbService.saveKundli(loggedEmail, parsed);
-                          localStorage.removeItem('pva_pending_save_payload');
-                          localStorage.removeItem('pva_pending_gate_action_type');
+                          await kundliDbService.saveKundli(loggedEmail, pendingPayload);
+                          setMemoryPendingSavePayload(null);
+                          setMemoryPendingGateActionType('');
                           if (actionType === 'generate_chart') {
-                            localStorage.setItem('pva_last_profile', JSON.stringify(parsed));
+                            setActiveProfileMemory(pendingPayload);
                             const list = await kundliDbService.fetchSavedKundlis(loggedEmail);
                             setSavedKundlis(list);
                             setCurrentScreen('KUNDLI_REPORT');
-                            triggerNotification("Chart Loaded & Synced", `${parsed.name}'s chart has been successfully mapped to your profile!`, "success");
+                            triggerNotification("Chart Loaded & Synced", `${pendingPayload.name}'s chart has been successfully mapped to your profile!`, "success");
                             return;
                           }
                         } catch (e) {}
@@ -2181,21 +2170,33 @@ function VedicKundliApp() {
                     if (res && res.success) {
                       triggerNotification("Registration Successful", "Setting up your account. Logging you in now...", "success");
                       setCurrentUser(userRegisterEmail);
+                      setUsersList(prev => {
+                        const exists = prev.find(u => u.email.toLowerCase() === userRegisterEmail.toLowerCase());
+                        if (!exists) {
+                          return [...prev, { 
+                            email: userRegisterEmail, 
+                            name: userRegisterName || userRegisterEmail.split('@')[0], 
+                            isPremium: userRegisterEmail.toLowerCase() === 'nespuneet2501@gmail.com', 
+                            method: storageConfig.mode === 'GOOGLE_SHEETS' ? 'Google Sheets DB' : 'Email/Password', 
+                            registeredAt: new Date().toISOString().split('T')[0] 
+                          }];
+                        }
+                        return prev;
+                      });
                       
                       // Auto login in memory
                       const loginRes = await authService.loginWithEmail(userRegisterEmail, userRegisterPassword);
                       if (loginRes && loginRes.success) {
                         // Sync any pending items saved in Guest mode
-                        const pendingPayload = localStorage.getItem('pva_pending_save_payload');
-                        const actionType = localStorage.getItem('pva_pending_gate_action_type');
+                        const pendingPayload = memoryPendingSavePayload;
+                        const actionType = memoryPendingGateActionType;
                         if (pendingPayload) {
                           try {
-                            const parsed = JSON.parse(pendingPayload);
-                            await kundliDbService.saveKundli(userRegisterEmail, parsed);
-                            localStorage.removeItem('pva_pending_save_payload');
-                            localStorage.removeItem('pva_pending_gate_action_type');
+                            await kundliDbService.saveKundli(userRegisterEmail, pendingPayload);
+                            setMemoryPendingSavePayload(null);
+                            setMemoryPendingGateActionType('');
                             if (actionType === 'generate_chart') {
-                              localStorage.setItem('pva_last_profile', JSON.stringify(parsed));
+                              setActiveProfileMemory(pendingPayload);
                               const list = await kundliDbService.fetchSavedKundlis(userRegisterEmail);
                               setSavedKundlis(list);
                               setCurrentScreen('KUNDLI_REPORT');
@@ -2254,8 +2255,8 @@ function VedicKundliApp() {
                 type="button"
                 onClick={() => {
                   const guestValue = 'guest@vedicastrology.org';
+                  authService.demoAuth(guestValue, 'Guest Session');
                   setCurrentUser(guestValue);
-                  localStorage.setItem('pva_current_user', guestValue);
                   setUsersList(prev => {
                     const exists = prev.find(u => u.email.toLowerCase() === guestValue.toLowerCase());
                     if (!exists) {
@@ -2393,12 +2394,11 @@ function VedicKundliApp() {
                             const exists = prev.some(k => k.name.trim().toLowerCase() === "puneet vashishtha");
                             if (!exists) {
                               const updated = [newProfile, ...prev];
-                              localStorage.setItem('pva_saved_kundlis', JSON.stringify(updated));
                               return updated;
                             }
                             return prev;
                           });
-                          localStorage.setItem('pva_last_profile', JSON.stringify(newProfile));
+                          setActiveProfileMemory(newProfile);
                           setCurrentScreen('KUNDLI_REPORT');
                         }, 50);
                       }}
@@ -2580,7 +2580,7 @@ function VedicKundliApp() {
                       setLatitudeInput(28.6139);
                       setLongitudeInput(77.2090);
                       setTimezoneInput("Asia/Kolkata");
-                      localStorage.removeItem('pva_last_profile');
+                      setActiveProfileMemory(null);
                     }}
                     className="w-full sm:w-auto px-4 py-3 bg-red-50 hover:bg-red-100/40 text-red-600 border border-red-200 hover:border-red-300 font-semibold text-xs rounded-lg flex items-center justify-center gap-1.5 transition"
                   >
@@ -2675,7 +2675,7 @@ function VedicKundliApp() {
                 </div>
 
                 {/* RECENT KUNDLI MINI WIDGET */}
-                {localStorage.getItem('pva_last_profile') && (
+                {activeProfileMemory && (
                   <div className="bg-[#FAF0E6]/30 border border-[#cca43b]/20 rounded-xl p-4 shadow-xs">
                     <div className="flex items-center gap-1.5 mb-2 text-[#936a18]">
                       <RefreshCw className="w-4 h-4" />
@@ -2683,7 +2683,7 @@ function VedicKundliApp() {
                     </div>
                     {(() => {
                       try {
-                        const last = JSON.parse(localStorage.getItem('pva_last_profile'));
+                        const last = activeProfileMemory;
                         return (
                           <div 
                             onClick={() => navigateToReport(last)}
@@ -4046,12 +4046,38 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                       </span>
                       <button
                         onClick={async () => {
-                          if (!storageConfig.googleScriptUrl) {
-                            alert("Please paste the Google Apps Script Web App URL in the setup box first!");
+                          const url = (storageConfig.googleScriptUrl || '').trim();
+                          if (!url) {
+                            alert("❌ Error: Please paste the Google Apps Script Web App URL first!");
                             return;
                           }
+
+                          // 1. Check if the user pasted a Google Sheet URL in the Script field
+                          if (url.includes('/spreadsheets/d/') || url.includes('docs.google.com/spreadsheets')) {
+                            alert("❌ Error: You pasted a Google SPREADSHEET URL in the Apps Script URL field!\n\nPlease paste it in the SPREADSHEET ID field instead, and use the Google Web App URL (ends in '/exec') for this field.");
+                            return;
+                          }
+
+                          // 2. Check if the user pasted the Apps Script editor project link rather than the deployed Web App exec link
+                          if (url.includes('script.google.com/home') || url.includes('/edit') || url.includes('script.google.com/d/') && !url.includes('/exec')) {
+                            alert("❌ Error: You pasted the Apps Script EDITOR link!\n\nTo get the correct Web App URL:\n1. Click [Deploy] (top right)\n2. Select 'New deployment'\n3. Set 'Select type' to 'Web app'\n4. Set 'Who has access' to 'Anyone' (crucial!)\n5. Click 'Deploy', and copy the Web App URL (ends in '/exec').");
+                            return;
+                          }
+
+                          // 3. Check if they used a '/dev' URL
+                          if (url.endsWith('/dev')) {
+                            const proceed = confirm("⚠️ Warning: Your Apps Script URL ends with '/dev'.\n\nThis is a draft developer-only URL which requires active login credentials and will fail when other users try to register or sign in.\n\nWe recommend deploying a production URL ending in '/exec' instead.\n\nDo you want to proceed with this test anyway?");
+                            if (!proceed) return;
+                          }
+
+                          // 4. General invalid check
+                          if (!url.startsWith('https://script.google.com/')) {
+                            alert("❌ Error: Invalid Apps Script URL! It should start with https://script.google.com/macros/s/...\n\nPlease double check and copy-paste it again.");
+                            return;
+                          }
+
                           try {
-                            const res = await fetch(storageConfig.googleScriptUrl, {
+                            const res = await fetch(url, {
                               method: 'POST',
                               headers: { 'Content-Type': 'text/plain' },
                               body: JSON.stringify({
@@ -4060,14 +4086,31 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                                 name: 'PV-Astro Diagnostic Test Record'
                               })
                             });
-                            const body = await res.json();
+                            
+                            const text = await res.text();
+                            const trimmed = text.trim();
+                            
+                            // Check if the response text looks like Google login or error HTML (e.g. they forgot 'Who has access: Anyone')
+                            if (trimmed.startsWith('<') || trimmed.includes('<!DOCTYPE') || trimmed.includes('<html') || trimmed.includes('<body') || trimmed.includes('Google Accounts')) {
+                              alert("❌ Connection Fail (Permissions Block)!\n\nYour Google Script was successfully reached, but it returned an HTML login page instead of database JSON.\n\n👉 KEY FIX NEEDED:\nWhen deploying your Apps Script, you MUST set 'Who has access' to 'Anyone' so that anyone can register or log in securely.\n\nHow to fix:\n1. Open your Apps Script editor.\n2. Click [Deploy] -> [New deployment] (or Manage deployments -> Edit).\n3. Change 'Who has access' from 'Only myself' to 'Anyone'.\n4. Set 'Execute as' to 'Me (your email)'.\n5. Click deploy, copy the new Web App URL, and paste it here!\n\nAlso make sure you have approved OAuth credentials if requested during deployment!");
+                              return;
+                            }
+
+                            let body;
+                            try {
+                              body = JSON.parse(trimmed);
+                            } catch (parseErr) {
+                              alert(`⚠️ Connected, but the return code was invalid or not JSON:\n\n"${trimmed.substring(0, 150)}..."\n\nPlease make sure your sheet is active and you copied the entire script code correctly.`);
+                              return;
+                            }
+
                             if (body && (body.success || res.ok)) {
-                              alert("✅ Connection Successful! Google Sheet is connected and ready to sync real horoscopes!");
+                              alert("✅ Connection Successful!\n\nYour Google Spreadsheet database is 100% connected & synchronized! User registration, login telemetry, kundlis, and feedback records are fully active and writable. 🎉");
                             } else {
-                              alert("⚠️ Connected but sheet returned failure. Verify sharing permission on Google Spreadsheet.");
+                              alert(`⚠️ Connected but sheet returned failure: ${body?.error || "Unknown sheet error"}.\n\nEnsure your Spreadsheet ID is correct and of the format '1aBCd...' and that you have at least one sheet configured or writable.`);
                             }
                           } catch (err) {
-                            alert("❌ Connection Fail: Check console details or ensure you selected Who Has Access: Anyone when deploying Google Script.");
+                            alert("❌ Connection Fail: The request was blocked or unreachable!\n\nThis is usually caused by:\n1. The URL has typos or is incomplete.\n2. The Google Apps Script was not deployed as a 'Web App'.\n3. 'Who has access' is set to 'Only myself' instead of 'Anyone'.\n4. Your browser is blocking the request.\n\nPlease refer to the 10-Second Setup Guide below and follow steps 4-7 precisely.");
                             console.error(err);
                           }
                         }}
@@ -4175,7 +4218,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                 <div className="truncate text-sm font-bold text-slate-205 font-cinzel mt-1">
                   {(() => {
                     try {
-                      const last = JSON.parse(localStorage.getItem('pva_last_profile'));
+                      const last = activeProfileMemory;
                       return last ? last.name : t("None Compiled", "कोई उपलब्ध नहीं");
                     } catch(e) { return t("None Compiled", "कोई उपलब्ध नहीं"); }
                   })()}
@@ -4592,10 +4635,9 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
 
                 {currentUser && (
                   <button 
-                    onClick={() => {
+                    onClick={async () => {
+                      await authService.logout();
                       setCurrentUser(null);
-                      localStorage.removeItem('pva_current_user');
-                      triggerNotification("Signed Out", "Successfully signed out of secure session.", "info");
                       setCurrentScreen('DASHBOARD');
                     }}
                     className="px-4 py-1.5 bg-red-950/20 hover:bg-red-950/60 border border-red-900/30 text-red-100 hover:text-white transition text-[11px] font-bold uppercase rounded-lg"
@@ -4696,7 +4738,6 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                       if (confirmationPhrase === 'CONFIRM DELETE') {
                         await authService.deleteUserAccount(currentUser);
                         setCurrentUser(null);
-                        localStorage.removeItem('pva_current_user');
                         triggerNotification("Eradicated Permanently", "Account closed and completely wiped.", "info");
                         setCurrentScreen('DASHBOARD');
                       } else if (confirmationPhrase) {
@@ -4771,8 +4812,8 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                   <button
                     key={account.email}
                     onClick={() => {
+                      authService.demoAuth(account.email, 'Role Picker Simulator');
                       setCurrentUser(account.email);
-                      localStorage.setItem('pva_current_user', account.email);
                       setShowGoogleSimPicker(false);
                       alert(`Successfully synchronized session as identity: ${account.email}`);
                     }}
@@ -4791,8 +4832,8 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                   e.preventDefault();
                   const formEmail = e.target.elements.customEmail.value.trim();
                   if (formEmail) {
+                    authService.demoAuth(formEmail, 'Role Picker Custom Simulator');
                     setCurrentUser(formEmail);
-                    localStorage.setItem('pva_current_user', formEmail);
                     // Add to list if not present
                     setUsersList(prev => {
                       if (!prev.find(u => u.email.toLowerCase() === formEmail.toLowerCase())) {
@@ -4862,8 +4903,8 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                     onClick={async () => {
                       if (!currentUser || currentUser.includes('guest')) {
                         // Not logged in. Open signup/login.
-                        localStorage.setItem('pva_pending_save_payload', JSON.stringify(pendingKundliToSave));
-                        localStorage.setItem('pva_pending_gate_action_type', 'generate_chart');
+                        setMemoryPendingSavePayload(pendingKundliToSave);
+                        setMemoryPendingGateActionType('generate_chart');
                         setShowSavePrompt(false);
                         setPendingKundliToSave(null);
                         setAuthActiveTab('signup');
@@ -4956,8 +4997,8 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                 <button
                   type="button"
                   onClick={() => {
-                    localStorage.setItem('pva_pending_save_payload', JSON.stringify(guestGateAction.payload));
-                    localStorage.setItem('pva_pending_gate_action_type', guestGateAction.type);
+                    setMemoryPendingSavePayload(guestGateAction.payload);
+                    setMemoryPendingGateActionType(guestGateAction.type);
                     setGuestGateAction(null);
                     setAuthActiveTab('signup');
                     setCurrentScreen('AUTH');
@@ -4995,7 +5036,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                       setSavedKundlis(list);
                       
                       // Show report or trigger depending on action type
-                      localStorage.setItem('pva_last_profile', JSON.stringify(guestGateAction.payload));
+                      setActiveProfileMemory(guestGateAction.payload);
                       setCurrentScreen('KUNDLI_REPORT');
                       setGuestGateAction(null);
                     }
@@ -5016,8 +5057,8 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                 <button
                   type="button"
                   onClick={() => {
-                    localStorage.setItem('pva_pending_save_payload', JSON.stringify(guestGateAction.payload));
-                    localStorage.setItem('pva_pending_gate_action_type', guestGateAction.type);
+                    setMemoryPendingSavePayload(guestGateAction.payload);
+                    setMemoryPendingGateActionType(guestGateAction.type);
                     setGuestGateAction(null);
                     setAuthActiveTab('signup');
                     setCurrentScreen('AUTH');
@@ -5038,14 +5079,13 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                 <button
                   type="button"
                   onClick={async () => {
-                    // Let's save as guest in browser fallback so they don't lose it if they refresh
                     const currentGuestEmail = 'guest@vedicastrology.org';
                     await kundliDbService.saveKundli(currentGuestEmail, guestGateAction.payload);
                     const list = await kundliDbService.fetchSavedKundlis(currentGuestEmail);
                     setSavedKundlis(list);
 
                     // Re-route
-                    localStorage.setItem('pva_last_profile', JSON.stringify(guestGateAction.payload));
+                    setActiveProfileMemory(guestGateAction.payload);
                     setCurrentScreen('KUNDLI_REPORT');
                     setGuestGateAction(null);
                     triggerNotification("Vedic Chart Loaded", "Report loaded without syncing to cloud.", "info");
