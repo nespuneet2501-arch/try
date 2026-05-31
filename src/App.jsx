@@ -493,7 +493,7 @@ const GOOGLE_APPS_SCRIPT_CODE = `function doPost(e) {
         var rowValues = [];
         for (var colIdx = 0; colIdx < headers.length; colIdx++) {
           var header = headers[colIdx];
-          if (header === "User ID") rowValues.push(data.id || Utilities.base64Encode(email));
+          if (header === "User ID") rowValues.push(data.id || Utilities.base64Encode(Utilities.newBlob(email).getBytes()));
           else if (header === "Name") rowValues.push(name);
           else if (header === "Email") rowValues.push(email);
           else if (header === "Google ID") rowValues.push(googleId);
@@ -504,7 +504,7 @@ const GOOGLE_APPS_SCRIPT_CODE = `function doPost(e) {
           else rowValues.push("");
         }
         usersSheet.appendRow(rowValues);
-        userFound = { id: data.id || Utilities.base64Encode(email), name: name, email: email, loginType: loginType, registeredAt: regDate };
+        userFound = { id: data.id || Utilities.base64Encode(Utilities.newBlob(email).getBytes()), name: name, email: email, loginType: loginType, registeredAt: regDate };
       } else {
         var countCol = headers.indexOf("Login Count");
         var nameCol = headers.indexOf("Name");

@@ -256,57 +256,62 @@ export const authService = {
     }
 
     // 1. Try to post to Google Sheets if configured
-    let googleSucceeded = false;
-    let gRes = null;
     if (isGoogleScriptConfigured()) {
       try {
-        gRes = await callGoogleScript({
+        const gRes = await callGoogleScript({
           type: 'signup',
+          id: btoa(cleanEmail),
           email: cleanEmail,
           password: password,
           name: fullName,
           method: 'Google Sheets DB',
           registeredAt: regDate
         });
+        
         if (gRes && gRes.success) {
-          googleSucceeded = true;
+          const finalUser = {
+            email: cleanEmail,
+            id: btoa(cleanEmail),
+            name: fullName,
+            isPremium: cleanEmail === 'nespuneet2501@gmail.com',
+            method: 'Google Sheets DB',
+            role: cleanEmail === 'nespuneet2501@gmail.com' ? 'Admin' : 'User',
+            registeredAt: regDate,
+            lastLogin: new Date().toISOString()
+          };
+
+          if (!inMemoryRegisteredUsers.some(u => u.email.toLowerCase() === cleanEmail)) {
+            inMemoryRegisteredUsers.push({
+              email: cleanEmail,
+              name: fullName,
+              password: password,
+              method: 'Google Sheets DB',
+              registeredAt: regDate,
+              isPremium: cleanEmail === 'nespuneet2501@gmail.com',
+              role: cleanEmail === 'nespuneet2501@gmail.com' ? 'Admin' : 'User',
+              active: true
+            });
+          }
+
+          authService._persistUserSession(finalUser);
+          triggerNotification("Account Registered", "Successfully saved in your Google Sheet spreadsheet database!", "success");
+          return { success: true, message: gRes.message || 'Google Sheets registration succeeded.', user: finalUser };
+        } else {
+          return {
+            success: false,
+            error: `❌ Save Failed: Could not register user row into Google Sheets database. ${gRes?.message || 'Please verify write permissions of your Spreadsheet ID or check Apps Script console logs.'}`
+          };
         }
       } catch (err) {
         console.warn("GAS registration request failed:", err);
+        return {
+          success: false,
+          error: `❌ Network Error: Could not connect to Google Apps Script. Please verify your connection or Web App URL. Details: ${err.message}`
+        };
       }
     }
 
-    if (googleSucceeded) {
-      const finalUser = {
-        email: cleanEmail,
-        id: btoa(cleanEmail),
-        name: fullName,
-        isPremium: cleanEmail === 'nespuneet2501@gmail.com',
-        method: 'Google Sheets DB',
-        role: cleanEmail === 'nespuneet2501@gmail.com' ? 'Admin' : 'User',
-        registeredAt: regDate,
-        lastLogin: new Date().toISOString()
-      };
-
-      if (!inMemoryRegisteredUsers.some(u => u.email.toLowerCase() === cleanEmail)) {
-        inMemoryRegisteredUsers.push({
-          email: cleanEmail,
-          name: fullName,
-          password: password,
-          method: 'Google Sheets DB',
-          registeredAt: regDate,
-          isPremium: cleanEmail === 'nespuneet2501@gmail.com',
-          role: cleanEmail === 'nespuneet2501@gmail.com' ? 'Admin' : 'User',
-          active: true
-        });
-      }
-
-      authService._persistUserSession(finalUser);
-      triggerNotification("Account Registered", "Successfully saved in your Google Sheet spreadsheet database!", "success");
-      return { success: true, message: gRes.message || 'Google Sheets registration succeeded.', user: finalUser };
-    }
-
-    // 2. FALLBACK: Save user in memory if Sheets write is unreachable or fails
+    // 2. SANDBOX MODE: If Google Sheets is not configured at all
     const fallbackUser = {
       email: cleanEmail,
       id: btoa(cleanEmail),
