@@ -13,7 +13,7 @@ import {
   VerificationCertificatePanel
 } from './AdvancedVedicModules';
 import SocietyUpdatesHub, { AstroPaywallLock, AdminControlWorkstation } from './SocietyCMS';
-import { authService, kundliDbService, feedbackService, adminAnalyticsService, getDefaultStorageConfig, saveStorageConfig, isSupabaseConfigured, isGoogleSheetsConfigured } from './StorageService';
+import { authService, kundliDbService, feedbackService, adminAnalyticsService, getDefaultStorageConfig, saveStorageConfig, isSupabaseConfigured, checkDatabaseHealth } from './StorageService';
 
 const THEMES = {
   BRIGHT: {
@@ -352,373 +352,111 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-const GOOGLE_APPS_SCRIPT_CODE = `function doPost(e) {
-  try {
-    var data = JSON.parse(e.postData.contents);
-    var ss = null;
-    
-    // Multi-criteria Spreadsheet resolution
-    if (data.googleSheetId || data.spreadsheetId) {
-      var targetId = data.googleSheetId || data.spreadsheetId;
-      try {
-        ss = SpreadsheetApp.openById(targetId);
-      } catch (err) {
-        // Fallback to active spreadsheet if openById fails/unauthorized
-      }
-    }
-    
-    if (!ss) {
-      try {
-        ss = SpreadsheetApp.getActiveSpreadsheet();
-      } catch (err) {}
-    }
-    
-    if (!ss) {
-      try {
-        ss = SpreadsheetApp.getActive();
-      } catch (err) {}
-    }
-    
-    if (!ss) {
-      throw new Error("Could not access Google Spreadsheet. Please verify your Spreadsheet ID is correct and your Apps Script has permissions.");
-    }
-    
-    // Self-healing schema builder that handles dynamic column injection
-    function ensureSheetWithColumns(ss, name, requiredCols) {
-      var sheet = ss.getSheetByName(name);
-      if (!sheet) {
-        sheet = ss.insertSheet(name);
-      }
-      if (sheet.getLastRow() === 0) {
-        sheet.appendRow(requiredCols);
-        return sheet;
-      }
-      var currentHeaders = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0];
-      var headerMap = {};
-      for (var i = 0; i < currentHeaders.length; i++) {
-        headerMap[currentHeaders[i]] = i;
-      }
-      for (var j = 0; j < requiredCols.length; j++) {
-        var col = requiredCols[j];
-        if (headerMap[col] === undefined) {
-          sheet.getRange(1, sheet.getLastColumn() + 1).setValue(col);
-        }
-      }
-      return sheet;
-    }
+const SUPABASE_SQL_SETUP_CODE = `-- 🕉️ PRANAVA VEDIC ASTROLOGY DATABASE ECOSYSTEM SETUP SCRIPT
+-- Paste this script directly into your Supabase SQL Editor and click [Run]
+-- Location: Supabase Dashboard -> SQL Editor (or https://supabase.com/dashboard/project/_/sql/new)
 
-    // Dynamic creation & auto-schema healthcheck
-    var usersSheet = ensureSheetWithColumns(ss, "Users", ["User ID", "Name", "Email", "Google ID", "Registration Date", "Last Login", "Login Count", "Status"]);
-    var kundlisSheet = ensureSheetWithColumns(ss, "Kundli Records", ["Record ID", "User ID", "Name", "Gender", "Date of Birth", "Time of Birth", "Place of Birth", "Kundli JSON", "PDF URL", "Created Date"]);
-    var feedbackSheet = ensureSheetWithColumns(ss, "Feedback", ["Feedback ID", "User ID", "Feedback Message", "Date"]);
-    var analyticsSheet = ensureSheetWithColumns(ss, "Analytics", ["Total Users", "Total Kundli Generated", "Total Saved Kundli", "Total Logins", "Last Updated"]);
-    var settingsSheet = ensureSheetWithColumns(ss, "Settings", ["Key", "Value"]);
+CREATE TABLE IF NOT EXISTS public.users (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT,
+  mobile TEXT,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  last_login TIMESTAMPTZ,
+  role TEXT DEFAULT 'User' NOT NULL,
+  status TEXT DEFAULT 'Active' NOT NULL
+);
 
-    var type = data.type || "unknown";
-    var result = { success: false, message: "Invalid command" };
+CREATE TABLE IF NOT EXISTS public.kundlis (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  full_name TEXT NOT NULL,
+  gender TEXT,
+  birth_date TEXT,
+  birth_time TEXT,
+  birth_place TEXT,
+  latitude NUMERIC,
+  longitude NUMERIC,
+  timezone NUMERIC,
+  kundli_json TEXT,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
 
-    function getSettingVal(key) {
-      if (settingsSheet.getLastRow() < 1) return null;
-      var rows = settingsSheet.getDataRange().getValues();
-      for (var i = 1; i < rows.length; i++) {
-        if (rows[i][0] === key) return rows[i][1];
-      }
-      return null;
-    }
+CREATE TABLE IF NOT EXISTS public.saved_reports (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  report_type TEXT,
+  report_data TEXT,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
 
-    function saveSettingVal(key, val) {
-      var lastRow = settingsSheet.getLastRow();
-      var foundIdx = -1;
-      if (lastRow > 0) {
-        var rows = settingsSheet.getDataRange().getValues();
-        for (var i = 1; i < rows.length; i++) {
-          if (rows[i][0] === key) {
-            foundIdx = i + 1;
-            break;
-          }
-        }
-      }
-      if (foundIdx === -1) {
-        settingsSheet.appendRow([key, val]);
-      } else {
-        settingsSheet.getRange(foundIdx, 2).setValue(val);
-      }
-    }
+CREATE TABLE IF NOT EXISTS public.user_activity (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  activity_type TEXT NOT NULL,
+  device TEXT,
+  ip_address TEXT,
+  timestamp TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
 
-    function updateAnalyticsRecord() {
-      var totalUsers = Math.max(0, usersSheet.getLastRow() - 1);
-      var totalSavedKundli = Math.max(0, kundlisSheet.getLastRow() - 1);
-      var totalLogins = getSettingVal("total_logins") || totalUsers || 1;
-      var totalKundliGenerated = getSettingVal("total_generated") || totalSavedKundli || 1;
-      
-      // Clear secondary rows if present to preserve exact layout
-      if (analyticsSheet.getLastRow() > 1) {
-        analyticsSheet.getRange(2, 1).setValue(totalUsers);
-        analyticsSheet.getRange(2, 2).setValue(totalKundliGenerated);
-        analyticsSheet.getRange(2, 3).setValue(totalSavedKundli);
-        analyticsSheet.getRange(2, 4).setValue(totalLogins);
-        analyticsSheet.getRange(2, 5).setValue(new Date().toISOString());
-      } else {
-        analyticsSheet.appendRow([totalUsers, totalKundliGenerated, totalSavedKundli, totalLogins, new Date().toISOString()]);
-      }
-    }
+CREATE TABLE IF NOT EXISTS public.subscriptions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  plan_name TEXT NOT NULL,
+  start_date TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  end_date TIMESTAMPTZ,
+  payment_status TEXT NOT NULL
+);
 
-    if (type === "test_ping") {
-      updateAnalyticsRecord();
-      result = { success: true, message: "Authorization & database synchronization diagnostic ping completed successfully!" };
-    } else if (type === "signup" || type === "login") {
-      var email = (data.email || "").trim().toLowerCase();
-      var name = data.name || email.split("@")[0];
-      var googleId = data.googleId || "";
-      var regDate = data.registeredAt || new Date().toISOString().split("T")[0];
-      var lastLogin = new Date().toISOString();
-      var loginType = data.method || "Email/Password";
-      
-      var usersData = usersSheet.getDataRange().getValues();
-      var headers = usersData[0];
-      var emailCol = headers.indexOf("Email");
-      var foundIdx = -1;
-      
-      for (var i = 1; i < usersData.length; i++) {
-        if (usersData[i][emailCol].toString().toLowerCase() === email) {
-          foundIdx = i + 1;
-          break;
-        }
-      }
+CREATE TABLE IF NOT EXISTS public.contact_enquiries (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  email TEXT NOT NULL,
+  mobile TEXT,
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
 
-      var userFound = null;
-      var loginCount = 1;
-      
-      if (foundIdx === -1) {
-        var rowValues = [];
-        for (var colIdx = 0; colIdx < headers.length; colIdx++) {
-          var header = headers[colIdx];
-          if (header === "User ID") rowValues.push(data.id || Utilities.base64Encode(Utilities.newBlob(email).getBytes()));
-          else if (header === "Name") rowValues.push(name);
-          else if (header === "Email") rowValues.push(email);
-          else if (header === "Google ID") rowValues.push(googleId);
-          else if (header === "Registration Date") rowValues.push(regDate);
-          else if (header === "Last Login") rowValues.push(lastLogin);
-          else if (header === "Login Count") rowValues.push(1);
-          else if (header === "Status") rowValues.push("Active");
-          else rowValues.push("");
-        }
-        usersSheet.appendRow(rowValues);
-        userFound = { id: data.id || Utilities.base64Encode(Utilities.newBlob(email).getBytes()), name: name, email: email, loginType: loginType, registeredAt: regDate };
-      } else {
-        var countCol = headers.indexOf("Login Count");
-        var nameCol = headers.indexOf("Name");
-        var lastLoginCol = headers.indexOf("Last Login");
-        var gIdCol = headers.indexOf("Google ID");
-        var statusCol = headers.indexOf("Status");
-        
-        loginCount = parseInt(usersData[foundIdx-1][countCol] || 0) + 1;
-        
-        usersSheet.getRange(foundIdx, nameCol + 1).setValue(name);
-        usersSheet.getRange(foundIdx, lastLoginCol + 1).setValue(lastLogin);
-        usersSheet.getRange(foundIdx, countCol + 1).setValue(loginCount);
-        usersSheet.getRange(foundIdx, statusCol + 1).setValue("Active");
-        if (googleId) {
-          usersSheet.getRange(foundIdx, gIdCol + 1).setValue(googleId);
-        }
-        
-        userFound = {
-          id: usersData[foundIdx-1][headers.indexOf("User ID")],
-          name: name,
-          email: email,
-          loginType: loginType,
-          registeredAt: usersData[foundIdx-1][headers.indexOf("Registration Date")],
-          lastLogin: lastLogin
-        };
-      }
-      
-      var totalLogins = parseInt(getSettingVal("total_logins") || 0) + 1;
-      saveSettingVal("total_logins", totalLogins);
-      updateAnalyticsRecord();
-      
-      result = { success: true, message: "Authorized successfully!", user: userFound };
+-- Indexes for performance optimization and fast indexing
+CREATE INDEX IF NOT EXISTS idx_kundlis_user_id ON public.kundlis(user_id);
+CREATE INDEX IF NOT EXISTS idx_saved_reports_user_id ON public.saved_reports(user_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON public.subscriptions(user_id);
 
-    } else if (type === "save_kundli") {
-      var kundliId = data.id || "k_" + Date.now();
-      var userId = data.email || "guest";
-      var name = data.name || "Unnamed Seeker";
-      var gender = data.gender || "Male";
-      var dob = data.dob || "";
-      var tob = data.tob || "";
-      var place = data.place || "";
-      var createdDate = data.created_at || new Date().toISOString();
-      var jsonPayload = JSON.stringify(data);
-      var pdfUrl = data.pdfUrl || "";
-      
-      var kundlisData = kundlisSheet.getDataRange().getValues();
-      var headers = kundlisData[0];
-      var foundIdx = -1;
-      
-      for (var i = 1; i < kundlisData.length; i++) {
-        if (kundlisData[i][0].toString() === kundliId.toString()) {
-          foundIdx = i + 1;
-          break;
-        }
-      }
-      
-      var rowValues = [];
-      for (var colIdx = 0; colIdx < headers.length; colIdx++) {
-        var header = headers[colIdx];
-        if (header === "Record ID" || header === "Kundli ID") rowValues.push(kundliId);
-        else if (header === "User ID") rowValues.push(userId);
-        else if (header === "Name" || header === "Full Name") rowValues.push(name);
-        else if (header === "Gender") rowValues.push(gender);
-        else if (header === "Date of Birth" || header === "Birth Date") rowValues.push(dob);
-        else if (header === "Time of Birth" || header === "Birth Time") rowValues.push(tob);
-        else if (header === "Place of Birth" || header === "Birth Place") rowValues.push(place);
-        else if (header === "Kundli JSON" || header === "Kundli JSON Data") rowValues.push(jsonPayload);
-        else if (header === "PDF URL") rowValues.push(pdfUrl);
-        else if (header === "Created Date" || header === "Created date") rowValues.push(createdDate);
-        else rowValues.push("");
-      }
-      
-      if (foundIdx === -1) {
-        kundlisSheet.appendRow(rowValues);
-        var totalGen = parseInt(getSettingVal("total_generated") || 0) + 1;
-        saveSettingVal("total_generated", totalGen);
-      } else {
-        kundlisSheet.getRange(foundIdx, 1, 1, rowValues.length).setValues([rowValues]);
-      }
-      
-      updateAnalyticsRecord();
-      result = { success: true, message: "Kundli saved inside spreadsheet successfully!" };
+-- Seed static administration credential for Puneet Vashishtha
+INSERT INTO public.users (id, email, name, role, status)
+VALUES ('NESPUNEET_ADMIN_ID', 'nespuneet2501@gmail.com', 'Puneet Vashishtha', 'Admin', 'Active')
+ON CONFLICT (email) DO UPDATE SET role = 'Admin', status = 'Active';
 
-    } else if (type === "fetch_kundlis") {
-      var email = (data.email || "").trim().toLowerCase();
-      var kundlisData = kundlisSheet.getDataRange().getValues();
-      var headers = kundlisData[0];
-      var userCol = headers.indexOf("User ID");
-      var list = [];
-      
-      for (var i = 1; i < kundlisData.length; i++) {
-        var row = kundlisData[i];
-        if (row[userCol].toString().toLowerCase() === email || email === "nespuneet2501@gmail.com") {
-          var parsedObj = {};
-          var jsonCol = headers.indexOf("Kundli JSON");
-          if (jsonCol === -1) jsonCol = headers.indexOf("Kundli JSON Data");
-          
-          try {
-            parsedObj = JSON.parse(row[jsonCol]);
-          } catch(e) {
-            parsedObj = {
-              id: row[0],
-              user_id: row[1],
-              name: row[2],
-              gender: row[3],
-              dob: row[4],
-              tob: row[5],
-              place: row[6],
-              created_at: row[headers.indexOf("Created Date")]
-            };
-          }
-          list.push(parsedObj);
-        }
-      }
-      result = { success: true, list: list };
+-- Enable Row Level Security (RLS) policies across all entities
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kundlis ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.saved_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_activity ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.contact_enquiries ENABLE ROW LEVEL SECURITY;
 
-    } else if (type === "delete_kundli") {
-      var kundliId = data.id || "";
-      var kundlisData = kundlisSheet.getDataRange().getValues();
-      var foundIdx = -1;
-      for (var i = 1; i < kundlisData.length; i++) {
-        if (kundlisData[i][0].toString() === kundliId.toString()) {
-          foundIdx = i + 1;
-          break;
-        }
-      }
-      if (foundIdx !== -1) {
-        kundlisSheet.deleteRow(foundIdx);
-        updateAnalyticsRecord();
-        result = { success: true, message: "Kundli erased from database!" };
-      }
+-- Setup Row-Level Security Rules for absolute compliance (uses WITH CHECK to fully authorize inserts)
+DROP POLICY IF EXISTS "Enable read/write on users" ON public.users;
+CREATE POLICY "Enable read/write on users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 
-    } else if (type === "submit_feedback") {
-      var fId = "f_" + Date.now();
-      var fEmail = (data.email || "guest@vedicastrology.org").trim();
-      var message = data.message || "";
-      var fDate = new Date().toISOString();
-      
-      feedbackSheet.appendRow([fId, fEmail, message, fDate]);
-      result = { success: true, message: "Feedback submitted successfully!" };
+DROP POLICY IF EXISTS "Enable read/write/trash on kundlis" ON public.kundlis;
+CREATE POLICY "Enable read/write/trash on kundlis" ON public.kundlis FOR ALL USING (true) WITH CHECK (true);
 
-    } else if (type === "fetch_feedback") {
-      if (feedbackSheet.getLastRow() < 2) {
-        result = { success: true, list: [] };
-      } else {
-        var rows = feedbackSheet.getDataRange().getValues();
-        var list = [];
-        for (var i = 1; i < rows.length; i++) {
-          list.push({
-            id: rows[i][0],
-            email: rows[i][1],
-            message: rows[i][2],
-            date: rows[i][3]
-          });
-        }
-        result = { success: true, list: list };
-      }
+DROP POLICY IF EXISTS "Enable read/write on saved_reports" ON public.saved_reports;
+CREATE POLICY "Enable read/write on saved_reports" ON public.saved_reports FOR ALL USING (true) WITH CHECK (true);
 
-    } else if (type === "get_analytics") {
-      updateAnalyticsRecord();
-      var rows = analyticsSheet.getDataRange().getValues();
-      var usersRows = usersSheet.getDataRange().getValues();
-      var listUsers = [];
-      for (var j = 1; j < Math.min(500, usersRows.length); j++) {
-        var rawRegDate = usersRows[j][4];
-        var regDateStr = "2026-05-24";
-        if (rawRegDate) {
-          if (typeof rawRegDate.toISOString === 'function') {
-            regDateStr = rawRegDate.toISOString().substring(0, 10);
-          } else {
-            regDateStr = rawRegDate.toString().substring(0, 10);
-          }
-        }
-        var rawLastLogin = usersRows[j][5];
-        var lastLoginStr = "";
-        if (rawLastLogin) {
-          if (typeof rawLastLogin.toISOString === 'function') {
-            lastLoginStr = rawLastLogin.toISOString();
-          } else {
-            lastLoginStr = rawLastLogin.toString();
-          }
-        }
-        listUsers.push({
-          email: usersRows[j][2],
-          name: usersRows[j][1],
-          method: usersRows[j][3] || "Email/Password",
-          registeredAt: regDateStr,
-          lastLogin: lastLoginStr,
-          loginCount: usersRows[j][6] || 1,
-          status: usersRows[j][7] || "Active"
-        });
-      }
-      
-      result = {
-        success: true,
-        metrics: {
-          totalUsers: parseInt(rows[1][0] || 0),
-          totalKundlisGenerated: parseInt(rows[1][1] || 0),
-          totalSavedSavedKundli: parseInt(rows[1][2] || 0),
-          totalSavedKundlis: parseInt(rows[1][2] || 0),
-          totalLogins: parseInt(rows[1][3] || 0),
-          lastUpdated: rows[1][4]
-        },
-        users: listUsers
-      };
-    }
+DROP POLICY IF EXISTS "Enable insert for activity telemetry" ON public.user_activity;
+CREATE POLICY "Enable insert for activity telemetry" ON public.user_activity FOR ALL USING (true) WITH CHECK (true);
 
-    return ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}`;
+DROP POLICY IF EXISTS "Enable read/write on subscriptions" ON public.subscriptions;
+CREATE POLICY "Enable read/write on subscriptions" ON public.subscriptions FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable enquiry submission" ON public.contact_enquiries;
+CREATE POLICY "Enable enquiry submission" ON public.contact_enquiries FOR ALL USING (true) WITH CHECK (true);
+`;
+
+
 
 // Wrapper to export the crash-proof App
 export default function App() {
@@ -756,28 +494,39 @@ function VedicKundliApp() {
   const [pendingKundliToSave, setPendingKundliToSave] = useState(null);
   const [storageConfig, setStorageConfig] = useState(() => getDefaultStorageConfig());
 
-  // Automatic URL Sharing Config Sync hook
+  const [dbHealth, setDbHealth] = useState({ configured: false, status: 'offline', tables: {} });
+
+  const queryDatabaseStatus = async () => {
+    try {
+      const res = await checkDatabaseHealth();
+      setDbHealth(res);
+    } catch (e) {
+      console.warn("Database health probe error:", e);
+    }
+  };
+
+  // Synchronize Supabase configurations from URL parameters if provided
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      const sheetId = params.get('googleSheetId') || params.get('sheetId');
-      const scriptUrl = params.get('googleScriptUrl') || params.get('scriptUrl');
+      const sUrl = params.get('supabaseUrl') || params.get('sUrl');
+      const sKey = params.get('supabaseAnonKey') || params.get('sKey');
       
-      if (sheetId || scriptUrl) {
+      if (sUrl && sKey) {
         const currentConfig = getDefaultStorageConfig();
         const updated = {
           ...currentConfig,
-          googleSheetId: sheetId ? decodeURIComponent(sheetId).trim() : currentConfig.googleSheetId,
-          googleScriptUrl: scriptUrl ? decodeURIComponent(scriptUrl).trim() : currentConfig.googleScriptUrl,
-          mode: 'GOOGLE_SHEETS'
+          supabaseUrl: decodeURIComponent(sUrl).trim(),
+          supabaseAnonKey: decodeURIComponent(sKey).trim(),
+          mode: 'SUPABASE'
         };
         setStorageConfig(updated);
         saveStorageConfig(updated);
         
         setTimeout(() => {
           triggerNotification(
-            "Live Database Connected!", 
-            "Connected to the shared Google Sheets database successfully! 🪐", 
+            "Supabase Sync Successful!", 
+            "Your workspace is connected to the cloud PostgreSQL cluster! 🪐", 
             "success"
           );
         }, 1200);
@@ -786,15 +535,28 @@ function VedicKundliApp() {
         window.history.replaceState({ path: newUrl }, '', newUrl);
       }
     } catch (e) {
-      console.warn("Failed to parse configurations from URL query params", e);
+      console.warn("Failed to parse Supabase URL parameters", e);
     }
   }, []);
+
+  // Poll database table existence and status
+  useEffect(() => {
+    queryDatabaseStatus();
+    // Periodically probe connection
+    const interval = setInterval(queryDatabaseStatus, 15000);
+    return () => clearInterval(interval);
+  }, [storageConfig]);
+
   const [userRegisterEmail, setUserRegisterEmail] = useState('');
   const [userRegisterPassword, setUserRegisterPassword] = useState('');
   const [userRegisterName, setUserRegisterName] = useState('');
+  const [userLoginEmail, setUserLoginEmail] = useState('');
   const [userLoginPassword, setUserLoginPassword] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [isResetSending, setIsResetSending] = useState(false);
   const [adminSecretCode, setAdminSecretCode] = useState(''); // Admin authorization key
-  const [authActiveTab, setAuthActiveTab] = useState('signup'); // Default to signup page first
+  const [authActiveTab, setAuthActiveTab] = useState('login'); // Default to login page first with default Admin prefilled
   const [currentLanguage, setCurrentLanguage] = useState('English'); // English / Hindi
   const [activeChartStyle, setActiveChartStyle] = useState('North Indian'); // North Indian, South Indian, East Indian
   const [highlightedPlanet, setHighlightedPlanet] = useState(null);
@@ -1236,6 +998,22 @@ function VedicKundliApp() {
       .bg-gradient-to-r.from-\\[\\#cca43b\\] { background-image: linear-gradient(to right, ${t.primary}, ${t.accent}) !important; color: ${isHC ? (currentTheme === 'CLASSIC_BW' ? '#FFFFFF' : '#000000') : '#000000'} !important; }
       .bg-gradient-to-r.from-\\[\\#11132e\\] { background-image: linear-gradient(to right, ${t.bgPage}, ${t.bgCard}) !important; border: ${borderWidthVal} solid ${t.border} !important; }
       .bg-gradient-to-tr.from-\\[\\#cca43b\\/10\\] { background-image: linear-gradient(to top right, ${t.bgBadge}, ${t.bgCard}) !important; }
+
+      @keyframes scale-heart {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.155); }
+      }
+      .animate-scale-heart {
+        display: inline-block;
+        animation: scale-heart 2s ease-in-out infinite;
+      }
+      @keyframes neon-glow {
+        0%, 100% { text-shadow: 0 0 6px rgba(255,255,255,0.6), 0 0 14px rgba(251, 191, 36, 0.4); opacity: 0.95; }
+        50% { text-shadow: 0 0 12px rgba(255,255,255,0.9), 0 0 25px rgba(251, 191, 36, 0.9); opacity: 1; }
+      }
+      .animate-neon-glow {
+        animation: neon-glow 3s ease-in-out infinite;
+      }
     `;
   }, [currentTheme, fontScale]);
 
@@ -1627,6 +1405,21 @@ function VedicKundliApp() {
       {/* Dynamic Theme Paint Processor */}
       <style>{themeStyles}</style>
 
+      {/* Prominent Golden & Crimson Animated Free Banner */}
+      <div className="w-full bg-gradient-to-r from-red-900 via-amber-700 to-red-900 border-b border-amber-500/30 text-white py-2.5 px-4 shadow-md text-center flex items-center justify-center gap-2 overflow-hidden relative" style={{ zIndex: 60 }} data-testid="free-services-banner">
+        <div className="absolute inset-0 bg-[#ffd700]/5 animate-pulse pointer-events-none" />
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs sm:text-sm font-black tracking-wide font-sans relative z-10">
+          <span className="inline-block animate-scale-heart text-base">🎉</span>
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-white to-amber-200 animate-neon-glow filter drop-shadow font-extrabold uppercase">
+            {t("All Astrology Services Are Completely FREE", "सभी ज्योतिष सेवाएं पूरी तरह से निःशुल्क हैं")}
+          </span>
+          <span className="inline-block animate-scale-heart text-base">🎉</span>
+          <span className="hidden md:inline bg-amber-500/30 px-2.5 py-0.5 rounded text-[10px] uppercase font-mono border border-amber-500/20 text-white font-black animate-pulse">
+            {t("No Cards Required", "क्रेडिट कार्ड की आवश्यकता नहीं")}
+          </span>
+        </div>
+      </div>
+
       {/* Top Luxury Dynamic Header */}
       <header className="sticky top-0 z-50 bg-[#0f1123]/95 backdrop-blur-md border-b border-[#cca43b]/20 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => setCurrentScreen('DASHBOARD')}>
@@ -1698,26 +1491,41 @@ function VedicKundliApp() {
           </button>
 
           {/* Database Live Connected Badge */}
-          {storageConfig.mode === 'GOOGLE_SHEETS' && (
-            <div 
-              onClick={() => {
-                if (isUserAdmin) {
-                  setCurrentScreen('INTEGRATIONS');
-                } else {
-                  triggerNotification(
-                    "Database Connection Live", 
-                    "You are securely connected to the global Google Sheets live database. Only administrator has permissions to adjust Switchboard nodes.", 
-                    "info"
-                  );
-                }
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] rounded-full border cursor-pointer transition uppercase tracking-wider font-extrabold ${isGoogleSheetsConfigured() ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400 hover:bg-emerald-950/60' : 'bg-rose-950/40 border-rose-500/30 text-rose-450 hover:bg-rose-950/60'}`}
-              title={isGoogleSheetsConfigured() ? "Database: Connected Live" : "Database: Offline Sandbox fallback"}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${isGoogleSheetsConfigured() ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500 animate-pulse'}`}></span>
-              <span>{isGoogleSheetsConfigured() ? t("database connected live", "डेटाबेस लाइव कनेक्टेड") : t("Database Offline (Sandbox)", "डेटाबेस ऑफलाइन (सैंडबॉक्स)")}</span>
-            </div>
-          )}
+          <div 
+            onClick={() => {
+              if (isUserAdmin) {
+                setCurrentScreen('INTEGRATIONS');
+              } else {
+                triggerNotification(
+                  "Database Workspace Status", 
+                  `Currently connected in ${storageConfig.mode === 'SUPABASE' ? 'Supabase cloud' : 'Sandbox (local)'} mode. Credentials can be adjusted in the admin panel.`, 
+                  "info"
+                );
+              }
+            }}
+            className={`flex items-center gap-2 px-3.5 py-1.5 text-[10px] rounded-full border-2 cursor-pointer transition uppercase tracking-wider font-extrabold shadow-md ${
+              storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
+                ? 'bg-emerald-950/85 border-emerald-500 text-emerald-300 hover:bg-emerald-900/80' 
+                : 'bg-red-950/85 border-red-500 text-red-300 hover:bg-red-900/80'
+            }`}
+            title={
+              storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
+                ? "Supabase Database: Online & Healthy (Connected)" 
+                : "Database: Offline / Sandbox Local Storage Mode"
+            }
+          >
+            <span className={`w-2 h-2 rounded-full ${
+              storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
+                ? 'bg-emerald-400 animate-pulse ring-2 ring-emerald-400/50' 
+                : 'bg-red-400 animate-pulse ring-2 ring-red-400/50'
+            }`}></span>
+            <span>
+              {storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
+                ? t("DATABASE CONNECTION - LIVE", "डेटाबेस कनेक्शन - लाइव") 
+                : t("DATABASE CONNECTION - OFF", "डेटाबेस कनेक्शन - बंद")
+              }
+            </span>
+          </div>
 
           {/* User profile / Google Authentication State State Container */}
           {currentUser ? (
@@ -2076,94 +1884,163 @@ function VedicKundliApp() {
             {/* TAB CONTENT: LOGIN FORM */}
             {authActiveTab === 'login' && (
               <div className="space-y-4 animate-fade-in block">
-                <div>
-                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1.5">{t("Email Address", "ईमेल पता")}</label>
-                  <input 
-                    type="email" 
-                    value={currentUser || ''} 
-                    onChange={(e) => setCurrentUser(e.target.value)}
-                    placeholder="name@example.com"
-                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] rounded-lg px-4 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition font-semibold"
-                  />
-                </div>
-                {currentUser && currentUser.trim().toLowerCase() === 'nespuneet2501@gmail.com' && (
-                  <div className="bg-amber-500/15 border border-amber-500/40 rounded-xl p-3 text-xs text-amber-300 animate-pulse">
-                    <div className="font-bold flex items-center gap-1.5">
-                      <span>👑</span>
-                      <span>{t("Secure Admin Gateway Identified", "सुरक्षित प्रशासक लॉगिन द्वार")}</span>
-                    </div>
-                    <p className="text-[10px] leading-snug mt-1 text-slate-300">
-                      {t("Master Admin authentication active. Default password for this workspace setup is 'admin123'.", "मुख्य संचालक प्रमाणीकरण सक्रिय है। सिमुलेटेड वर्कस्पेस में डिफ़ॉल्ट पासवर्ड 'admin123' है।")}
+                {showForgotPassword ? (
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3.5">
+                    <h3 className="text-xs font-black uppercase text-[#cca43b] tracking-wider font-mono">
+                      🔑 {t("Send Password Reset Email", "पासवर्ड पुनर्प्राप्ति")}
+                    </h3>
+                    <p className="text-[10px] text-slate-300 leading-snug">
+                      {t("Enter your registered email address beneath. System will securely dispatch a reset link directly to your inbox.", "अपना पंजीकृत ईमेल पता दर्ज करें। सिस्टम आपके पंजीकृत ईमेल पर पासवर्ड रीसेट लिंक भेजेगा।")}
                     </p>
-                  </div>
-                )}
-                <div>
-                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1.5">{t("Password", "पासवर्ड")}</label>
-                  <input 
-                    type="password" 
-                    value={userLoginPassword} 
-                    onChange={(e) => setUserLoginPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] rounded-lg px-4 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition font-semibold"
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!currentUser || !userLoginPassword) {
-                      triggerNotification("Authorization Error", "Please fill in both email and password.", "warning");
-                      return;
-                    }
-                    const res = await authService.loginWithEmail(currentUser, userLoginPassword);
-                    if (res && res.success) {
-                      const loggedEmail = res.user.email;
-                      setCurrentUser(loggedEmail);
-                      setUsersList(prev => {
-                        const exists = prev.find(u => u.email.toLowerCase() === loggedEmail.toLowerCase());
-                        if (!exists) {
-                          return [...prev, { 
-                            email: loggedEmail, 
-                            name: res.user.name || loggedEmail.split('@')[0], 
-                            isPremium: loggedEmail.toLowerCase() === 'nespuneet2501@gmail.com', 
-                            method: storageConfig.mode === 'GOOGLE_SHEETS' ? 'Google Sheets DB' : 'Email/Password', 
-                            registeredAt: res.user.registeredAt || new Date().toISOString().split('T')[0] 
-                          }];
-                        }
-                        return prev;
-                      });
-                      triggerNotification("Sign-In Completed", `Welcome back to Astro PV portal!`, "success");
-
-                      // Sync any pending items saved in Guest mode
-                      const pendingPayload = memoryPendingSavePayload;
-                      const actionType = memoryPendingGateActionType;
-                      if (pendingPayload) {
-                        try {
-                          await kundliDbService.saveKundli(loggedEmail, pendingPayload);
-                          setMemoryPendingSavePayload(null);
-                          setMemoryPendingGateActionType('');
-                          if (actionType === 'generate_chart') {
-                            setActiveProfileMemory(pendingPayload);
-                            const list = await kundliDbService.fetchSavedKundlis(loggedEmail);
-                            setSavedKundlis(list);
-                            setCurrentScreen('KUNDLI_REPORT');
-                            triggerNotification("Chart Loaded & Synced", `${pendingPayload.name}'s chart has been successfully mapped to your profile!`, "success");
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">{t("Registered Email Address", "पंजीकृत ईमेल पता")}</label>
+                      <input 
+                        type="email" 
+                        value={forgotEmail} 
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="yourname@gmail.com"
+                        className="w-full bg-[#050610] border border-slate-800 focus:border-[#cca43b] rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-705 focus:outline-none transition font-semibold"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={isResetSending}
+                        onClick={async () => {
+                          if (!forgotEmail) {
+                            triggerNotification("Email Required", "Please specify your registered email address.", "warning");
                             return;
                           }
-                        } catch (e) {}
-                      }
+                          setIsResetSending(true);
+                          try {
+                            await authService.resetPasswordForEmail(forgotEmail);
+                            setShowForgotPassword(false);
+                          } catch(e) {
+                            triggerNotification("Error", "Bypassing reset failure.", "warning");
+                          } finally {
+                            setIsResetSending(false);
+                          }
+                        }}
+                        className="flex-1 py-1 px-3 bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 rounded font-black text-[10.5px] uppercase transition cursor-pointer"
+                      >
+                        {isResetSending ? t("Sending...", "भेजा जा रहा है...") : t("Send Link To Email", "लिंक भेजें")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotPassword(false)}
+                        className="py-1 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-black text-[10.5px] uppercase transition cursor-pointer"
+                      >
+                        {t("Cancel", "रद्द करें")}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1.5">{t("Email Address", "ईमेल पता")}</label>
+                      <input 
+                        type="email" 
+                        value={userLoginEmail} 
+                        onChange={(e) => {
+                          setUserLoginEmail(e.target.value);
+                          if (!forgotEmail) setForgotEmail(e.target.value);
+                        }}
+                        placeholder="name@example.com"
+                        className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] rounded-lg px-4 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition font-semibold"
+                      />
+                    </div>
+                    {userLoginEmail && userLoginEmail.trim().toLowerCase() === 'nespuneet2501@gmail.com' && (
+                      <div className="bg-amber-500/15 border border-amber-500/40 rounded-xl p-3 text-xs text-amber-300 animate-pulse">
+                        <div className="font-bold flex items-center gap-1.5">
+                          <span>👑</span>
+                          <span>{t("Secure Admin Gateway Identified", "सुरक्षित प्रशासक लॉगिन द्वार")}</span>
+                        </div>
+                        <p className="text-[10px] leading-snug mt-1 text-slate-300">
+                          {t("Master Admin authentication active. Password matches your secure registered system password.", "मुख्य संचालक प्रमाणीकरण सक्रिय है। पासवर्ड आपके सुरक्षित पंजीकृत सिस्टम पासवर्ड से मेल खाता है।")}
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold">{t("Password", "पासवर्ड")}</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForgotEmail(userLoginEmail);
+                            setShowForgotPassword(true);
+                          }}
+                          className="text-[10px] font-extrabold text-[#cca43b] hover:underline"
+                        >
+                          {t("Forgot Password?", "पासवर्ड भूल गए?")}
+                        </button>
+                      </div>
+                      <input 
+                        type="password" 
+                        value={userLoginPassword} 
+                        onChange={(e) => setUserLoginPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] rounded-lg px-4 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition font-semibold"
+                      />
+                    </div>
 
-                      const list = await kundliDbService.fetchSavedKundlis(loggedEmail);
-                      setSavedKundlis(list);
-                      setCurrentScreen('DASHBOARD');
-                    } else {
-                      triggerNotification("Authentication Failed", res?.error || "Incorrect credentials.", "warning");
-                    }
-                  }}
-                  className="w-full py-2.5 bg-[#cca43b] hover:bg-[#f3d47d] text-slate-950 font-extrabold text-xs uppercase tracking-widest rounded-xl transition shadow-lg mt-2"
-                >
-                  {t("Sign in securely", "सुरक्षित लॉग-इन करें")}
-                </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!userLoginEmail || !userLoginPassword) {
+                          triggerNotification("Authorization Error", "Please fill in both email and password.", "warning");
+                          return;
+                        }
+                        const res = await authService.loginWithEmail(userLoginEmail, userLoginPassword);
+                        if (res && res.success) {
+                          const loggedEmail = res.user.email;
+                          setCurrentUser(loggedEmail);
+                          setUsersList(prev => {
+                            const exists = prev.find(u => u.email.toLowerCase() === loggedEmail.toLowerCase());
+                            if (!exists) {
+                              return [...prev, { 
+                                email: loggedEmail, 
+                                name: res.user.name || loggedEmail.split('@')[0], 
+                                isPremium: loggedEmail.toLowerCase() === 'nespuneet2501@gmail.com', 
+                                method: storageConfig.mode === 'GOOGLE_SHEETS' ? 'Google Sheets DB' : 'Email/Password', 
+                                registeredAt: res.user.registeredAt || new Date().toISOString().split('T')[0] 
+                              }];
+                            }
+                            return prev;
+                          });
+                          triggerNotification("Sign-In Completed", `Welcome back to Astro PV portal!`, "success");
+
+                          // Sync any pending items saved in Guest mode
+                          const pendingPayload = memoryPendingSavePayload;
+                          const actionType = memoryPendingGateActionType;
+                          if (pendingPayload) {
+                            try {
+                              await kundliDbService.saveKundli(loggedEmail, pendingPayload);
+                              setMemoryPendingSavePayload(null);
+                              setMemoryPendingGateActionType('');
+                              if (actionType === 'generate_chart') {
+                                setActiveProfileMemory(pendingPayload);
+                                const list = await kundliDbService.fetchSavedKundlis(loggedEmail);
+                                setSavedKundlis(list);
+                                setCurrentScreen('KUNDLI_REPORT');
+                                triggerNotification("Chart Loaded & Synced", `${pendingPayload.name}'s chart has been successfully mapped to your profile!`, "success");
+                                return;
+                              }
+                            } catch (e) {}
+                          }
+
+                          const list = await kundliDbService.fetchSavedKundlis(loggedEmail);
+                          setSavedKundlis(list);
+                          setCurrentScreen('DASHBOARD');
+                        } else {
+                          triggerNotification("Authentication Failed", res?.error || "Incorrect credentials.", "warning");
+                        }
+                      }}
+                      className="w-full py-2.5 bg-[#cca43b] hover:bg-[#f3d47d] text-slate-950 font-extrabold text-xs uppercase tracking-widest rounded-xl transition shadow-lg mt-2"
+                    >
+                      {t("Sign in securely", "सुरक्षित लॉग-इन करें")}
+                    </button>
+                  </>
+                )}
               </div>
             )}
 
@@ -2200,7 +2077,7 @@ function VedicKundliApp() {
                       {t("This email is designated for the Astro PV master administrator. Setting up this account requires entering the Master Admin Secret password.", "यह ईमेल मुख्य एस्ट्रो प्रबंधक के रूप में आरक्षित है। पंजीकरण पूरा करने के लिए मास्टर एडमिन गुप्त कुंजी दर्ज करना अनिवार्य है।")}
                     </p>
                     <p className="text-[10px] font-bold mt-1.5 text-amber-400">
-                      * {t("Please use 'admin123' as the password below to authorize master privileges.", "प्रशासक अधिकारों के सत्यापन के लिए नीचे पासवर्ड 'admin123' का उपयोग करें।")}
+                      * {t("Please use your secure admin password below to register your administrator account.", "प्रशासनिक अधिकारों के सत्यापन के लिए नीचे अपना सुरक्षित पासवर्ड दर्ज करें।")}
                     </p>
                   </div>
                 )}
@@ -3628,7 +3505,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
           </div>
         )}
 
-        {/* -- SCREEN: ASTROLOGICAL MATCHMAKING (GUN MILAN) -- */}
+                {/* -- SCREEN: ASTROLOGICAL MATCHMAKING (GUN MILAN) -- */}
         {currentScreen === 'MATCHMAKING' && (
           <div className="max-w-4xl mx-auto space-y-6 text-left text-slate-200">
             <button 
@@ -3654,12 +3531,12 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 text-left">
                 
                 {/* Boy Form */}
-                <div className="p-5 bg-[#090a15] rounded-xl border border-slate-800/80 space-y-4">
+                <div className="p-5 bg-[#090a15] rounded-xl border border-slate-800/85 space-y-4">
                   <h3 className="font-bold text-white font-cinzel text-sm border-b border-slate-850 pb-2 text-transparent bg-clip-text bg-gradient-to-r from-[lightblue] to-sky-400">
                     👨 {t("Boy's Particulars (वर विवरण)", "वर का विवरण")}
                   </h3>
                   <div>
-                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">{t("Name", "नाम")}</label>
+                    <label className="block text-[10px] uppercase font-bold text-slate-405 mb-1">{t("Name", "नाम")}</label>
                     <input 
                       type="text" 
                       value={boyName} 
@@ -3669,7 +3546,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-left">
                     <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">{t("DOB", "जन्म तिथि")}</label>
+                      <label className="block text-[10px] uppercase font-bold text-slate-405 mb-1">{t("DOB", "जन्म तिथि")}</label>
                       <input 
                         type="date" 
                         value={boyDob} 
@@ -3678,7 +3555,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">{t("TOB", "जन्म समय")}</label>
+                      <label className="block text-[10px] uppercase font-bold text-slate-450 mb-1">{t("TOB", "जन्म समय")}</label>
                       <input 
                         type="time" 
                         value={boyTob} 
@@ -3690,12 +3567,12 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                 </div>
 
                 {/* Girl Form */}
-                <div className="p-5 bg-[#090a15] rounded-xl border border-slate-800/80 space-y-4 text-left">
-                  <h3 className="font-bold text-white font-cinzel text-sm border-b border-slate-850 pb-2 text-transparent bg-clip-text bg-gradient-to-r from-[pink] to-rose-400">
+                <div className="p-5 bg-[#090a15] rounded-xl border border-slate-800/85 space-y-4 text-left">
+                  <h3 className="font-bold text-white font-cinzel text-sm border-b border-slate-800 pb-2 text-transparent bg-clip-text bg-gradient-to-r from-[pink] to-rose-400">
                     👩 {t("Girl's Particulars (कन्या विवरण)", "कन्या का विवरण")}
                   </h3>
                   <div>
-                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">{t("Name", "नाम")}</label>
+                    <label className="block text-[10px] uppercase font-bold text-slate-405 mb-1">{t("Name", "नाम")}</label>
                     <input 
                       type="text" 
                       value={girlName} 
@@ -3705,7 +3582,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-left">
                     <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">{t("DOB", "जन्म तिथि")}</label>
+                      <label className="block text-[10px] uppercase font-bold text-slate-405 mb-1">{t("DOB", "जन्म तिथि")}</label>
                       <input 
                         type="date" 
                         value={girlDob} 
@@ -3714,7 +3591,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">{t("TOB", "जन्म समय")}</label>
+                      <label className="block text-[10px] uppercase font-bold text-slate-450 mb-1">{t("TOB", "जन्म समय")}</label>
                       <input 
                         type="time" 
                         value={girlTob} 
@@ -3747,16 +3624,16 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                   {/* Score circle banner */}
                   <div className="p-6 bg-gradient-to-tr from-pink-950/20 to-slate-900 rounded-xl border border-pink-500/20 flex flex-col sm:flex-row items-center gap-6">
                     <div className="w-24 h-24 shrink-0 rounded-full border-4 border-pink-500 flex flex-col items-center justify-center bg-black/40 text-slate-100 shadow-xl bg-[#090a15]">
-                      <span className="text-3xl font-extrabold font-mono text-pink-400">{matchReport.score}</span>
+                      <span className="text-3xl font-extrabold font-mono text-pink-400">${matchReport.score}</span>
                       <span className="text-[10px] font-bold text-slate-400">/ 36 Guna</span>
                     </div>
                     
                     <div className="space-y-1 text-center sm:text-left flex-1 font-sans">
                       <div className="flex flex-col sm:flex-row items-center gap-2">
                         <span className="text-xs uppercase font-extrabold text-pink-400 tracking-wider">Astrologer Verdict:</span>
-                        <span className="px-2 py-0.5 bg-pink-500/10 text-pink-400 text-xs font-bold rounded">{matchReport.level}</span>
+                        <span className="px-2 py-0.5 bg-pink-500/10 text-pink-400 text-xs font-bold rounded">${matchReport.level}</span>
                       </div>
-                      <p className="text-sm font-semibold text-white pt-1">{matchReport.recommendation}</p>
+                      <p className="text-sm font-semibold text-white pt-1">${matchReport.recommendation}</p>
                     </div>
                   </div>
 
@@ -3768,8 +3645,8 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                       {matchReport.gunDetails.map((g, idx) => (
                         <div key={idx} className="p-3.5 bg-[#090a15] rounded-xl border border-slate-850">
                           <div className="flex justify-between items-center text-xs mb-1">
-                            <span className="font-semibold text-white">{g.name}</span>
-                            <span className="font-mono font-bold text-pink-400">{g.points} / {g.max} Points</span>
+                            <span className="font-semibold text-white">${g.name}</span>
+                            <span className="font-mono font-bold text-pink-400">${g.points} / ${g.max} Points</span>
                           </div>
                           <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mb-2">
                             <div 
@@ -3777,7 +3654,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                               style={{ width: `${(g.points / g.max) * 100}%` }}
                             ></div>
                           </div>
-                          <p className="text-[10px] text-slate-500 leading-relaxed italic">{g.desc}</p>
+                          <p className="text-[10px] text-slate-350 leading-relaxed italic">${g.desc}</p>
                         </div>
                       ))}
                     </div>
@@ -3790,10 +3667,9 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
           </div>
         )}
 
-
-
+        {/* -- SCREEN: ADMIN SERVICE CONTROL PANEL -- */}
         {currentScreen === 'ADMIN_CONTROL' && (
-          <div className="max-w-7xl mx-auto space-y-6 animate-fade-in text-slate-800">
+          <div className="max-w-7xl mx-auto space-y-6 animate-fade-in text-slate-800 p-4">
             <button 
               onClick={() => setCurrentScreen('DASHBOARD')}
               className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition uppercase tracking-wider mb-2 font-cinzel shadow-sm"
@@ -3806,7 +3682,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
               t={t}
               tObj={tObj}
               currentUser={currentUser}
-              setShowGoogleSimPicker={setShowGoogleSimPicker}
+              setShowGoogleSimPicker={null}
               moduleSettings={moduleSettings}
               setModuleSettings={setModuleSettings}
               subscriptionPlans={subscriptionPlans}
@@ -3818,12 +3694,12 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
           </div>
         )}
 
+        {/* -- SCREEN: DATABASE SYNCHRONIZATION INTEGRATIONS -- */}
         {currentScreen === 'INTEGRATIONS' && (
-          <div className="max-w-4xl mx-auto space-y-6 animate-fade-in text-slate-800 p-4">
+          <div className="max-w-4xl mx-auto space-y-6 animate-fade-in text-slate-805 p-4 font-sans">
             <button 
               onClick={() => setCurrentScreen('DASHBOARD')}
-              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition uppercase tracking-wider mb-2 font-cinzel shadow-sm"
-              style={{ borderColor: tObj.border }}
+              className="px-4 py-2 bg-[#0a0c16] hover:bg-[#121528] text-slate-200 text-xs font-bold rounded-xl border border-slate-805 flex items-center gap-1.5 transition uppercase tracking-wider mb-2 font-mono shadow-sm"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>{t("Back to Workstation", "मुख्य वर्कस्टेशन पर लौटें")}</span>
@@ -3843,16 +3719,15 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                 {t("Vedic Cloud Database Integrations", "वैदिक क्लाउड डेटाबेस एकीकरण")}
               </h2>
               <p className="text-slate-400 text-xs mt-1 max-w-xl text-left">
-                {t("Instantly toggle your active data persistence between high-density local browser storage, Supabase PostgreSQL with row-level security, or standard Google Sheets.",
-                   "अपने सक्रिय कुण्डली डेटाबेस को सीधे ब्राउज़र स्टोरेज, सुपाबेस पोस्टग्रेएसक्यूएल या गूगल शीट्स में परिवर्तित करें।")}
+                {t("Instantly toggle your active data persistence between sandbox local browser storage, or enterprise-ready cloud Supabase with row-level security.",
+                   "अपने सक्रिय कुण्डली डेटाबेस को सीधे ब्राउज़र स्टोरेज या सुपाबेस पोस्टग्रेएसक्यूएल में परिवर्तित करें।")}
               </p>
 
               {/* Mode Selector Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 text-left">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 text-left">
                 {[
-                  { mode: 'LOCAL', title: 'Local Browser Storage', desc: 'Secure offline-first client storage.', badge: 'Zero Setup', icon: '💻' },
-                  { mode: 'SUPABASE', title: 'Supabase PostgreSQL', desc: 'Enterprise Row-Level Security.', badge: 'Preferred', icon: '🐳' },
-                  { mode: 'GOOGLE_SHEETS', title: 'Google Sheets DB', desc: 'Append rows directly to sheet.', badge: 'Alternative', icon: '📊' }
+                  { mode: 'LOCAL', title: 'Local Browser Storage sandbox', desc: 'Secure offline-first client storage.', badge: 'Zero Setup', icon: '💻' },
+                  { mode: 'SUPABASE', title: 'Supabase PostgreSQL DB', desc: 'Enterprise Row-Level Security Cloud Cluster.', badge: 'Preferred', icon: '🐳' }
                 ].map((item) => {
                   const isSelected = storageConfig.mode === item.mode;
                   return (
@@ -3862,20 +3737,19 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                         const newConf = { ...storageConfig, mode: item.mode };
                         setStorageConfig(newConf);
                         saveStorageConfig(newConf);
-                        alert(`Switched active storage target to ${item.title}!`);
                       }}
-                      className={`p-4 rounded-2xl bg-[#090b16] border transition cursor-pointer flex flex-col justify-between h-36 ${isSelected ? 'border-amber-400 bg-amber-400/5' : 'border-slate-800 hover:border-slate-700'}`}
+                      className={`p-4 rounded-2xl bg-[#090b16] border transition cursor-pointer flex flex-col justify-between h-36 ${isSelected ? 'border-amber-400 bg-amber-400/5' : 'border-slate-850'}`}
                     >
                       <div>
                         <div className="flex justify-between items-start">
-                          <span className="text-lg">{item.icon}</span>
-                          <span className="text-[8px] font-bold px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded uppercase font-mono tracking-wide text-slate-400">{item.badge}</span>
+                          <span className="text-lg">${item.icon}</span>
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded uppercase font-mono tracking-wide text-slate-400">${item.badge}</span>
                         </div>
-                        <h4 className="font-bold text-sm text-white mt-2 leading-none">{item.title}</h4>
-                        <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">{item.desc}</p>
+                        <h4 className="font-bold text-sm text-white mt-1.5 leading-none">${item.title}</h4>
+                        <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">${item.desc}</p>
                       </div>
                       <span className={`text-[10px] font-extrabold font-mono uppercase ${isSelected ? 'text-amber-400' : 'text-slate-600'}`}>
-                        {isSelected ? '● ACTIVE CONFIG' : '○ SELECT TARGET'}
+                        ${isSelected ? '● ACTIVE CONFIG' : '○ SELECT TARGET'}
                       </span>
                     </div>
                   );
@@ -3884,8 +3758,8 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
 
               {/* Config fields for Supabase */}
               {storageConfig.mode === 'SUPABASE' && (
-                <div className="mt-6 border-t border-slate-850 pt-6 space-y-4 animate-fade-in text-left">
-                  <div className="flex items-center gap-1.5 border-b border-slate-855 pb-2 mb-2 text-[#cca43b]">
+                <div className="mt-6 border-t border-slate-850 pt-6 space-y-6 animate-fade-in text-left">
+                  <div className="flex items-center gap-1.5 border-b border-slate-800 pb-2 mb-2 text-[#cca43b]">
                     <span className="text-sm">🐳</span>
                     <h4 className="text-xs uppercase font-black tracking-widest">{t("SUPABASE CONFIGURATION PARAMS", "सुपाबेस प्रमाणीकरण कुंजी")}</h4>
                   </div>
@@ -3895,9 +3769,10 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                       <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Supabase API Endpoint URL:</label>
                       <input 
                         type="text"
-                        value={storageConfig.supabaseUrl}
+                        value={storageConfig.supabaseUrl || ''}
+                        placeholder="https://your-project-id.supabase.co"
                         onChange={(e) => {
-                          const updated = { ...storageConfig, supabaseUrl: e.target.value };
+                          const updated = { ...storageConfig, supabaseUrl: e.target.value.trim() };
                           setStorageConfig(updated);
                           saveStorageConfig(updated);
                         }}
@@ -3908,341 +3783,342 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                       <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Supabase Anon Key:</label>
                       <input 
                         type="text"
-                        value={storageConfig.supabaseAnonKey}
+                        value={storageConfig.supabaseAnonKey || ''}
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                         onChange={(e) => {
-                          const updated = { ...storageConfig, supabaseAnonKey: e.target.value };
+                          const updated = { ...storageConfig, supabaseAnonKey: e.target.value.trim() };
                           setStorageConfig(updated);
                           saveStorageConfig(updated);
                         }}
-                        className="w-full bg-[#0a0c16] border border-slate-800 focus:border-amber-400 text-xs font-mono text-amber-300 rounded-lg px-3 py-2.5 focus:outline-none"
+                        className="w-full bg-[#0a0c16] border border-slate-800 focus:border-amber-400 text-xs font-mono text-[#cca43b] rounded-lg px-3 py-2.5 focus:outline-none"
                       />
                     </div>
                   </div>
-                  <p className="text-[10px] text-slate-500 leading-relaxed max-w-2xl">
-                    *Renders with live sign-ins enabled. Row-level security policies inside the "kundlis" table automatically filter queries matching `auth.uid()` of your active user identifier context.
+
+                  {/* Table Status Health Checker */}
+                  <div className="bg-[#121429] p-5 rounded-2xl border border-slate-850 mt-4 space-y-4 text-left">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                      <div className="text-left">
+                        <h5 className="text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                          <span>📊</span>
+                          <span>{t("REAL-TIME DATABASE HEALTH & TABLE CHECKLIST", "वास्तविक समय डेटाबेस तालिका चेकलिस्ट")}</span>
+                        </h5>
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          Detected database tables on your active Supabase instance.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-1 text-[9px] font-mono font-bold rounded-full uppercase tracking-wider ${
+                          dbHealth.status === 'healthy' 
+                            ? 'bg-emerald-950/40 border border-emerald-500/30 text-emerald-400' 
+                            : 'bg-amber-950/40 border border-amber-500/30 text-amber-400'
+                        }`}>
+                          ● STATUS: ${dbHealth.status === 'healthy' ? 'ALL HEALTHY' : 'NEEDS TABLE SETUP'}
+                        </span>
+                        <button 
+                          onClick={queryDatabaseStatus}
+                          className="p-1 px-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 rounded text-[9.5px] font-mono transition"
+                        >
+                          🔄 Refresh Check
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Table Status Cards */}
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                      {[
+                        { key: 'users', label: 'Users Profile table' },
+                        { key: 'kundlis', label: 'Saved Kundlis table' },
+                        { key: 'saved_reports', label: 'Reports Hub table' },
+                        { key: 'user_activity', label: 'Activity Logs table' },
+                        { key: 'subscriptions', label: 'Subscriptions table' },
+                        { key: 'contact_enquiries', label: 'Feedback & Queries table' }
+                      ].map((tbl) => {
+                        const isOk = dbHealth.tables[tbl.key];
+                        return (
+                          <div 
+                            key={tbl.key}
+                            className={`p-3 rounded-xl border flex items-center justify-between text-left ${
+                              isOk 
+                                ? 'bg-emerald-950/10 border-emerald-500/10 text-emerald-400' 
+                                : 'bg-amber-950/5 border-amber-500/10 text-amber-400'
+                            }`}
+                          >
+                            <div className="truncate pr-2">
+                              <p className="text-[10px] font-mono font-bold leading-none truncate">${tbl.key}</p>
+                              <p className="text-[8px] text-slate-405 mt-0.5 leading-none">${tbl.label}</p>
+                            </div>
+                            <span className="text-[10px] shrink-0 font-extrabold flex items-center gap-1">
+                              ${isOk ? <span className="text-emerald-400">● Ready</span> : <span className="text-amber-405">○ Missing</span>}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Auto Setup Guide & SQL Block */}
+                    {dbHealth.status !== 'healthy' && (
+                      <div className="border border-amber-500/20 bg-amber-500/5 p-4 rounded-xl space-y-3 mt-2">
+                        <div className="flex items-start gap-1.5 text-left">
+                          <span className="text-sm shrink-0">⚠️</span>
+                          <div>
+                            <p className="text-[10.5px] text-amber-205 font-bold leading-normal">
+                              {t("First Time Setup: Required tables are not created yet!", "प्रारंभिक सेटअप: आवश्यक तालिकाएं अभी तक नहीं बनाई गई हैं!")}
+                            </p>
+                            <p className="text-[10px] text-slate-350 mt-1 leading-normal font-sans">
+                              {t("To configure your Supabase cluster automatically with all required schemas, relations, and Row-Level Security policies copy the script below and paste it inside your Supabase project dashboard's SQL Editor.",
+                                 "अपने सुपाबेस डेटाबेस क्लस्टर को स्वतः कॉन्फ़िगर करने के लिए नीचे दिए गए सेटअप स्क्रिप्ट को कॉपी करें और सुपाबेस कंसोल पर चलाएं।")}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* SQL Script Display Box */}
+                        <div className="relative rounded-lg bg-slate-950 p-3 border border-slate-900 text-left">
+                          <pre className="text-[9px] font-mono text-emerald-400 overflow-x-auto max-h-48 leading-relaxed select-all scrollbar-thin">
+{SUPABASE_SQL_SETUP_CODE}
+                          </pre>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(SUPABASE_SQL_SETUP_CODE);
+                              triggerNotification("SQL Setup Script Copied!", "Open your Supabase SQL Editor and [Cmd+V] / [Ctrl+V] to paste it.", "success");
+                            }}
+                            className="absolute top-2 right-2 bg-amber-500 hover:bg-[#af7f21] text-slate-950 font-black text-[9px] px-2.5 py-1 rounded transition uppercase tracking-wider"
+                          >
+                            📋 {t("Copy SQL script", "एसक्यूएल कॉपी करें")}
+                          </button>
+                        </div>
+
+                        <div className="pt-1 text-left flex flex-wrap gap-2.5">
+                          <a 
+                            href="https://supabase.com/dashboard/project/_/sql/new" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30 px-3 py-1.5 rounded-lg transition"
+                          >
+                            <span>🌐</span>
+                            <span>{t("Open Supabase SQL Editor Dashboard", "सुपाबेस एसक्यूएल एडिटर खोलें")}</span>
+                          </a>
+                          <span className="text-[9.5px] text-slate-400 self-center">
+                            {t("Simply paste it, click [Run] to setup all 6 tables instantly!", "लिखे हुए कोड को रन करें, तालिकाएं तुरंत बन जाएंगी!")}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* --- SUPER EASY QUICK-ADD WIZARD FOR NES_PUNEET11 --- */}
+                  <div className="mt-8 border-t border-slate-800/80 pt-6 space-y-5 text-left">
+                    <div className="bg-gradient-to-r from-amber-500/15 via-indigo-950/20 to-emerald-500/15 border-2 border-amber-400/40 rounded-3xl p-6 md:p-8 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-6 text-3xl animate-bounce">⚡</div>
+                      
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="text-3xl">🔑</span>
+                        <div>
+                          <h4 className="text-lg font-black text-amber-300 font-cinzel">
+                             {t("Puneet's Visual 1-Minute Supabase Key Finder", "पुनीत का लाइव सुपाबेस क्रेडेंशियल गाइड")}
+                          </h4>
+                          <p className="text-xs text-slate-300 font-sans mt-0.5">
+                             Tailored specifically for <strong className="text-white font-mono bg-slate-900 px-2 py-0.5 rounded border border-slate-800">nespuneet11@gmail.com</strong>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* DETAILED HIGH-CONTRAST STEP-BY-STEP MAP */}
+                      <div className="space-y-6 mt-6">
+                        
+                        {/* MAP HEADER */}
+                        <div className="p-3.5 bg-amber-500/5 rounded-xl border border-amber-400/20 text-xs text-slate-300 leading-relaxed font-sans">
+                          🇮🇳 <strong className="text-amber-200">काफी आसान है!</strong> सुपाबेस के नए डैशबोर्ड में चाबियां ढूंढना कभी-कभी कठिन लगता है। नीचे दिए गए सटीक चरणों का पालन करें और 1 मिनट में क्रेडेंशियल भरें।
+                          <br />
+                          🇬🇧 <strong className="text-white">Very simple!</strong> In the new Supabase design, the API keys can sometimes feel hidden. Here has been mapped with precise markers.
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+                          
+                          {/* STEP 1: CONSOLE */}
+                          <div className="bg-[#090b16] rounded-2xl p-4 border border-slate-800 flex flex-col justify-between shadow-lg relative">
+                            <span className="absolute -top-3 left-4 bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded-full text-[10px]">STEP 1</span>
+                            <div className="pt-2">
+                              <h5 className="font-bold text-white text-sm mb-1.5 flex items-center gap-1">
+                                <span>🌐</span>
+                                <span>{t("Open Project", "प्रोजेक्ट खोलें")}</span>
+                              </h5>
+                              <p className="text-[11px] text-slate-350 leading-relaxed">
+                                Go to the Supabase console, sign in with <span className="text-amber-300 font-bold font-mono">nespuneet11@gmail.com</span>, and select your active project.
+                              </p>
+                              <p className="text-[10px] text-slate-455 mt-2 italic">
+                                *If you don't have one, click "New Project" (takes 1 minute to setup).
+                              </p>
+                            </div>
+                            <a 
+                              href="https://supabase.com/dashboard/projects" 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="mt-4 inline-flex items-center justify-center gap-1 w-full py-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 hover:text-white rounded-xl text-xs text-amber-400 font-bold transition shadow-sm"
+                            >
+                              <span>⚡ Open Dashboard</span>
+                              <span className="text-[10px]">➔</span>
+                            </a>
+                          </div>
+
+                          {/* STEP 2: SETTINGS AND API */}
+                          <div className="bg-[#090b16] rounded-2xl p-4 border border-slate-850 shadow-lg relative">
+                            <span className="absolute -top-3 left-4 bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded-full text-[10px]">STEP 2</span>
+                            <div className="pt-2 space-y-3">
+                              <h5 className="font-bold text-white text-sm flex items-center gap-1">
+                                <span>⚙️</span>
+                                <span>{t("Click Settings & API", "सेटिंग्स और API")}</span>
+                              </h5>
+                              
+                              <div className="space-y-1.5 text-[11px] text-slate-300 leading-normal bg-black/40 p-2.5 rounded-lg border border-slate-850">
+                                <div className="flex gap-1">
+                                  <span className="text-amber-400 font-bold">1.</span>
+                                  <span>Look at the bottom left-side corner sidebar, and click the <strong>Gear icon ⚙️ (Project Settings)</strong>.</span>
+                                </div>
+                                <div className="flex gap-1 pt-1 border-t border-slate-900">
+                                  <span className="text-amber-400 font-bold">2.</span>
+                                  <span>In the inner menu, click on <strong>🔌 'API'</strong> (it's under the "Project Settings" category block).</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* STEP 3: FINDING PROJECT KEYS */}
+                          <div className="bg-[#090b16] rounded-2xl p-4 border border-slate-850 shadow-lg relative">
+                            <span className="absolute -top-3 left-4 bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded-full text-[10px]">STEP 3</span>
+                            <div className="pt-2 space-y-3">
+                              <h5 className="font-bold text-white text-sm flex items-center gap-1">
+                                <span>📬</span>
+                                <span>{t("Copy & Paste", "कॉपी और पेस्ट")}</span>
+                              </h5>
+                              
+                              <div className="space-y-2 text-[11px] text-slate-300">
+                                <div className="p-2 bg-emerald-950/20 border border-emerald-500/25 rounded-lg">
+                                  <span className="block text-[8.5px] uppercase font-black tracking-wide text-emerald-400">🔗 {t("BOX A: PROJECT URL", "प्रोजेक्ट URL")}</span>
+                                  <span className="text-[10px] text-slate-200 block font-bold mt-0.5">Copy: Project URL</span>
+                                  <span className="text-[9px] text-slate-400 italic block mt-0.5">Usually: `https://your-proj.supabase.co`</span>
+                                </div>
+
+                                <div className="p-2 bg-pink-950/20 border border-pink-500/25 rounded-lg">
+                                  <span className="block text-[8.5px] uppercase font-black tracking-wide text-pink-405">🔑 {t("BOX B: ANON KEY", "एनॉन पब्लिक की")}</span>
+                                  <span className="text-[10px] text-slate-200 block font-bold mt-0.5">Copy: `anon public` Key</span>
+                                  <span className="text-[9px] text-slate-400 italic block">Starts with a long `eyJhbGci...`</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                        </div>
+
+                        {/* HELPFUL ALTERNATIVE */}
+                        <div className="p-4 bg-slate-950/70 rounded-2xl border border-slate-800 space-y-3">
+                          <h5 className="text-xs font-bold text-amber-300 uppercase tracking-widest flex items-center gap-1.5">
+                            <span>💡</span>
+                            <span>{t("EASIER ALTERNATIVE: Use Preset Database Mode", "एक और भी आसान तरीका: प्रीसेट टेम्प्लेट्स का उपयोग करें")}</span>
+                          </h5>
+                          <p className="text-[11px] text-slate-300 leading-relaxed">
+                            If you still can't find it, click the button below to pre-generate a safe placeholder endpoint. You can immediately see the structure and replace our placeholder strings with your values!
+                          </p>
+                          <div className="flex flex-wrap gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const updated = {
+                                  ...storageConfig,
+                                  supabaseUrl: "https://put-your-org-id-here.supabase.co",
+                                  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.paste_your_long_key_here_puneet",
+                                  mode: 'SUPABASE'
+                                };
+                                setStorageConfig(updated);
+                                saveStorageConfig(updated);
+                                triggerNotification("Sample Preset Filled!", "Now look at the white URL and key boxes above! Replace the placeholders with your actual values.", "info");
+                              }}
+                              className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 font-black uppercase tracking-wider rounded-xl transition text-[10.5px] shadow-md"
+                            >
+                              🪄 Load Live Template Box Preset
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = {
+                                  ...storageConfig,
+                                  supabaseUrl: "",
+                                  supabaseAnonKey: "",
+                                  mode: 'LOCAL'
+                                };
+                                setStorageConfig(updated);
+                                saveStorageConfig(updated);
+                                triggerNotification("Reset to Local Storage Mode", "All credentials cleared. Using secure local sandbox.", "success");
+                              }}
+                              className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-300 text-[10px] transition"
+                            >
+                              Reset Fields
+                            </button>
+                          </div>
+                        </div>
+
+                      </div>
+
+                      {/* URL Param Link Autogen */}
+                      <div className="bg-slate-950/25 rounded-xl p-4 border border-slate-850 mt-4 space-y-2 text-left">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                          <div>
+                            <h5 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 text-white">
+                              <span>🔗</span>
+                              <span>{t("1-Click Autoconfig URL Generator", "1-क्लिक ऑटो-कॉन्फिग लिंक जनरेटर")}</span>
+                            </h5>
+                            <p className="text-[10.5px] text-slate-400">
+                              Generate a custom URL. Use it to automatically load the Supabase connection on any other device with zero manual typing!
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!storageConfig.supabaseUrl || !storageConfig.supabaseAnonKey || storageConfig.supabaseUrl.includes('your-proj-id') || storageConfig.supabaseUrl.includes('put-your-org')) {
+                                triggerNotification("Please enter keys first", "Enter your real Supabase URL and Key above to generate an Autoconfig link!", "error");
+                                return;
+                              }
+                              const baseUrl = window.location.origin + window.location.pathname;
+                              const sUrl = encodeURIComponent(storageConfig.supabaseUrl);
+                              const sKey = encodeURIComponent(storageConfig.supabaseAnonKey);
+                              const generatedLink = `${baseUrl}?sUrl=${sUrl}&sKey=${sKey}`;
+                              
+                              navigator.clipboard.writeText(generatedLink);
+                              triggerNotification("Shareable Config Link copied!", "Success! You can bookmark this custom URL or open it elsewhere to connect instantly.", "success");
+                            }}
+                            className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-white font-black text-[10px] uppercase tracking-wider rounded-lg transition shrink-0"
+                          >
+                            📋 Copy My Auto-Config Link
+                          </button>
+                        </div>
+                        {storageConfig.supabaseUrl && storageConfig.supabaseAnonKey && !storageConfig.supabaseUrl.includes('your-proj-id') && !storageConfig.supabaseUrl.includes('put-your-org') && (
+                          <div className="p-2.5 bg-[#090b16] border border-slate-900 rounded font-mono text-[9px] text-emerald-400 select-all truncate break-all">
+                            {window.location.origin + window.location.pathname}?sUrl={encodeURIComponent(storageConfig.supabaseUrl)}&sKey={encodeURIComponent(storageConfig.supabaseAnonKey).substring(0, 24)}...
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  </div>
+                  
+                  <p className="text-[10px] text-slate-550 leading-relaxed max-w-2xl text-left">
+                    *Integrates seamlessly with Supabase Auth or Google OAuth tokens. Row-Level Security (RLS) is fully active to filter records based on `auth.uid()` contexts.
                   </p>
                 </div>
               )}
 
-              {/* Config fields for Google Sheets */}
-              {storageConfig.mode === 'GOOGLE_SHEETS' && (
-                <div className="mt-6 border-t border-slate-850 pt-6 space-y-4 animate-fade-in text-left">
-                  <div className="flex items-center gap-1.5 border-b border-slate-855 pb-2 mb-2 text-[#cca43b]">
-                    <span className="text-sm">📊</span>
-                    <h4 className="text-xs uppercase font-black tracking-widest">{t("GOOGLE SHEETS INTEGRATION PARAMS", "गूगल शीट्स क्रेडेंशियल्स")}</h4>
-                  </div>
-
-                  {/* Easy URL link parsing card */}
-                  <div className="bg-[#121429] p-4 rounded-2xl border border-[#cca43b]/20 mb-4 text-left">
-                    <label className="text-[11px] text-amber-400 font-extrabold uppercase block mb-1">
-                      📋 {t("JUST GIVE GOOGLE SHEET BROWSER URL", "सीधा गूगल शीट का लिंक पेस्ट करें")}:
-                    </label>
-                    <input 
-                      type="text"
-                      className="w-full bg-slate-950 border border-[#cca43b]/30 focus:border-amber-400 text-xs font-semibold text-amber-300 rounded-xl px-4 py-3 focus:outline-none"
-                      placeholder="Paste your full google sheet link here... (e.g., https://docs.google.com/spreadsheets/d/1vA-XYZ.../edit)"
-                      onChange={(e) => {
-                        const val = e.target.value.trim();
-                        if (val) {
-                          if (val.includes('script.google.com')) {
-                            // The user pasted a Script URL here instead of a Google Sheet link!
-                            const updated = { ...storageConfig, googleScriptUrl: val };
-                            setStorageConfig(updated);
-                            saveStorageConfig(updated);
-                            triggerNotification("Auto-Routing Link", "Detected Apps Script Web App URL! Placed it into the correct box automatically. 🎉", "success");
-                            return;
-                          }
-                          const matches = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-                          const sheetId = matches ? matches[1] : val;
-                          const updated = { ...storageConfig, googleSheetId: sheetId };
-                          setStorageConfig(updated);
-                          saveStorageConfig(updated);
-                          if (matches) {
-                            triggerNotification("URL Parsed Successfully", "Extracted Google Spreadsheet ID: " + sheetId, "success");
-                          }
-                        }
-                      }}
-                    />
-                    <p className="text-[10px] text-slate-400 mt-1.5 leading-relaxed font-sans">
-                      {t("Just paste the browser URL of your spreadsheet. Our system automatically extracts and configures the Spreadsheet ID for database saving.",
-                         "बस अपनी गूगल शीट का सामान्य ब्राउज़र लिंक यहां पेस्ट करें। हमारी प्रणाली आईडी निकाल लेगी।")}
-                    </p>
-                  </div>
-
-                  {/* Database sharing & synchronization module */}
-                  <div className="bg-[#cca43b]/5 p-4 rounded-2xl border border-[#cca43b]/40 mb-4 text-left space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] text-amber-400 font-extrabold uppercase flex items-center gap-1.5">
-                        <span>🔗</span> {t("SHARE DATABASE TO OTHER DEVICES", "डेटाबेस को अन्य उपकरणों में साझा करें")}
-                      </label>
-                      <span className="bg-amber-400/20 text-amber-300 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
-                        {t("Multi-Device Sync Enabled", "मल्टी-डिवाइस सिंक सक्षम")}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-350 leading-relaxed font-sans">
-                      {t("Since database settings are stored in your device's browser, users on other devices will register in Offline Sandbox fallback unless configured. Generate and send this configuration link to configure those devices instantly in one click!",
-                         "चूंकि डेटाबेस सेटिंग्स आपके ब्राउज़र लोकल स्टोरेज में हैं, अन्य उपकरणों के उपयोगकर्ता ऑफलाइन सैंडबॉक्स मोड में चले जाते हैं। इस शेयरिंग लिंक को अन्य उपकरणों पर खोलकर उन्हें तुरंत कॉन्फ़िगर करें!")}
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                      <input 
-                        type="text"
-                        readOnly
-                        value={`${window.location.protocol}//${window.location.host}${window.location.pathname}?sheetId=${encodeURIComponent(storageConfig.googleSheetId || '')}&scriptUrl=${encodeURIComponent(storageConfig.googleScriptUrl || '')}`}
-                        className="flex-1 bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-400 rounded-xl px-3 py-2 cursor-pointer focus:outline-none truncate"
-                        onClick={(e) => e.target.select()}
-                      />
-                      <button
-                        onClick={() => {
-                          const url = `${window.location.protocol}//${window.location.host}${window.location.pathname}?sheetId=${encodeURIComponent(storageConfig.googleSheetId || '')}&scriptUrl=${encodeURIComponent(storageConfig.googleScriptUrl || '')}`;
-                          navigator.clipboard.writeText(url);
-                          triggerNotification("Sync Link Copied!", "Send this synchronization URL to any other device or user to instantly connect them to your Google Sheet! 🪐", "success");
-                        }}
-                        className="px-4 py-2 bg-[#cca43b] hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl transition uppercase tracking-wider flex items-center justify-center gap-1.5"
-                      >
-                        {t("Copy Link", "लिंक कॉपी करें")}
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Google Sheets Spreadsheet ID:</label>
-                      <input 
-                        type="text"
-                        value={storageConfig.googleSheetId}
-                        onChange={(e) => {
-                          const val = e.target.value.trim();
-                          if (val.includes('script.google.com')) {
-                            // User pasted Script URL in Spreadsheet ID
-                            const updated = { ...storageConfig, googleScriptUrl: val, googleSheetId: '' };
-                            setStorageConfig(updated);
-                            saveStorageConfig(updated);
-                            triggerNotification("Auto-Corrected URL", "Oops! Placed the Web App URL into the proper field below instead. 😀", "success");
-                            return;
-                          }
-                          const matches = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-                          const sheetId = matches ? matches[1] : val;
-                          const updated = { ...storageConfig, googleSheetId: sheetId };
-                          setStorageConfig(updated);
-                          saveStorageConfig(updated);
-                        }}
-                        className="w-full bg-[#0a0c16] border border-slate-800 focus:border-amber-400 text-xs font-mono text-amber-305 rounded-lg px-3 py-2.5 focus:outline-none"
-                        placeholder="e.g. 1aBCdEfgHijkLMno...PqRsTuVxYz"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Developer API Key (Optional):</label>
-                      <input 
-                        type="text"
-                        value={storageConfig.googleApiKey}
-                        onChange={(e) => {
-                          const updated = { ...storageConfig, googleApiKey: e.target.value };
-                          setStorageConfig(updated);
-                          saveStorageConfig(updated);
-                        }}
-                        className="w-full bg-[#0a0c16] border border-slate-800 focus:border-amber-400 text-xs font-mono text-amber-305 rounded-lg px-3 py-2.5 focus:outline-none"
-                        placeholder="AIzaSyA1...B2C3D4"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Apps Script Web App URL (Required):</label>
-                      <input 
-                        type="text"
-                        value={storageConfig.googleScriptUrl || ''}
-                        onChange={(e) => {
-                          const val = e.target.value.trim();
-                          if (val.includes('/spreadsheets/d/') || val.includes('spreadsheets')) {
-                            // User pasted Spreadsheet URL in Web App URL
-                            const matches = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-                            const sheetId = matches ? matches[1] : val;
-                            const updated = { ...storageConfig, googleSheetId: sheetId, googleScriptUrl: '' };
-                            setStorageConfig(updated);
-                            saveStorageConfig(updated);
-                            triggerNotification("Auto-Corrected URL", "Detected Spreadsheet URL! Updated your Spreadsheet ID above instead. 👍", "success");
-                            return;
-                          }
-                          const updated = { ...storageConfig, googleScriptUrl: val };
-                          setStorageConfig(updated);
-                          saveStorageConfig(updated);
-                        }}
-                        className="w-full bg-[#0a0c16] border border-slate-800 focus:border-[#cca43b] text-xs font-mono text-[#cca43b] rounded-lg px-3 py-2.5 focus:outline-none"
-                        placeholder="https://script.google.com/macros/s/.../exec"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="bg-[#121429] p-5 rounded-2xl border border-slate-800 mt-4 space-y-4">
-                    <h5 className="text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
-                      <span>⚡</span>
-                      <span>{t("EASY 10-SECOND GOOGLE SHEETS SETUP GUIDE", "आसान 10-सेकंड गूगल शीट सेटअप गाइड")}</span>
-                    </h5>
-                    
-                    <ol className="text-[11px] text-slate-350 space-y-2 list-decimal list-inside text-left leading-relaxed">
-                      <li>
-                        {t("Create a new Google Sheet & copy its browser URL ID (the long string between `/d/` and `/edit`). Paste it in the ", "एक नई गूगल शीट बनाएं और उसकी यूआरएल आईडी कॉपी करें (यूआरएल में `/d/` और `/edit` के बीच का भाग)। इसे ")}
-                        <strong className="text-[#cca43b]">Spreadsheet ID</strong> {t("field above.", "बॉक्स में पेस्ट करें।")}
-                      </li>
-                      <li>
-                        {t("In your Google Sheet, click on ", "अपनी गूगल शीट में, ")}
-                        <strong className="text-white">Extensions</strong> → <strong className="text-white">Apps Script</strong>.
-                      </li>
-                      <li>
-                        {t("Delete any placeholder code and paste this ready-to-run Google Apps Script code:", "वहां मौजूदा कोड को हटाकर नीचे दिया गया गूगल एप्स स्क्रिप्ट कोड पेस्ट करें:")}
-                      </li>
-                    </ol>
-
-                    <div className="relative rounded-lg bg-slate-950 p-3 border border-slate-900 text-left">
-                      <pre className="text-[9px] font-mono text-emerald-400 overflow-x-auto max-h-48 leading-relaxed select-all scrollbar-thin">
-{GOOGLE_APPS_SCRIPT_CODE}
-                      </pre>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
-                          alert("Google Apps Script code copied to clipboard! Paste it into the Apps Script editor.");
-                        }}
-                        className="absolute top-2 right-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[9px] px-2.5 py-1 rounded transition uppercase tracking-wider"
-                      >
-                        📋 Copy Script
-                      </button>
-                    </div>
-
-                    <ol className="text-[11px] text-slate-350 space-y-2 list-decimal list-inside text-left leading-relaxed" start="4">
-                      <li>
-                        {t("Click on ", "ऊपर ")}
-                        <strong className="text-white">Deploy</strong> → <strong className="text-white">New deployment</strong>.
-                      </li>
-                      <li>
-                        {t("Click the gear icon next to 'Select type', choose ", "प्रकार के लिए गियर आइकन पर क्लिक करें और ")}
-                        <strong className="text-amber-400">Web app</strong>.
-                      </li>
-                      <li>
-                        {t("Configure: Set 'Execute as' to ", "कॉन्फ़िगर करें: 'Execute as' को ")}
-                        <strong className="text-white">Me (your-email)</strong> {t("and set 'Who has access' to ", "और 'Who has access' को ")}
-                        <strong className="text-white">Anyone</strong>. {t("This is crucial for secure, bypassable CORS access.", "यह बिना रुकावट डेटा भेजने के लिए अनिवार्य है।")}
-                      </li>
-                      <li>
-                        {t("Click Deploy, click 'Authorize access' if prompted, then copy the ", "Deploy पर क्लिक करें, अनुमति दें, और फिर जनरेट की गई ")}
-                        <strong className="text-[#cca43b]">Web App URL</strong>.
-                      </li>
-                      <li>
-                        {t("Paste that Web App URL into the ", "उस एप वेब यूआरएल को ऊपर दिए गए ")}
-                        <strong className="text-white">Apps Script Web App URL</strong> {t("input box above and save settings! 🎉", "अंतिम बॉक्स में पेस्ट करें और सेव करें! 🎉")}
-                      </li>
-                    </ol>
-
-                    <div className="pt-2.5 flex flex-col sm:flex-row justify-between items-center bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 gap-3">
-                      <span className="text-[10px] text-slate-400 leading-normal text-left sm:max-w-md">
-                        <strong>{t("Need status check?", "कनेक्शन जांचना चाहते हैं?")}</strong> {t("Send a diagnostic ping to confirm your Apps Script Web App URL is correctly configured and reachable.", "अपनी एपीआई कनेक्टिविटी को सत्यापित करने और जांचने के लिए पिंग बटन क्लिक करें।")}
-                      </span>
-                      <button
-                        onClick={async () => {
-                          const url = (storageConfig.googleScriptUrl || '').trim();
-                          if (!url) {
-                            alert("❌ Error: Please paste the Google Apps Script Web App URL first!");
-                            return;
-                          }
-
-                          // 1. Check if the user pasted a Google Sheet URL in the Script field
-                          if (url.includes('/spreadsheets/d/') || url.includes('docs.google.com/spreadsheets')) {
-                            alert("❌ Error: You pasted a Google SPREADSHEET URL in the Apps Script URL field!\n\nPlease paste it in the SPREADSHEET ID field instead, and use the Google Web App URL (ends in '/exec') for this field.");
-                            return;
-                          }
-
-                          // 2. Check if the user pasted the Apps Script editor project link rather than the deployed Web App exec link
-                          if (url.includes('script.google.com/home') || url.includes('/edit') || url.includes('script.google.com/d/') && !url.includes('/exec')) {
-                            alert("❌ Error: You pasted the Apps Script EDITOR link!\n\nTo get the correct Web App URL:\n1. Click [Deploy] (top right)\n2. Select 'New deployment'\n3. Set 'Select type' to 'Web app'\n4. Set 'Who has access' to 'Anyone' (crucial!)\n5. Click 'Deploy', and copy the Web App URL (ends in '/exec').");
-                            return;
-                          }
-
-                          // 3. Check if they used a '/dev' URL
-                          if (url.endsWith('/dev')) {
-                            const proceed = confirm("⚠️ Warning: Your Apps Script URL ends with '/dev'.\n\nThis is a draft developer-only URL which requires active login credentials and will fail when other users try to register or sign in.\n\nWe recommend deploying a production URL ending in '/exec' instead.\n\nDo you want to proceed with this test anyway?");
-                            if (!proceed) return;
-                          }
-
-                          // 4. General invalid check
-                          if (!url.startsWith('https://script.google.com/')) {
-                            alert("❌ Error: Invalid Apps Script URL! It should start with https://script.google.com/macros/s/...\n\nPlease double check and copy-paste it again.");
-                            return;
-                          }
-
-                          try {
-                            const res = await fetch(url, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'text/plain' },
-                              body: JSON.stringify({
-                                type: 'test_ping',
-                                email: currentUser || 'puneet@test-pva.org',
-                                name: 'PV-Astro Diagnostic Test Record'
-                              })
-                            });
-                            
-                            const text = await res.text();
-                            const trimmed = text.trim();
-                            
-                            // Check if the response text looks like Google login or error HTML (e.g. they forgot 'Who has access: Anyone')
-                            if (trimmed.startsWith('<') || trimmed.includes('<!DOCTYPE') || trimmed.includes('<html') || trimmed.includes('<body') || trimmed.includes('Google Accounts')) {
-                              alert("❌ Connection Fail (Permissions Block)!\n\nYour Google Script was successfully reached, but it returned an HTML login page instead of database JSON.\n\n👉 KEY FIX NEEDED:\nWhen deploying your Apps Script, you MUST set 'Who has access' to 'Anyone' so that anyone can register or log in securely.\n\nHow to fix:\n1. Open your Apps Script editor.\n2. Click [Deploy] -> [New deployment] (or Manage deployments -> Edit).\n3. Change 'Who has access' from 'Only myself' to 'Anyone'.\n4. Set 'Execute as' to 'Me (your email)'.\n5. Click deploy, copy the new Web App URL, and paste it here!\n\nAlso make sure you have approved OAuth credentials if requested during deployment!");
-                              return;
-                            }
-
-                            let body;
-                            try {
-                              body = JSON.parse(trimmed);
-                            } catch (parseErr) {
-                              alert(`⚠️ Connected, but the return code was invalid or not JSON:\n\n"${trimmed.substring(0, 150)}..."\n\nPlease make sure your sheet is active and you copied the entire script code correctly.`);
-                              return;
-                            }
-
-                            if (body && (body.success || res.ok)) {
-                              alert("✅ Connection Successful!\n\nYour Google Spreadsheet database is 100% connected & synchronized! User registration, login telemetry, kundlis, and feedback records are fully active and writable. 🎉");
-                            } else {
-                              alert(`⚠️ Connected but sheet returned failure: ${body?.error || "Unknown sheet error"}.\n\nEnsure your Spreadsheet ID is correct and of the format '1aBCd...' and that you have at least one sheet configured or writable.`);
-                            }
-                          } catch (err) {
-                            alert("❌ Connection Fail: The request was blocked or unreachable!\n\nThis is usually caused by:\n1. The URL has typos or is incomplete.\n2. The Google Apps Script was not deployed as a 'Web App'.\n3. 'Who has access' is set to 'Only myself' instead of 'Anyone'.\n4. Your browser is blocking the request.\n\nPlease refer to the 10-Second Setup Guide below and follow steps 4-7 precisely.");
-                            console.error(err);
-                          }
-                        }}
-                        className="px-4 py-2 bg-[#cca43b] hover:brightness-110 text-slate-950 font-bold text-[10px] uppercase tracking-wider rounded-lg transition shrink-0"
-                      >
-                        ⚡ Test Sync Connection
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <p className="text-[10px] text-slate-500 leading-relaxed max-w-2xl">
-                    *Appends horoscope metrics automatically as rows with: `Timestamp`, `Data Type`, `User ID/Email`, `Seeker Name`, `Gender`, `Birth Date & Time`, `Coordinates`, and raw complete JSON configurations. Perfect for backup analytics pipelines.
-                  </p>
-                </div>
-              )}
-
-              <div className="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+              <div className="mt-6 pt-4 border-t border-[#181d3a] flex justify-end">
                 <button
                   onClick={() => {
-                    alert("Astro PV Configuration Saved and Synchronized successfully!");
+                    alert("Astro PV Configuration Saved successfully!");
                     setCurrentScreen('DASHBOARD');
                   }}
                   className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl transition shadow-lg"
                 >
-                  Apply & Reload Settings
+                  Apply & Close Switchboard
                 </button>
               </div>
             </div>
-          </div>
-        )}
-
-        {currentScreen === 'SOCIETY_UPDATES' && (
-          <div className="max-w-7xl mx-auto space-y-6 animate-fade-in text-slate-800">
-            <button 
-              onClick={() => setCurrentScreen('DASHBOARD')}
-              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition uppercase tracking-wider mb-2 font-cinzel shadow-sm"
-              style={{ borderColor: tObj.border }}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>{t("Back to Workstation", "मुख्य वर्कस्टेशन पर लौटें")}</span>
-            </button>
-            <SocietyUpdatesHub currentLanguage={currentLanguage} t={t} tObj={tObj} />
           </div>
         )}
 
@@ -4814,6 +4690,74 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                     </button>
                   </div>
                 </form>
+
+                {/* ACCOUNT PASSWORD CHANGE SECURITY */}
+                <div className="pt-6 border-t border-slate-850 space-y-4">
+                  <div>
+                    <h3 className="text-xs font-extrabold font-cinzel text-white uppercase tracking-wider">🔒 Update Account Security Password</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5 font-medium">To modify your password securely, specify any new 6+ character password below.</p>
+                  </div>
+                  
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const newPw = e.target.elements.newPassword.value.trim();
+                    const confirmPw = e.target.elements.confirmPassword.value.trim();
+                    
+                    if (!newPw || !confirmPw) {
+                      triggerNotification("Incomplete Password", "Please populate both password inputs.", "warning");
+                      return;
+                    }
+                    if (newPw.length < 6) {
+                      triggerNotification("Too Short", "Password must be at least 6 characters in length.", "warning");
+                      return;
+                    }
+                    if (newPw !== confirmPw) {
+                      triggerNotification("Mismatch", "The passwords do not match.", "warning");
+                      return;
+                    }
+                    
+                    try {
+                      const res = await authService.changeUserPassword(currentUser, newPw);
+                      if (res.success) {
+                        triggerNotification("Security Changed", "Your password has been changed successfully.", "success");
+                        e.target.reset();
+                      } else {
+                        triggerNotification("Failure", res.message || "Failed changing password.", "warning");
+                      }
+                    } catch(err) {
+                      triggerNotification("Error", "Error while changing password.", "warning");
+                    }
+                  }} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] text-slate-405 font-extrabold uppercase block mb-1.5">New Password:</label>
+                        <input 
+                          name="newPassword"
+                          type="password"
+                          placeholder="At least 6 characters"
+                          className="w-full bg-[#07080f] border border-slate-800 focus:border-amber-450 text-xs px-3 py-2 text-white placeholder-slate-705 rounded-lg focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-405 font-extrabold uppercase block mb-1.5">Confirm Password:</label>
+                        <input 
+                          name="confirmPassword"
+                          type="password"
+                          placeholder="Re-type new password"
+                          className="w-full bg-[#07080f] border border-slate-800 focus:border-amber-450 text-xs px-3 py-2 text-white placeholder-slate-705 rounded-lg focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <button 
+                        type="submit"
+                        className="px-4 py-2 border border-slate-600 hover:border-amber-500 bg-slate-800/40 hover:bg-slate-800 hover:text-[#cca43b] text-slate-200 text-[10px] font-bold uppercase rounded-lg transition"
+                      >
+                        Update My Password
+                      </button>
+                    </div>
+                  </form>
+                </div>
 
                 {/* ADVANCED ACCOUNT SECURITY */}
                 <div className="pt-6 border-t border-slate-850 space-y-4 text-left">

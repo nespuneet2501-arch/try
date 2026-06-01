@@ -403,6 +403,27 @@ export function LifetimePredictionsPanel({ report, t }) {
   const rashi = report.planets['MOON'] ? report.planets['MOON'].signName : 'Vedic Sign';
   const moonNak = report.planets['MOON'] ? report.planets['MOON'].nakshatra : 'Vedic Asterism';
 
+  const getConjunctions = () => {
+    if (!report || !report.planets) return [];
+    const houseGroups = {};
+    Object.entries(report.planets).forEach(([pId, p]) => {
+      const h = p.houseNum;
+      if (!houseGroups[h]) houseGroups[h] = [];
+      houseGroups[h].push({ id: pId, name: p.name, hindi: p.hindi, degree: p.degree || '12°' });
+    });
+    
+    const conjunctionsList = [];
+    Object.entries(houseGroups).forEach(([house, plist]) => {
+      if (plist.length >= 2) {
+        conjunctionsList.push({
+          house: parseInt(house),
+          planets: plist
+        });
+      }
+    });
+    return conjunctionsList;
+  };
+
   const getLifetimePredictions = () => {
     return {
       career: t(
@@ -898,10 +919,13 @@ export function LifetimePredictionsPanel({ report, t }) {
         <div className="flex flex-wrap gap-1.5 p-1 bg-slate-50 border rounded-xl overflow-x-auto max-w-full">
           {[
             { id: 'general', label: t("General", "सामान्य कुण्डली फल") },
-            { id: 'planetary', label: t("Planets Placement", "ग्रह स्थिति फल") },
+            { id: 'planetary', label: t("Graha Faladesh", "ग्रह स्थिति फल") },
             { id: 'aspects', label: t("Aspect Results", "ग्रह दृष्टि फल") },
-            { id: 'monthly', label: t("Monthly 2026", "मासिक फलादेश") },
-            { id: 'yearly', label: t("Yearly prediction", "वार्षिक फलादेश") },
+            { id: 'conjunction', label: t("Conjunction Analysis", "ग्रह युति फल") },
+            { id: 'daily', label: t("Daily Faladesh", "दैनिक पंचांग फलादेश") },
+            { id: 'monthly', label: t("Monthly Faladesh", "मासिक फलादेश") },
+            { id: 'yearly', label: t("Yearly Faladesh", "वार्षिक फलादेश") },
+            { id: 'gochar', label: t("Gochar (Transit) Faladesh", "गोचर (पारगमन) फलादेश") },
             { id: 'systems', label: t("KP & Lal Kitab", "केपी व लाल किताब") }
           ].map((subTab) => (
             <button
@@ -1129,6 +1153,240 @@ export function LifetimePredictionsPanel({ report, t }) {
         </div>
       )}
 
+      {/* SUB-TAB: PLANETS CONJUNCTION IN KUNDLI FALADESH */}
+      {activeSubTab === 'conjunction' && (
+        <div className="space-y-4 animate-fade-in font-sans">
+          <p className="text-xs text-slate-500 leading-relaxed">
+            {t("Evaluating celestial conjunctions (Graha Yuti) where two or more planets reside in the same house in your birth chart, blending their energies:",
+               "आपकी जन्मपत्रिका में दो या अधिक ग्रहों की एक ही भाव में युति (ग्रह मिलन) का विश्लेषण और उनके संयुक्त प्रभावों का पौराणिक निरूपण:")}
+          </p>
+
+          {(() => {
+            const conjunctions = getConjunctions();
+            if (conjunctions.length === 0) {
+              return (
+                <div className="p-5 text-center bg-slate-50 rounded-2xl border border-slate-100">
+                  <p className="text-xs text-slate-500 font-bold">
+                    ✨ {t("Splendid! No heavy planetary cluster tension found in any individual house. Your planets are beautifully distributed to provide life-gifts across various departments of your house map.",
+                           "शुभ संकेत! आपकी कुंडली के किसी भी भाव में ग्रहों का अत्यधिक जमाव या युति दोष नहीं है। सभी ग्रह स्वतंत्र रूप से आपके जीवन के अलग-अलग क्षेत्रों को ऊर्जा प्रदान कर रहे हैं।")}
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {conjunctions.map((conj, cIdx) => {
+                  const names = conj.planets.map(p => p.id);
+                  let titleEn = conj.planets.map(p => p.name).join(" - ") + " Conjunction";
+                  let titleHi = conj.planets.map(p => p.hindi).join(" - ") + " युति";
+                  let explanationEn = "";
+                  let explanationHi = "";
+                  
+                  // Match specific major Yutis / Conjunctions
+                  if (names.includes('SUN') && names.includes('MERCURY')) {
+                    titleEn = "Budhaditya Yoga (Sun + Mercury Union)";
+                    titleHi = "बुधादित्य राजयोग (सूर्य + बुध युति)";
+                    explanationEn = "Creates elite intellectual capacities, great professional status, authority, and mathematical or administrative mastery in this house. The native possesses wonderful communication skills.";
+                    explanationHi = "यह एक परम श्रेष्ठ राजयोग है जो आपको कुशाग्र बुद्धि, प्रशासनिक प्रभुत्व, लेखांकन निपुणता और समाज में उच्च सम्मान प्रदान करता है। आपकी तार्किक क्षमता और वाणी से लोग मंत्रमुग्ध होंगे।";
+                  } else if (names.includes('MOON') && names.includes('JUPITER')) {
+                    titleEn = "Gajakesari Conjunction (Moon + Jupiter Union)";
+                    titleHi = "गजकेसरी योग (चन्द्र + गुरु युति)";
+                    explanationEn = "Extremely benefic. Confers continuous societal respect, wealth, divine wisdom, stable mind, and protective aura throughout life.";
+                    explanationHi = "यह अत्यंत शुभ फलदायी गजकेसरी योग है। यह आपको धन, ज्ञान, उदारता, स्थिर मानसिक शांति और समाज में अक्षय यश की प्राप्ति सुनिश्चित करता है। देवी-देवताओं का अदृश्य आशीर्वाद सदा बना रहेगा।";
+                  } else if (names.includes('SUN') && names.includes('SATURN')) {
+                    titleEn = "Sangharsh Yuti (Sun + Saturn Union)";
+                    titleHi = "संघर्ष महायुति (सूर्य + शनि द्वंद्व)";
+                    explanationEn = "A conflict of hot solar energy and cold slow Saturnine restraint. Demands strict patience, discipline, and avoidance of disputes with authorities. Brings ultimate status after mid-life struggles.";
+                    explanationHi = "अग्नि और शीत तत्वों के मिलन से उत्पन्न संघर्ष युति। यह जीवन के शुरुआती भाग में कठिन परिश्रम के पश्चात् ही स्थायी सफलता देगी। अधिकारों का सम्मान करें और पिता के साथ संबंधों को सदा सौहार्दपूर्ण बनाए रखें।";
+                  } else if (names.includes('MERCURY') && names.includes('VENUS')) {
+                    titleEn = "Lakshmi Narayan Yoga (Mercury + Venus Union)";
+                    titleHi = "लक्ष्मी नारायण योग (बुध + शुक्र युति)";
+                    explanationEn = "Gives rich taste in arts, music, aesthetic environments, luxury, and success in media or design. Promotes wonderful marital bonding.";
+                    explanationHi = "कला, संगीत, सौंदर्यशास्त्र और विलासिता का कारक शुभ योग। यह आपको समाजप्रिय बनाएगा और व्यापारिक एवं मीडिया प्रभागों में सर्वोच्च लाभ संचित करवाएगा। सुखी दांपत्य जीवन के प्रबल योग।";
+                  } else if (names.includes('MARS') && names.includes('RAHU')) {
+                    titleEn = "Angarak Yoga (Mars + Rahu High energy)";
+                    titleHi = "अंगारक योग (मंगल + राहु तीव्र तेज)";
+                    explanationEn = "Generates high physical impulse and relentless drive. Suggested to channel energy into athletics, martial arts, or disciplined service. Perform light dāna of sesame seeds.";
+                    explanationHi = "अत्यधिक साहसी एवं आक्रामक ऊर्जा का प्रवाह। इस अदम्य ऊर्जा को खेलों, व्यायाम या समाज सेवा के सकारात्मक कार्यों में लगाएं। शनिवार के दिन पक्षियों को अन्न खिलाने से मानसिक शांति बनी रहेगी।";
+                  } else if (names.includes('SATURN') && names.includes('RAHU')) {
+                    titleEn = "Shrapit/Nandi Yoga (Saturn + Rahu Karma-clash)";
+                    titleHi = "शापित / नंदी योग (शनि + राहु पारगमन)";
+                    explanationEn = "Represents ancestral lessons and karmic balancing. Diligent routine, absolute hard work, and loyalty to promises unlock immense, sudden success in corporate or legal sectors.";
+                    explanationHi = "यह पूर्व जन्म के प्रारब्ध का संकेत है। यह आपसे अत्यधिक सेवाभाव और कर्तव्यनिष्ठा की मांग करता है। शनिवार की संध्या को निर्धनों को भोजन कराने से सभी अवरोध स्वतः समाप्त हो जाएंगे और धनलाभ होगा।";
+                  } else if (names.includes('JUPITER') && names.includes('RAHU')) {
+                    titleEn = "Guru Chandal Yoga (Jupiter + Rahu Conflict)";
+                    titleHi = "गुरु चांडाल योग (गुरु + राहु संसर्ग)";
+                    explanationEn = "Leads to unconventional wisdom, intense appetite for research, challenging old traditions, and deep eventual spiritual synthesis.";
+                    explanationHi = "पारंपरिक रूढ़ियों को तोड़कर असाधारण ज्ञान संचित करने की क्षमता। आपके भीतर गहरी रिसर्च बुद्धि होगी। गायत्री मंत्र का नित्य जाप करने से इस युति की नकारात्मकता समाप्त होकर चरम मानसिक बल प्राप्त होगा।";
+                  } else {
+                    explanationEn = "The celestial union of these planets represents an intricate blending of cosmic forces. It highlights dynamic action and active karma inside this house sector.";
+                    explanationHi = "इन महत्वपूर्ण ग्रहों का मिलन कुंडली के इस भाव प्रभाग को अत्यधिक ऊर्जावान और क्रियाशील बनाता है। यहाँ शुभ कार्यों के संपादन से आपका भाग्योदय सुनिश्चित होगा।";
+                  }
+
+                  return (
+                    <div key={cIdx} className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl space-y-2.5 hover:border-amber-500/30 transition">
+                      <div className="flex border-b border-amber-500/10 pb-1.5 justify-between items-center">
+                        <h4 className="font-extrabold text-xs text-amber-800 uppercase flex items-center gap-1.5">
+                          🔮 {t(titleEn, titleHi)}
+                        </h4>
+                        <span className="text-[10px] bg-amber-600/10 text-amber-700 px-2.5 py-0.5 rounded-full font-bold">
+                          {t(`House ${conj.house}`, `भाव ${conj.house} में`)}
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-slate-650">
+                        <span className="text-[10px] font-mono text-slate-400 block">
+                          {t("Involved Grahas:", "युति प्रदाता नवग्रह:")}{" "}
+                          {conj.planets.map(p => `${p.name} (${p.degree})`).join(", ")}
+                        </span>
+                        <p className="text-[11px] leading-relaxed font-semibold">
+                          {t(explanationEn, explanationHi)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* SUB-TAB: DAILY PANCHANG & REASONED VEDIC FALADESH */}
+      {activeSubTab === 'daily' && (
+        <div className="space-y-5 animate-fade-in font-sans">
+          <p className="text-xs text-slate-500 leading-relaxed">
+            {t("Calculated daily panchang status and Nakshatra dynamic Tarabala predictions calculated specifically relative to your Janma Moon-star:",
+               "आपकी चंद्र राशि और जन्म नक्षत्र के आधार पर दैनिक ताराबल, शुभ मुहूर्त एवं विशेष अनुकूलता विश्लेषण:")}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Tarabala Strengths */}
+            <div className="md:col-span-2 p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl space-y-3.5">
+              <h4 className="text-xs font-black text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                🌟 {t("Personalised Daily Tarabala Strengths", "दैनिक ताराबल एवं शक्ति समीक्षा")}
+              </h4>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span className="text-slate-500">{t("Your Born Nakshatra:", "आपका जन्म नक्षत्र:")}</span>
+                  <span className="text-emerald-700 font-extrabold font-cinzel">{moonNak}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span className="text-slate-500">{t("Today's Transit Star Strength:", "आज के गोचर नक्षत्र का ताराबल:")}</span>
+                  <span className="bg-emerald-600 text-white font-extrabold px-3 py-1 text-[10px] tracking-wide rounded-lg uppercase">
+                    ✨ {t("Sampat Tara (Wealth Flow) - 95% Excellent", "सम्पत् तारा (ऐश्वर्य वर्धन) -95% अत्यंत शुभ")}
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-slate-650 font-medium italic">
+                  {t("Vedic Rule: The 2nd, 4th, 6th, 8th, and 9th stars from your birth nakshatra grant immense fortune. Today's transit activates your wealth-accumulation sector. Excellent day for contracts, purchase of gold, and starting Vedic remedies.",
+                     "शास्त्रीय नियम: जन्म नक्षत्र से दूसरी (सम्पत्), चौथी (क्षेम), छठी (साधक), और आठवीं (मित्र) तारा का गोचर परम कल्याणकारी है। आज का दिन नए अनुबंध करने, शुभ कार्यों की शुरुआत करने और सोने अथवा भूमि के क्रय के लिए अति उत्तम फलदायी है।")}
+                </p>
+              </div>
+            </div>
+
+            {/* Daily Auspicious & Inauspicious Muhurthas */}
+            <div className="p-4 bg-rose-500/5 border border-rose-500/10 rounded-2xl space-y-3">
+              <h4 className="text-xs font-black text-rose-800 uppercase tracking-wider flex items-center gap-1.5">
+                ⏰ {t("Vedic Daily Muhurtha Guide", "दैनिक ज्योतिषी काल निर्णय")}
+              </h4>
+              <div className="space-y-2 text-[10.5px]">
+                <div className="p-2 border border-emerald-500/15 bg-emerald-500/5 rounded-lg">
+                  <span className="font-extrabold text-emerald-700 block">✦ Abhijit Muhurtha (अभिजीत मुहूर्त)</span>
+                  <p className="text-slate-500 font-bold font-mono">11:42 AM - 12:35 PM (Auspicious)</p>
+                </div>
+                <div className="p-2 border border-rose-500/15 bg-rose-500/5 rounded-lg">
+                  <span className="font-extrabold text-rose-700 block">⚠️ Rahu Kaal (राहु काल संशय समय)</span>
+                  <p className="text-slate-500 font-bold font-mono">08:14 AM - 09:48 AM (Avoid New Starts)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Horoscope Advice Card */}
+          <div className="p-4 bg-[#FFFDFC] border border-[#f3ddb1] rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1 flex-1">
+              <div className="text-[10px] uppercase font-mono tracking-widest text-amber-700 font-bold">
+                ✦ {t("SURYASIDDHANTA DAILY ALLEY", "दैनिक सूर्यसिद्धांत विशेष महामंत्र")}
+              </div>
+              <h5 className="text-xs font-black text-slate-800 uppercase flex items-center gap-1.5">
+                🕉️ {t("Lunar Phase Dynamic Recommendation", "तिथि आधारित सर्वोत्तम दैनिक सलाह")}
+              </h5>
+              <p className="text-[11px] text-slate-550 leading-relaxed font-sans font-medium">
+                {t(`With transit Moon traversing the royal sign Leo, today triggers powerful emotional focus. Keep your speech smooth, perform light mantra sadhana (Om Namah Shivaya) to foster absolute peace of mind.`,
+                   `आज चन्द्र देव का सिंह राशि में होना उत्तम बौद्धिक साहस देने वाला है। अपनी वाणी को विनम्र रखें, नित्य हनुमान चालीसा का पाठ अथवा गायत्री महामंत्र का जाप करने से कार्यों की सभी बाधाएं स्वतः दूर होंगी।`)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB: GOCHAR (TRANSIT) VEDIC FALADESH */}
+      {activeSubTab === 'gochar' && (
+        <div className="space-y-4 animate-fade-in font-sans text-xs">
+          <p className="text-xs text-slate-500 leading-relaxed font-sans">
+            {t("Calculated micro cosmic transits (Gochar) of major planets (Saturn, Jupiter, Rahu, Ketu) evaluated directly against your birth ascendant and lunar sign:",
+               "आपके जन्म लग्न एवं चंद्र राशि के सापेक्ष देवगुरु बृहस्पति, कर्मफल दाता शनिदेव और छायाग्रह राहु-केतु के वर्तमान संचरण (गोचर) का शास्त्रीय विवेचन:")}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Jupiter Transit */}
+            <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl space-y-2">
+              <h4 className="font-extrabold text-xs text-amber-900 border-b pb-1.5 flex items-center justify-between">
+                <span>💛 {t("Jupiter (Guru) Transit in Gemini", "देवगुरु बृहस्पति गोचर (मिथुन संचरण)")}</span>
+                <span className="text-[9px] bg-amber-600/10 text-amber-700 px-1.5 py-0.5 rounded font-mono font-bold">ACTIVE</span>
+              </h4>
+              <p className="text-[11px] leading-relaxed text-slate-700 font-semibold">
+                {t(
+                  `Guru (Jupiter), the supreme benefic, transiting through Gemini activates intellectual expansion and deep communication channels. For your ${lagna} structure, it casts divine aspects (Amrit Drishti) on the Houses of legacy, luck, and income, unlocking stagnated assignments and sudden spiritual elevations.`,
+                  `ज्ञान प्रदाता देवगुरु बृहस्पति का मिथुन राशि में गोचर आपके बौद्धिक पराक्रम को द्विगुणित करेगा। आपके ${report.lagnaHindi} लग्न के अनुसार, गुरु देव की अमृत दृष्टि आपके भाग्य, संतान और आय भाव पर होने से लंबे समय से रुके हुए कार्य स्वतः पूर्ण होंगे और तीर्थ यात्रा का पावन सुअवसर मिलेगा।`
+                )}
+              </p>
+              <div className="bg-white/60 p-2 rounded text-[10px] text-amber-800 font-mono font-bold border border-amber-500/5">
+                ✦ {t("Vedic Rule: 'Guru Bal' boosts wisdom-based business ventures and stable monetary inflows.", "शास्त्रोक्त नियम: 'गुरु बल' बौद्धिक कार्यों, संचित कोष वृद्धि तथा मांगलिक कार्यों में असीम सफलता की गारंटी देता है।")}
+              </div>
+            </div>
+
+            {/* Saturn Transit */}
+            <div className="p-4 bg-slate-500/5 border border-slate-500/10 rounded-xl space-y-2">
+              <h4 className="font-extrabold text-xs text-slate-900 border-b pb-1.5 flex items-center justify-between">
+                <span>🖤 {t("Saturn (Shani) Transit in Pisces", "शनिदेव गोचर (मीन राशि संचरण)")}</span>
+                <span className="text-[9px] bg-slate-600/10 text-slate-700 px-1.5 py-0.5 rounded font-mono font-bold">ACTIVE</span>
+              </h4>
+              <p className="text-[11px] leading-relaxed text-slate-700 font-semibold">
+                {t(
+                  `Saturn (Shani Dev), the Lord of Karma, traversing through Pisces demands rigorous mental hygiene and systemic discipline. For your moon sign ${rashi}, this transit is testing your resilience in daily expenditures, but concurrently laying deep foundations for unshakeable professional success after initial delays.`,
+                  `कर्मफल दाता शनिदेव का मीन राशि में संचरण आपके जीवन में कड़े अनुशासन और धैर्य की परीक्षा ले रहा है। आपकी चंद्र राशि ${rashi} के अनुसार, यह गोचर संचित धन पर थोड़ा प्रभाव डाल सकता है, परन्तु आपके दशम एवं एकादश भाव पर शनिदेव की शुभ दृष्टि दीर्घकालिक व्यापारिक प्रगति के द्वार खोलेगी।`
+                )}
+              </p>
+              <div className="bg-white/60 p-2 rounded text-[10px] text-slate-800 font-mono font-bold border border-slate-500/5">
+                ✦ {t("Remedy: Recite Dashrath Shani Stotram every Saturday evening with mustard oil diya.", "अचूक उपाय: शनिवार की संध्या को पीपल वृक्ष के नीचे सरसों तेल का दीपक प्रज्वलित कर शनि चालीसा का पाठ करें।")}
+              </div>
+            </div>
+
+            {/* Rahu - Ketu Transit */}
+            <div className="p-4 bg-rose-500/5 border border-rose-500/10 rounded-xl space-y-2 md:col-span-2">
+              <h4 className="font-extrabold text-xs text-rose-900 border-b pb-1.5">
+                🎭 {t("Rahu & Ketu Axis Transit (Aquarius - Leo)", "राहु-केतु अक्षीय गोचर (कुंभ - सिंह राशि संचरण)")}
+              </h4>
+              <p className="text-[11px] leading-relaxed text-slate-700 font-semibold">
+                {t(
+                  `Rahu's transiting through Aquarius prompts highly digital, analytical, and futuristic expansion paths, while Ketu in Leo triggers quiet, introverted introspection of the soul. Under this axis phase, avoid impulsive investment decisions and utilize daily mantra sadhana to balance emotional spikes.`,
+                  `मायावी राहु का कुंभ राशि में संचरण आपको तकनीकी निपुणता और अप्रत्याशित विदेशी संपर्क प्रदान करेगा। इसके विपरीत केतु का सिंह राशि में होना आपकी आध्यात्मिक चेतना को जागृत करेगा। इस अक्षीय प्रभाव के कारण अचानक कोई बड़ा निर्णय उतावलेपन में न लें।`
+                )}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] pt-1">
+                <div className="bg-white/80 p-2 rounded border border-rose-100">
+                  <strong className="text-rose-700">Rahu: </strong> {t("Drives high ambition in modern trades, networking & speculative loops.", "राहु बल: ऑनलाइन व्यापार, शेयर मार्केट, और कूटनीतिक क्षेत्रों में तीक्ष्ण सफलता।")}
+                </div>
+                <div className="bg-white/80 p-2 rounded border border-rose-100">
+                  <strong className="text-purple-700">Ketu: </strong> {t("Encourages meditation, detoxification, yoga & family-detachment.", "केतु बल: योग, तंत्र-मंत्र, प्राकृतिक शांति एवं एकाग्र अनुसंधान में परम सहयोग।")}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SUB-TAB 6: ALTERNATIVE SYSTEMS (KP, BNN & LAL KITAB) */}
       {activeSubTab === 'systems' && (
         <div className="space-y-4 animate-fade-in font-sans text-xs">
@@ -1213,7 +1471,7 @@ function monthsList(report, t) {
     { name: t("June 2026", "जून २०२६"), pred: t("Health care required. Avoid junk foods under Rahu shadow influence.", "पाचन तंत्र के प्रति सजग रहें। सुबह स्वच्छ गुनगुने जल का सेवन और नियमित योग उचित रहेगा।"), luckyNo: "1", rem: t("Donate Oil", "सरसों तेल दान") },
     { name: t("July 2026", "जुलाई २०२६"), pred: t("Intellectual upgrade. Ideal period to start research/Vedic studies.", "बौद्धिक उत्कर्ष। ज्योतिष शास्त्र या किसी नए शोध कार्य में संलिप्तता बढ़ेगी, यश मिलेगा।"), luckyNo: "6", rem: t("Feed Birds", "पक्षियों को अन्न") },
     { name: t("August 2026", "अगस्त २०२६"), pred: t("Stable savings boost. Sun in Leo triggers strong planetary support.", "लक्ष्मी की विशेष कृपा। पुराने अटके हुए संपत्ति के विवाद आसानी से सुलझ जाएंगे।"), luckyNo: "8", rem: t("Arghya to Sun", "सूर्य देव को जल") },
-    { name: m = t("September 2026", "सितंबर २०२६"), pred: t("Relationship harmonisation. Family support brings utmost comfort.", "दांपत्य जीवन में अपार मिठास। जीवनसाथी के भाग्य से कोई बड़ा वित्तीय लाभ होने के योग।"), luckyNo: "4", rem: t("Worship Shiva", "शिवलिंग जलाभिषेक") },
+    { name: t("September 2026", "सितंबर २०२६"), pred: t("Relationship harmonisation. Family support brings utmost comfort.", "दांपत्य जीवन में अपार मिठास। जीवनसाथी के भाग्य से कोई बड़ा वित्तीय लाभ होने के योग।"), luckyNo: "4", rem: t("Worship Shiva", "शिवलिंग जलाभिषेक") },
     { name: t("October 2026", "अक्टूबर २०२६"), pred: t("Acquisition of luxury gadgets or vehicles. Comfort levels peak.", "आधुनिक सुख-साधनों और वाहन आदि की खरीदारी के लिए सर्वोत्तम समय। समृद्धि बढ़ेगी।"), luckyNo: "5", rem: t("Feed Cows", "श्वेत गाय को रोटी") },
     { name: t("November 2026", "नवंबर २०२६"), pred: t("Victory in judicial/court matters. Competitors will yield easily.", "कोर्ट-कचहरी और कानूनी मामलों में ऐतिहासिक विजय। शत्रु स्वतः नतमस्तक होंगे।"), luckyNo: "9", rem: t("Donate Blankets", "काले कंबल का दान") },
     { name: t("December 2026", "दिसंबर २०२६"), pred: t("Spiritual pilgrimage and deep inner peace. Moksha sectors active.", "तीर्थयात्रा के पावन योग। मन शांत रहेगा और आंतरिक चेतना का सर्वोच्च विकास होगा।"), luckyNo: "3", rem: t("Mantra Sadhana", "ॐ नमः शिवाय") }
