@@ -7,9 +7,17 @@ const DEFAULT_THEME_KEY = 'pva_custom_theme_settings';
 
 // Default configuration with Supabase as preferred DB
 export const getDefaultStorageConfig = () => {
-  // Check for environment variables as modern system fallback
-  const envUrl = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_SUPABASE_URL || '').trim();
-  const envKey = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_SUPABASE_ANON_KEY || '').trim();
+  // Check for environment variables as modern system fallback with user's explicit defaults
+  let envUrl = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_SUPABASE_URL || '').trim();
+  let envKey = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_SUPABASE_ANON_KEY || '').trim();
+
+  // If no environment variables are defined or contain placeholders, use Puneet's production credentials
+  if (!envUrl || envUrl.includes('your-proj-id') || envUrl.includes('placeholder') || envUrl.length < 15) {
+    envUrl = 'https://elktujqnqhvvsxcnstcw.supabase.co';
+  }
+  if (!envKey || envKey.includes('paste_your_key') || envKey.includes('placeholder') || envKey.length < 25) {
+    envKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsa3R1anFucWh2dnN4Y25zdGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTMyODYsImV4cCI6MjA5NTg2OTI4Nn0.lFYK3ePkFRLR97ot00E-Q_x17CE54JKTkcXZTGrj8Cc';
+  }
 
   const local = localStorage.getItem(CONFIG_KEY);
   let mode = 'LOCAL';
