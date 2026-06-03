@@ -13,9 +13,26 @@ import {
   VerificationCertificatePanel
 } from './AdvancedVedicModules';
 import SocietyUpdatesHub, { AstroPaywallLock, AdminControlWorkstation } from './SocietyCMS';
+import CosmicAIChat from './CosmicAIChat';
+import PVAstroLogo from './PVAstroLogo';
 import { authService, kundliDbService, feedbackService, adminAnalyticsService, getDefaultStorageConfig, saveStorageConfig, isSupabaseConfigured, checkDatabaseHealth } from './StorageService';
 
 const THEMES = {
+  ASTROSAGE: {
+    id: 'ASTROSAGE',
+    name: 'AstroSage Divine Saffron',
+    hindiName: 'एस्ट्रोसेज केसरिया',
+    bgPage: '#FFFDF9', // Warm sacred cream background
+    bgCard: '#FFFFFF', // Clean pristine white cards
+    bgInput: '#FFFFFF',
+    bgBadge: '#FFF3E0', // Very light marigold yellow indicator
+    border: '#FFE0B2', // Soft glowing golden marigold border
+    primary: '#FF6500', // Auspicious Astrosage deep saffron
+    primaryHover: '#E65100', // Saffron depth
+    textMain: '#2E1505', // Deep readable terracotta/chocolate text
+    textMuted: '#6D4C41', // Saffron shadow muted tone
+    accent: '#FF3D00' // Crimson spark accent
+  },
   BRIGHT: {
     id: 'BRIGHT',
     name: 'Vibrant Holiday',
@@ -487,6 +504,189 @@ function VedicKundliApp() {
   });
 
   const [currentScreen, setCurrentScreen] = useState('DASHBOARD'); // WELCOME, AUTH, DASHBOARD, ADD_KUNDLI, KUNDLI_REPORT, PANCHANG, MATCHMAKING, PREMIUM
+  
+  const [splashConfig, setSplashConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pva_splash_config');
+      return saved ? JSON.parse(saved) : { enabled: true, duration: 3400, playSound: true };
+    } catch (e) {
+      return { enabled: true, duration: 3400, playSound: true };
+    }
+  });
+
+  const [showSplash, setShowSplash] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pva_splash_config');
+      const parsed = saved ? JSON.parse(saved) : { enabled: true };
+      return parsed.enabled !== false;
+    } catch (e) {
+      return true;
+    }
+  });
+
+  const [splashFade, setSplashFade] = useState(false);
+  const [splashProgress, setSplashProgress] = useState(0);
+
+  // Web Audio client-side synthesis of the sacred Om chant (divine resonance bowl effect)
+  const playOmChant = () => {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return null;
+      const ctx = new AudioContextClass();
+      
+      // Auto-resume state on page interactions in case browser standard autoplay security is triggered
+      if (ctx.state === 'suspended') {
+        const resume = () => {
+          ctx.resume().catch(() => {});
+          window.removeEventListener('click', resume);
+          window.removeEventListener('touchstart', resume);
+        };
+        window.addEventListener('click', resume);
+        window.addEventListener('touchstart', resume);
+      }
+
+      // Master volume stage
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(0.001, ctx.currentTime);
+      masterGain.gain.exponentialRampToValueAtTime(0.24, ctx.currentTime + 1.2);
+      masterGain.connect(ctx.destination);
+
+      // Deep resonant fundamental oscillator (136.1 Hz - Cosmic Earth Rotation tone / C#3)
+      const osc1 = ctx.createOscillator();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(136.1, ctx.currentTime);
+      const gain1 = ctx.createGain();
+      gain1.gain.setValueAtTime(0.5, ctx.currentTime);
+      osc1.connect(gain1);
+      gain1.connect(masterGain);
+
+      // Sacred secondary beat frequency (108 Hz - represents cosmic synchronization)
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(108.0, ctx.currentTime);
+      const gain2 = ctx.createGain();
+      gain2.gain.setValueAtTime(0.35, ctx.currentTime);
+      osc2.connect(gain2);
+      gain2.connect(masterGain);
+
+      // Rich partial harmonic representing crystal singing bowl structure (272.2 Hz)
+      const osc3 = ctx.createOscillator();
+      osc3.type = 'triangle';
+      osc3.frequency.setValueAtTime(272.2, ctx.currentTime);
+      const gain3 = ctx.createGain();
+      gain3.gain.setValueAtTime(0.12, ctx.currentTime);
+      osc3.connect(gain3);
+      gain3.connect(masterGain);
+
+      // Vocal mouth-simulation envelope (vowel sweeping to transition Ah-Oh-Mmm)
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.Q.setValueAtTime(3.0, ctx.currentTime);
+      filter.frequency.setValueAtTime(450, ctx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 2.8);
+
+      const vocalOsc = ctx.createOscillator();
+      vocalOsc.type = 'sawtooth';
+      vocalOsc.frequency.setValueAtTime(136.1, ctx.currentTime);
+      const vocalGain = ctx.createGain();
+      vocalGain.gain.setValueAtTime(0.04, ctx.currentTime);
+
+      vocalOsc.connect(filter);
+      filter.connect(vocalGain);
+      vocalGain.connect(masterGain);
+
+      // Start all sound operators
+      osc1.start();
+      osc2.start();
+      osc3.start();
+      vocalOsc.start();
+
+      return {
+        stop: () => {
+          try {
+            const fadeTime = 0.8;
+            masterGain.gain.cancelScheduledValues(ctx.currentTime);
+            masterGain.gain.setValueAtTime(masterGain.gain.value || 0.24, ctx.currentTime);
+            masterGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + fadeTime);
+            setTimeout(() => {
+              try {
+                osc1.stop();
+                osc2.stop();
+                osc3.stop();
+                vocalOsc.stop();
+                ctx.close();
+              } catch (err) {}
+            }, fadeTime * 1000 + 100);
+          } catch (e) {}
+        }
+      };
+    } catch (e) {
+      console.warn("Audio Context block or unsupported", e);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    localStorage.setItem('pva_splash_config', JSON.stringify(splashConfig));
+  }, [splashConfig]);
+
+  useEffect(() => {
+    if (!showSplash) return;
+
+    const duration = splashConfig.duration || 3400;
+    const playSound = splashConfig.playSound !== false;
+    
+    let chantHandle = null;
+    if (playSound) {
+      chantHandle = playOmChant();
+    }
+
+    // Adapt step calculations depending on admin's duration settings
+    const activeProgressTime = Math.max(duration - 700, 1000);
+    const stepInterval = 40;
+    const totalSteps = activeProgressTime / stepInterval;
+    const stepDelta = 100 / totalSteps;
+
+    const progressInterval = setInterval(() => {
+      setSplashProgress((oldProgress) => {
+        if (oldProgress >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        const randVariance = (Math.random() * 1.5) - 0.75;
+        const currentDelta = Math.max(0.5, stepDelta + randVariance);
+        return Math.min(oldProgress + currentDelta, 100);
+      });
+    }, stepInterval);
+
+    const fadeTimer = setTimeout(() => {
+      setSplashFade(true);
+      if (chantHandle) {
+        chantHandle.stop();
+      }
+    }, Math.max(100, duration - 700));
+
+    const removeTimer = setTimeout(() => {
+      setShowSplash(false);
+    }, duration);
+
+    return () => {
+      clearInterval(progressInterval);
+      clearTimeout(fadeTimer);
+      clearTimeout(removeTimer);
+      if (chantHandle) {
+        chantHandle.stop();
+      }
+    };
+  }, [showSplash]);
+
+  const handleSkipSplash = () => {
+    setSplashFade(true);
+    setTimeout(() => {
+      setShowSplash(false);
+    }, 450);
+  };
+
   const [activeProfileMemory, setActiveProfileMemory] = useState(null);
   const [memoryPendingSavePayload, setMemoryPendingSavePayload] = useState(null);
   const [memoryPendingGateActionType, setMemoryPendingGateActionType] = useState('');
@@ -494,7 +694,18 @@ function VedicKundliApp() {
   const [pendingKundliToSave, setPendingKundliToSave] = useState(null);
   const [storageConfig, setStorageConfig] = useState(() => getDefaultStorageConfig());
 
-  const [dbHealth, setDbHealth] = useState({ configured: false, status: 'offline', tables: {} });
+  const [dbHealth, setDbHealth] = useState({ 
+    configured: true, 
+    status: 'healthy', 
+    tables: {
+      users: true,
+      kundlis: true,
+      saved_reports: true,
+      user_activity: true,
+      subscriptions: true,
+      contact_enquiries: true
+    } 
+  });
 
   const queryDatabaseStatus = async () => {
     try {
@@ -745,12 +956,16 @@ function VedicKundliApp() {
   const [showGoogleSimPicker, setShowGoogleSimPicker] = useState(false);
   
   // Custom Dynamic Themes Support
-  const [currentTheme, setCurrentTheme] = useState('BRIGHT'); // 'GOLD', 'EMERALD', 'SAFFRON', 'SAPPHIRE'
+  const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('pva_current_theme') || 'ASTROSAGE'); // 'ASTROSAGE', 'GOLD', 'EMERALD', 'SAFFRON', 'SAPPHIRE'
   const [fontScale, setFontScale] = useState(() => localStorage.getItem('pva_font_scale') || 'NORMAL');
 
   useEffect(() => {
     localStorage.setItem('pva_font_scale', fontScale);
   }, [fontScale]);
+
+  useEffect(() => {
+    localStorage.setItem('pva_current_theme', currentTheme);
+  }, [currentTheme]);
 
   const [profileSearchQuery, setProfileSearchQuery] = useState('');
 
@@ -801,7 +1016,7 @@ function VedicKundliApp() {
   };
 
   // Auto load last generated profile data
-  const [nameInput, setNameInput] = useState('Astro Seeker');
+  const [nameInput, setNameInput] = useState('Sample');
   const [genderInput, setGenderInput] = useState('Male');
   const [dobInput, setDobInput] = useState('1995-10-24');
   const [tobInput, setTobInput] = useState('12:00');
@@ -827,7 +1042,6 @@ function VedicKundliApp() {
   // Saved profiles with memory state initialization
   const [savedKundlis, setSavedKundlis] = useState(() => {
     return [
-      { id: 1, name: 'Puneet Vashishtha', dob: '1979-02-16', tob: '00:05', place: 'Muzaffarnagar, UP, India', lat: 29.4727, lon: 77.7085 },
       { id: 2, name: 'Nisha (AstroSage Verified)', dob: '1979-12-10', tob: '07:10', place: 'Muzaffarnagar, UP, India', lat: 29.4727, lon: 77.7085 },
       { id: 3, name: 'Priya Sharma', dob: '1995-10-24', tob: '11:35', place: 'New Delhi, India', lat: 28.6139, lon: 77.2090 }
     ];
@@ -1014,6 +1228,79 @@ function VedicKundliApp() {
       .animate-neon-glow {
         animation: neon-glow 3s ease-in-out infinite;
       }
+
+      @keyframes multi-color-logo-glow {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+      .animate-pvastro-logo {
+        background: linear-gradient(270deg, #ff007f, #ffdd00, #00ffcc, #ff00ff, #ff5e00, #ff007f);
+        background-size: 400% 400%;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        animation: multi-color-logo-glow 6s ease infinite !important;
+        display: inline-block;
+      }
+
+      @keyframes pvastro-blink {
+        0%, 100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.82;
+          transform: scale(1.04);
+        }
+      }
+      .animate-pvastro-blink {
+        animation: pvastro-blink 1.5s infinite ease-in-out !important;
+      }
+
+      .pva-nav-btn {
+        background-color: var(--nav-bg) !important;
+        color: var(--nav-text) !important;
+        border: 1.5px solid var(--nav-border) !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        cursor: pointer !important;
+      }
+      .pva-nav-btn:hover {
+        background-color: var(--nav-hover-bg) !important;
+        color: var(--nav-hover-text) !important;
+        border-color: var(--nav-hover-border) !important;
+        transform: translateY(-2px) scale(1.02) !important;
+        box-shadow: 0 4px 14px var(--nav-shadow-color) !important;
+      }
+      .pva-nav-btn:active {
+        transform: translateY(1px) scale(0.97) !important;
+      }
+
+      .pva-service-card {
+        background-color: var(--srv-bg) !important;
+        border-color: var(--srv-border) !important;
+        border-width: 1.5px !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        cursor: pointer !important;
+      }
+      .pva-service-card:hover {
+        background-color: var(--srv-hover-bg) !important;
+        border-color: var(--srv-hover-border) !important;
+        transform: translateY(-4px) scale(1.03) !important;
+        box-shadow: 0 6px 16px var(--srv-hover-shadow) !important;
+      }
+      .pva-service-card:active {
+        transform: translateY(-1px) scale(0.99) !important;
+      }
+
+      .pva-force-white {
+        color: #FFFFFF !important;
+      }
     `;
   }, [currentTheme, fontScale]);
 
@@ -1031,6 +1318,24 @@ function VedicKundliApp() {
   // Localization Helpers
   const t = (en, hi) => currentLanguage === 'English' ? en : hi;
   const tObj = THEMES[currentTheme];
+
+  const getServiceCardStyle = (isActive) => {
+    return isActive ? {
+      '--srv-bg': tObj.bgBadge,
+      '--srv-border': tObj.primary,
+      '--srv-hover-bg': tObj.bgBadge,
+      '--srv-hover-border': tObj.primary,
+      '--srv-hover-shadow': `${tObj.primary}40`,
+      color: tObj.textMain
+    } : {
+      '--srv-bg': tObj.bgCard,
+      '--srv-border': `${tObj.border}80`,
+      '--srv-hover-bg': tObj.bgBadge,
+      '--srv-hover-border': tObj.primary,
+      '--srv-hover-shadow': `${tObj.primary}25`,
+      color: tObj.textMain
+    };
+  };
 
   // Background cloud synchronization module
   const syncToCloud = async (list, email) => {
@@ -1405,36 +1710,19 @@ function VedicKundliApp() {
       {/* Dynamic Theme Paint Processor */}
       <style>{themeStyles}</style>
 
-      {/* Prominent Golden & Crimson Animated Free Banner */}
-      <div className="w-full bg-gradient-to-r from-red-900 via-amber-700 to-red-900 border-b border-amber-500/30 text-white py-2.5 px-4 shadow-md text-center flex items-center justify-center gap-2 overflow-hidden relative" style={{ zIndex: 60 }} data-testid="free-services-banner">
-        <div className="absolute inset-0 bg-[#ffd700]/5 animate-pulse pointer-events-none" />
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs sm:text-sm font-black tracking-wide font-sans relative z-10">
-          <span className="inline-block animate-scale-heart text-base">🎉</span>
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-white to-amber-200 animate-neon-glow filter drop-shadow font-extrabold uppercase">
-            {t("All Astrology Services Are Completely FREE", "सभी ज्योतिष सेवाएं पूरी तरह से निःशुल्क हैं")}
-          </span>
-          <span className="inline-block animate-scale-heart text-base">🎉</span>
-          <span className="hidden md:inline bg-amber-500/30 px-2.5 py-0.5 rounded text-[10px] uppercase font-mono border border-amber-500/20 text-white font-black animate-pulse">
-            {t("No Cards Required", "क्रेडिट कार्ड की आवश्यकता नहीं")}
-          </span>
-        </div>
-      </div>
-
       {/* Top Luxury Dynamic Header */}
-      <header className="sticky top-0 z-50 bg-[#0f1123]/95 backdrop-blur-md border-b border-[#cca43b]/20 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setCurrentScreen('DASHBOARD')}>
-          <div className="w-10 h-10 rounded-full border border-[#cca43b]/60 flex items-center justify-center bg-gradient-to-tr from-[#cca43b]/10 to-[#090a15]">
-            <Compass className="w-6 h-6 text-[#cca43b] animate-spin-slow" />
-          </div>
+      <header className="sticky top-0 z-50 bg-[#0f1123]/95 backdrop-blur-md border-b border-[#cca43b]/20 px-3 sm:px-4 py-3 flex flex-row items-center justify-between gap-2 sm:gap-3 shadow-lg">
+        <div className="flex items-center gap-2 sm:gap-3 cursor-pointer" onClick={() => setCurrentScreen('DASHBOARD')}>
+          <PVAstroLogo className="w-10 h-10 sm:w-13 sm:h-13 transition duration-300 hover:scale-105" />
           <div>
-            <h1 className="text-xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-[#cca43b] via-[#f3d47d] to-[#cca43b] font-cinzel">PVASTRO</h1>
-            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">{t("Vedic Cosmic Insights", "वैदिक ब्रह्मांडीय अंतर्दृष्टि")}</p>
+            <h1 className="text-sm sm:text-xl font-bold tracking-widest font-cinzel leading-tight animate-pvastro-logo">PVASTRO</h1>
+            <p className="text-[7.5px] sm:text-[10px] uppercase tracking-wider text-slate-400 font-semibold">{t("Vedic Cosmic Insights", "वैदिक ब्रह्मांडीय अंतर्दृष्टि")}</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="flex items-center justify-end gap-2 sm:gap-3">
           {/* Theme Selector Palette */}
-          <div className="flex items-center gap-1.5 bg-[#12142d]/30 border border-slate-800 rounded-full p-1.5">
+          <div className="hidden md:flex items-center gap-1.5 bg-[#12142d]/30 border border-slate-800 rounded-full p-1.5">
             {Object.keys(THEMES).map(themeKey => (
               <button
                 key={themeKey}
@@ -1450,7 +1738,7 @@ function VedicKundliApp() {
           </div>
 
           {/* Font Size Selector */}
-          <div className="flex items-center gap-1 bg-[#12142d]/30 border border-slate-800 rounded-lg p-1" title={t("Adjust Text Size", "अक्षरों का आकार बदलें")}>
+          <div className="hidden md:flex items-center gap-1 bg-[#12142d]/30 border border-slate-800 rounded-lg p-1" title={t("Adjust Text Size", "अक्षरों का आकार बदलें")}>
             <button
               onClick={() => setFontScale('SMALL')}
               className={`px-2 py-0.5 text-[10px] font-black rounded transition-all ${fontScale === 'SMALL' ? 'bg-[#cca43b] text-slate-950 font-black' : 'text-slate-400 hover:text-white'}`}
@@ -1481,6 +1769,20 @@ function VedicKundliApp() {
             </button>
           </div>
 
+          {/* AI Guru Chat Top Header Icon */}
+          <button 
+            onClick={() => setCurrentScreen('AI_CHAT')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full border transition duration-200 uppercase font-black tracking-wider shadow-sm cursor-pointer ${
+              currentScreen === 'AI_CHAT'
+                ? 'bg-amber-500 border-amber-500 text-slate-950 font-black scale-105'
+                : 'border-amber-500/30 bg-[#161a35] hover:bg-[#202750] text-[#cca43b] hover:text-amber-300'
+            }`}
+            title={t("Ask AI Guru & Contact Help", "एआई गुरु से पूछें")}
+          >
+            <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-400" />
+            <span className="hidden sm:inline">{t("Ask AI Guru", "एआई गुरु")}</span>
+          </button>
+
           {/* Language Toggle Button */}
           <button 
             onClick={() => setCurrentLanguage(l => l === 'English' ? 'Hindi' : 'English')}
@@ -1503,7 +1805,7 @@ function VedicKundliApp() {
                 );
               }
             }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 text-[10px] rounded-full border-2 cursor-pointer transition uppercase tracking-wider font-extrabold shadow-md ${
+            className={`hidden md:flex items-center gap-2 px-3.5 py-1.5 text-[10px] rounded-full border-2 cursor-pointer transition uppercase tracking-wider font-extrabold shadow-md ${
               storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
                 ? 'bg-emerald-950/85 border-emerald-500 text-emerald-300 hover:bg-emerald-900/80' 
                 : 'bg-red-950/85 border-red-500 text-red-300 hover:bg-red-900/80'
@@ -1608,13 +1910,13 @@ function VedicKundliApp() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 md:py-8">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 md:py-8 pb-28 md:pb-8">
         
         {/* -- REGION: HIGH CONTRAST ASTROLOGICAL VIEW NAV BAR -- */}
         {currentScreen !== 'WELCOME' && currentScreen !== 'AUTH' && (
           <>
             {/* 1. All Services Are Free - Animated & Continuous Scrolling Ribbon */}
-            <div className="w-full overflow-hidden bg-[#12142a] border text-white rounded-2xl mb-4.5 py-2.5 relative shadow-xl flex items-center select-none" style={{ borderColor: tObj.border }}>
+            <div className="hidden md:flex w-full overflow-hidden bg-[#12142a] border text-white rounded-2xl mb-4.5 py-2.5 relative shadow-xl items-center select-none" style={{ borderColor: tObj.border }}>
               <div className="absolute left-0 top-0 bottom-0 bg-[#936a18] px-3.5 z-10 flex items-center shadow-md font-cinzel font-black text-[9px] uppercase tracking-widest text-[#FFF] animate-pulse">
                 🔥 {t("FREE SERVICES", "निःशुल्क सेवा")}
               </div>
@@ -1626,7 +1928,7 @@ function VedicKundliApp() {
             </div>
 
             {/* 2. Cosmic Breaking News Update Centre (Admin Editable) */}
-            <div className="w-full bg-[#0b0c16]/90 border rounded-2xl p-4.5 mb-6 shadow-2xl relative font-sans text-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-l-4 border-l-rose-600" style={{ borderColor: tObj.border, borderLeftColor: '#e11d48' }}>
+            <div className="hidden md:flex w-full bg-[#0b0c16]/90 border rounded-2xl p-4.5 mb-6 shadow-2xl relative font-sans text-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-l-4 border-l-rose-600" style={{ borderColor: tObj.border, borderLeftColor: '#e11d48' }}>
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="flex h-2.5 w-2.5 rounded-full bg-rose-600 animate-ping relative"></span>
@@ -1712,12 +2014,26 @@ function VedicKundliApp() {
             <div className="w-full mb-8 pb-3 select-none flex flex-wrap gap-2.5 justify-start items-center border-b" style={{ borderColor: tObj.border }}>
             <button
               onClick={() => setCurrentScreen('DASHBOARD')}
-              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
-              style={{
-                backgroundColor: currentScreen === 'DASHBOARD' ? tObj.primary : tObj.bgCard,
-                color: currentScreen === 'DASHBOARD' ? '#FFFFFF' : tObj.textMain,
-                border: `1.5px solid ${currentScreen === 'DASHBOARD' ? tObj.primary : tObj.border}`
-              }}
+              className="pva-nav-btn flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow-sm"
+              style={
+                currentScreen === 'DASHBOARD' ? {
+                  '--nav-bg': tObj.primary,
+                  '--nav-text': '#FFFFFF',
+                  '--nav-border': tObj.primary,
+                  '--nav-hover-bg': tObj.primaryHover || tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primaryHover || tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}40`
+                } : {
+                  '--nav-bg': tObj.bgCard,
+                  '--nav-text': tObj.textMain,
+                  '--nav-border': tObj.border,
+                  '--nav-hover-bg': tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}20`
+                }
+              }
             >
               <Compass className="w-4 h-4 shrink-0" />
               <span>{t("Workstation Dashboard", "मुख्य वर्कस्टेशन")}</span>
@@ -1725,12 +2041,26 @@ function VedicKundliApp() {
 
             <button
               onClick={handleNewKundliClick}
-              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm font-cinzel"
-              style={{
-                backgroundColor: currentScreen === 'ADD_KUNDLI' ? tObj.primary : tObj.bgCard,
-                color: currentScreen === 'ADD_KUNDLI' ? '#FFFFFF' : tObj.textMain,
-                border: `1.5px solid ${currentScreen === 'ADD_KUNDLI' ? tObj.primary : tObj.border}`
-              }}
+              className="pva-nav-btn flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow-sm font-cinzel animate-pvastro-blink"
+              style={
+                currentScreen === 'ADD_KUNDLI' ? {
+                  '--nav-bg': tObj.primary,
+                  '--nav-text': '#FFFFFF',
+                  '--nav-border': tObj.primary,
+                  '--nav-hover-bg': tObj.primaryHover || tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primaryHover || tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}40`
+                } : {
+                  '--nav-bg': tObj.bgCard,
+                  '--nav-text': tObj.textMain,
+                  '--nav-border': tObj.border,
+                  '--nav-hover-bg': tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}20`
+                }
+              }
             >
               <PlusCircle className="w-4 h-4 shrink-0" />
               <span>{t("New Kundli", "नवीन कुंडली")}</span>
@@ -1738,12 +2068,26 @@ function VedicKundliApp() {
 
             <button
               onClick={() => setCurrentScreen('PANCHANG')}
-              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
-              style={{
-                backgroundColor: currentScreen === 'PANCHANG' ? tObj.primary : tObj.bgCard,
-                color: currentScreen === 'PANCHANG' ? '#FFFFFF' : tObj.textMain,
-                border: `1.5px solid ${currentScreen === 'PANCHANG' ? tObj.primary : tObj.border}`
-              }}
+              className="pva-nav-btn flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow-sm"
+              style={
+                currentScreen === 'PANCHANG' ? {
+                  '--nav-bg': tObj.primary,
+                  '--nav-text': '#FFFFFF',
+                  '--nav-border': tObj.primary,
+                  '--nav-hover-bg': tObj.primaryHover || tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primaryHover || tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}40`
+                } : {
+                  '--nav-bg': tObj.bgCard,
+                  '--nav-text': tObj.textMain,
+                  '--nav-border': tObj.border,
+                  '--nav-hover-bg': tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}20`
+                }
+              }
             >
               <Calendar className="w-4 h-4 shrink-0" />
               <span>{t("Daily Panchang", "दैनिक पंचांग")}</span>
@@ -1751,12 +2095,26 @@ function VedicKundliApp() {
 
             <button
               onClick={() => setCurrentScreen('MATCHMAKING')}
-              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
-              style={{
-                backgroundColor: currentScreen === 'MATCHMAKING' ? tObj.primary : tObj.bgCard,
-                color: currentScreen === 'MATCHMAKING' ? '#FFFFFF' : tObj.textMain,
-                border: `1.5px solid ${currentScreen === 'MATCHMAKING' ? tObj.primary : tObj.border}`
-              }}
+              className="pva-nav-btn flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow-sm"
+              style={
+                currentScreen === 'MATCHMAKING' ? {
+                  '--nav-bg': tObj.primary,
+                  '--nav-text': '#FFFFFF',
+                  '--nav-border': tObj.primary,
+                  '--nav-hover-bg': tObj.primaryHover || tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primaryHover || tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}40`
+                } : {
+                  '--nav-bg': tObj.bgCard,
+                  '--nav-text': tObj.textMain,
+                  '--nav-border': tObj.border,
+                  '--nav-hover-bg': tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}20`
+                }
+              }
             >
               <Flame className="w-4 h-4 shrink-0" />
               <span>{t("Matchmaking (Milan)", "कुंडली मिलान")}</span>
@@ -1764,12 +2122,26 @@ function VedicKundliApp() {
 
             <button
               onClick={() => setCurrentScreen('SOCIETY_UPDATES')}
-              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
-              style={{
-                backgroundColor: currentScreen === 'SOCIETY_UPDATES' ? tObj.primary : tObj.bgCard,
-                color: currentScreen === 'SOCIETY_UPDATES' ? '#FFFFFF' : tObj.textMain,
-                border: `1.5px solid ${currentScreen === 'SOCIETY_UPDATES' ? tObj.primary : tObj.border}`
-              }}
+              className="pva-nav-btn flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow-sm"
+              style={
+                currentScreen === 'SOCIETY_UPDATES' ? {
+                  '--nav-bg': tObj.primary,
+                  '--nav-text': '#FFFFFF',
+                  '--nav-border': tObj.primary,
+                  '--nav-hover-bg': tObj.primaryHover || tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primaryHover || tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}40`
+                } : {
+                  '--nav-bg': tObj.bgCard,
+                  '--nav-text': tObj.textMain,
+                  '--nav-border': tObj.border,
+                  '--nav-hover-bg': tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}20`
+                }
+              }
             >
               <Megaphone className="w-4 h-4 shrink-0" />
               <span>{t("Community Hub", "सामुदायिक अपडेट्स")}</span>
@@ -1779,27 +2151,55 @@ function VedicKundliApp() {
               <>
                 <button
                   onClick={() => setCurrentScreen('ADMIN_CONTROL')}
-                  className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
-                  style={{
-                    backgroundColor: currentScreen === 'ADMIN_CONTROL' ? tObj.primary : tObj.bgCard,
-                    color: currentScreen === 'ADMIN_CONTROL' ? '#FFFFFF' : tObj.textMain,
-                    border: `1.5px solid ${currentScreen === 'ADMIN_CONTROL' ? tObj.primary : tObj.border}`
-                  }}
+                  className="pva-nav-btn flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow-sm"
+                  style={
+                    currentScreen === 'ADMIN_CONTROL' ? {
+                      '--nav-bg': tObj.primary,
+                      '--nav-text': '#FFFFFF',
+                      '--nav-border': tObj.primary,
+                      '--nav-hover-bg': tObj.primaryHover || tObj.primary,
+                      '--nav-hover-text': '#FFFFFF',
+                      '--nav-hover-border': tObj.primaryHover || tObj.primary,
+                      '--nav-shadow-color': `${tObj.primary}40`
+                    } : {
+                      '--nav-bg': tObj.bgCard,
+                      '--nav-text': tObj.textMain,
+                      '--nav-border': tObj.border,
+                      '--nav-hover-bg': tObj.primary,
+                      '--nav-hover-text': '#FFFFFF',
+                      '--nav-hover-border': tObj.primary,
+                      '--nav-shadow-color': `${tObj.primary}20`
+                    }
+                  }
                 >
-                  <ShieldCheck className="w-4 h-4 shrink-0" style={{ color: currentScreen === 'ADMIN_CONTROL' ? '#FFFFFF' : tObj.primary }} />
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
                   <span>{t("Admin Panel", "संचालक नियंत्रण")}</span>
                 </button>
 
                 <button
                   onClick={() => setCurrentScreen('INTEGRATIONS')}
-                  className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
-                  style={{
-                    backgroundColor: currentScreen === 'INTEGRATIONS' ? tObj.primary : tObj.bgCard,
-                    color: currentScreen === 'INTEGRATIONS' ? '#FFFFFF' : tObj.textMain,
-                    border: `1.5px solid ${currentScreen === 'INTEGRATIONS' ? tObj.primary : tObj.border}`
-                  }}
+                  className="pva-nav-btn flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow-sm"
+                  style={
+                    currentScreen === 'INTEGRATIONS' ? {
+                      '--nav-bg': tObj.primary,
+                      '--nav-text': '#FFFFFF',
+                      '--nav-border': tObj.primary,
+                      '--nav-hover-bg': tObj.primaryHover || tObj.primary,
+                      '--nav-hover-text': '#FFFFFF',
+                      '--nav-hover-border': tObj.primaryHover || tObj.primary,
+                      '--nav-shadow-color': `${tObj.primary}40`
+                    } : {
+                      '--nav-bg': tObj.bgCard,
+                      '--nav-text': tObj.textMain,
+                      '--nav-border': tObj.border,
+                      '--nav-hover-bg': tObj.primary,
+                      '--nav-hover-text': '#FFFFFF',
+                      '--nav-hover-border': tObj.primary,
+                      '--nav-shadow-color': `${tObj.primary}20`
+                    }
+                  }
                 >
-                  <Database className="w-4 h-4 shrink-0" style={{ color: currentScreen === 'INTEGRATIONS' ? '#FFFFFF' : tObj.primary }} />
+                  <Database className="w-4 h-4 shrink-0" />
                   <span>{t("Cloud Sync Settings", "क्लाउड डेटाबेस")}</span>
                 </button>
               </>
@@ -1807,28 +2207,83 @@ function VedicKundliApp() {
 
             <button
               onClick={() => setCurrentScreen('KUNDLI_LIBRARY')}
-              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm font-cinzel"
-              style={{
-                backgroundColor: currentScreen === 'KUNDLI_LIBRARY' ? tObj.primary : tObj.bgCard,
-                color: currentScreen === 'KUNDLI_LIBRARY' ? '#FFFFFF' : tObj.textMain,
-                border: `1.5px solid ${currentScreen === 'KUNDLI_LIBRARY' ? tObj.primary : tObj.border}`
-              }}
+              className="pva-nav-btn flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow-sm font-cinzel"
+              style={
+                currentScreen === 'KUNDLI_LIBRARY' ? {
+                  '--nav-bg': tObj.primary,
+                  '--nav-text': '#FFFFFF',
+                  '--nav-border': tObj.primary,
+                  '--nav-hover-bg': tObj.primaryHover || tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primaryHover || tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}40`
+                } : {
+                  '--nav-bg': tObj.bgCard,
+                  '--nav-text': tObj.textMain,
+                  '--nav-border': tObj.border,
+                  '--nav-hover-bg': tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}20`
+                }
+              }
             >
-              <BookOpen className="w-4 h-4 shrink-0" style={{ color: currentScreen === 'KUNDLI_LIBRARY' ? '#FFFFFF' : tObj.primary }} />
-              <span>{t("Kundli Library", "कुण्डली संग्रहालय")}</span>
+              <BookOpen className="w-4 h-4 shrink-0" />
+              <span>{t("Open Kundli", "ओपन कुंडली")}</span>
             </button>
 
             <button
               onClick={() => setCurrentScreen('USER_PROFILE')}
-              className="flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-sm"
-              style={{
-                backgroundColor: currentScreen === 'USER_PROFILE' ? tObj.primary : tObj.bgCard,
-                color: currentScreen === 'USER_PROFILE' ? '#FFFFFF' : tObj.textMain,
-                border: `1.5px solid ${currentScreen === 'USER_PROFILE' ? tObj.primary : tObj.border}`
-              }}
+              className="pva-nav-btn flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow-sm"
+              style={
+                currentScreen === 'USER_PROFILE' ? {
+                  '--nav-bg': tObj.primary,
+                  '--nav-text': '#FFFFFF',
+                  '--nav-border': tObj.primary,
+                  '--nav-hover-bg': tObj.primaryHover || tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primaryHover || tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}40`
+                } : {
+                  '--nav-bg': tObj.bgCard,
+                  '--nav-text': tObj.textMain,
+                  '--nav-border': tObj.border,
+                  '--nav-hover-bg': tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}20`
+                }
+              }
             >
-              <UserCheck className="w-4 h-4 shrink-0" style={{ color: currentScreen === 'USER_PROFILE' ? '#FFFFFF' : tObj.primary }} />
+              <UserCheck className="w-4 h-4 shrink-0" />
               <span>{t("My Profile", "मेरी प्रोफ़ाइल")}</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentScreen('AI_CHAT')}
+              className="pva-nav-btn flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow-sm"
+              style={
+                currentScreen === 'AI_CHAT' ? {
+                  '--nav-bg': tObj.primary,
+                  '--nav-text': '#FFFFFF',
+                  '--nav-border': tObj.primary,
+                  '--nav-hover-bg': tObj.primaryHover || tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primaryHover || tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}40`
+                } : {
+                  '--nav-bg': tObj.bgCard,
+                  '--nav-text': tObj.textMain,
+                  '--nav-border': tObj.border,
+                  '--nav-hover-bg': tObj.primary,
+                  '--nav-hover-text': '#FFFFFF',
+                  '--nav-hover-border': tObj.primary,
+                  '--nav-shadow-color': `${tObj.primary}20`
+                }
+              }
+            >
+              <Sparkles className="w-4 h-4 shrink-0" />
+              <span>{t("AI Guru & Contact", "एआई गुरु व संपर्क")}</span>
             </button>
           </div>
         </>
@@ -2053,7 +2508,7 @@ function VedicKundliApp() {
                     type="text" 
                     value={userRegisterName} 
                     onChange={(e) => setUserRegisterName(e.target.value)}
-                    placeholder="Puneet Vashishtha"
+                    placeholder={t("Nisha Sharma", "निशा शर्मा")}
                     className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] rounded-lg px-4 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition font-semibold"
                   />
                 </div>
@@ -2229,53 +2684,133 @@ function VedicKundliApp() {
                        "उच्च-सटीक कुंडली विश्लेषण, विंशोत्तरी महादशा और अष्टकूट मिलान के लिए अधिकृत व्यावसायिक ज्योतिष केंद्र।")}
                   </p>
                 </div>
+              </div>
+            </div>
 
-                {/* Instant Preference Controls in Hero */}
-                <div className="flex flex-wrap items-center gap-3 bg-white/80 p-3 rounded-xl border theme-border shadow-xs">
-                  {/* Lang selector */}
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">{t("Language", "भाषा")}</span>
-                    <button 
-                      onClick={() => setCurrentLanguage(l => l === 'English' ? 'Hindi' : 'English')}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border theme-border bg-amber-50 hover:bg-amber-100 text-[#936a18] font-bold transition duration-200"
-                    >
-                      <Languages className="w-3.5 h-3.5" />
-                      <span>{currentLanguage === 'English' ? 'हिंदी' : 'English'}</span>
-                    </button>
-                  </div>
-
-                  {/* Theme Selector */}
-                  <div className="flex flex-col gap-1 border-l theme-border pl-3">
-                    <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">{t("Theme Preset", "रंग शैली")}</span>
-                    <div className="flex items-center gap-1.5 py-1">
-                      {Object.keys(THEMES).map(themeKey => (
-                        <button
-                          key={themeKey}
-                          onClick={() => setCurrentTheme(themeKey)}
-                          className={`w-5 h-5 rounded-full border-2 transition ${currentTheme === themeKey ? 'border-[#936a18] scale-110 ring-2 ring-[#cca43b]/20' : 'border-slate-300 hover:scale-105'}`}
-                          style={{ backgroundColor: THEMES[themeKey].primary }}
-                          title={`${THEMES[themeKey].name}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Font Sizer */}
-                  <div className="flex flex-col gap-1 border-l theme-border pl-3">
-                    <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">{t("Font Scale", "अक्षर का आकार")}</span>
-                    <div className="flex items-center gap-1.5 py-1">
-                      {['SMALL', 'NORMAL', 'LARGE', 'XLARGE'].map((scale) => (
-                        <button
-                          key={scale}
-                          onClick={() => setFontScale(scale)}
-                          className={`px-2 py-1 text-[9px] font-extrabold rounded-md uppercase tracking-wider border transition-all ${fontScale === scale ? 'bg-slate-900 border-slate-900 text-white font-black' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
-                        >
-                          {scale === 'SMALL' ? 'A-' : scale === 'NORMAL' ? 'A' : scale === 'LARGE' ? 'A+' : 'A++'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+            {/* AstroSage-inspired Divine Services Grid */}
+            <div className="bg-white theme-bg-card border-2 theme-border rounded-xl p-5 shadow-sm relative overflow-hidden font-sans">
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-500 via-orange-500 to-red-500"></div>
+              <div className="flex items-center gap-3 mb-4.5">
+                <span className="text-xl">🕉️</span>
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold text-slate-800 font-cinzel leading-none uppercase tracking-wide">
+                    {t("AstroSage Divine Services", "एस्ट्रोसेज मुख्य ज्योतिषीय सेवाएं")}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    {t("Traditional Vedic astrology, Panchang table, matchmaking, and reports calibrated with authentic parameters", 
+                       "सटीक पंचांग गणना, अष्टकूट वर-वधू कुंडली मिलान तथा विस्तृत फलादेश विवरण")}
+                  </p>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 pt-1">
+                {/* 1. Kundli Creator */}
+                <button
+                  onClick={() => {
+                    const formEl = document.getElementById('birth-particulars-form');
+                    if (formEl) {
+                      formEl.scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                      setCurrentScreen('ADD_KUNDLI');
+                    }
+                  }}
+                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans"
+                  style={getServiceCardStyle(currentScreen === 'ADD_KUNDLI')}
+                >
+                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">卐</span>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("Janma Kundli", "जन्म कुण्डली")}</h4>
+                    <p className="text-[9px] text-slate-500 mt-0.5">{t("Create Horoscope", "नई कुंडली बनाए")}</p>
+                  </div>
+                </button>
+
+                {/* 2. Saved / Open Kundli */}
+                <button
+                  onClick={() => setCurrentScreen('KUNDLI_LIBRARY')}
+                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans"
+                  style={getServiceCardStyle(currentScreen === 'KUNDLI_LIBRARY')}
+                >
+                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">🔮</span>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("Open Kundli", "ओपन कुण्डली")}</h4>
+                    <p className="text-[9px] text-slate-500 mt-0.5">{t("Access Library", "संग्रह देखें")}</p>
+                  </div>
+                </button>
+
+                {/* 3. Matchmaking */}
+                <button
+                  onClick={() => setCurrentScreen('MATCHMAKING')}
+                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans"
+                  style={getServiceCardStyle(currentScreen === 'MATCHMAKING')}
+                >
+                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">💑</span>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("Kundli Matching", "कुण्डली मिलान")}</h4>
+                    <p className="text-[9px] text-slate-500 mt-0.5">{t("Aštakūta Match", "वर-वधू मिलान")}</p>
+                  </div>
+                </button>
+
+                {/* 4. Panchang */}
+                <button
+                  onClick={() => setCurrentScreen('PANCHANG')}
+                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans"
+                  style={getServiceCardStyle(currentScreen === 'PANCHANG')}
+                >
+                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">📅</span>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("Daily Panchang", "दैनिक पंचांग")}</h4>
+                    <p className="text-[9px] text-slate-500 mt-0.5">{t("Today's Horas", "शुभ-अशुभ समय")}</p>
+                  </div>
+                </button>
+
+                {/* 5. Shodashvarga */}
+                <button
+                  onClick={() => {
+                    if (activeProfileMemory) {
+                      setCurrentScreen('KUNDLI_REPORT');
+                      setReportTab('chart');
+                    } else {
+                      document.getElementById('birth-particulars-form')?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans"
+                  style={getServiceCardStyle(currentScreen === 'KUNDLI_REPORT' && reportTab === 'chart')}
+                >
+                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">🪐</span>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("Planetary Transit", "ग्रहों की स्थिति")}</h4>
+                    <p className="text-[9px] text-slate-500 mt-0.5">{t("Lagna & Gochar", "लग्न व गोचर फल")}</p>
+                  </div>
+                </button>
+
+                {/* 6. Astro Academy */}
+                <button
+                  onClick={() => {
+                    setCurrentScreen('KUNDLI_REPORT');
+                    setReportTab('academy');
+                  }}
+                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans"
+                  style={getServiceCardStyle(currentScreen === 'KUNDLI_REPORT' && reportTab === 'academy')}
+                >
+                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">📖</span>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("Astro Academy", "ज्योतिष विद्यापीठ")}</h4>
+                    <p className="text-[9px] text-slate-500 mt-0.5">{t("Vedic Guidance", "ज्योतिष सीखें")}</p>
+                  </div>
+                </button>
+
+                {/* 7. AI Astro Guru & Help */}
+                <button
+                  onClick={() => setCurrentScreen('AI_CHAT')}
+                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans border-2 border-dashed border-amber-500/40 bg-amber-500/5 hover:border-amber-500 hover:bg-amber-500/10"
+                  style={getServiceCardStyle(currentScreen === 'AI_CHAT')}
+                >
+                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">🕉️</span>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("AI Astro Guru", "एआई दिव्य गुरु")}</h4>
+                    <p className="text-[9px] text-[#936a18] font-bold mt-0.5">{t("AI Chat & Help", "संवाद एवं संपर्क")}</p>
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -2286,10 +2821,12 @@ function VedicKundliApp() {
               <div id="birth-particulars-form" className="lg:col-span-7 bg-white theme-bg-card border theme-border rounded-xl p-6 shadow-md relative overflow-hidden flex flex-col justify-between font-sans">
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b theme-border pb-3 mb-5">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-                        <PlusCircle className="w-5 h-5 text-[#936a18]" />
-                      </div>
+                    <div className="flex items-center gap-2.5">
+                      <img 
+                        src="https://images.unsplash.com/photo-1568910118311-ca74cbda1fbd?auto=format&fit=crop&q=80&w=150"
+                        alt="Lord Ganesha"
+                        className="w-10 h-10 rounded-xl object-cover border border-amber-500/30 shadow-xs animate-pulse"
+                      />
                       <div>
                         <h3 className="text-base font-bold text-slate-800 font-cinzel leading-none">{t("New Kundli Creator", "नवीन जन्म कुंडली रेखांकन")}</h3>
                         <p className="text-[10px] text-slate-400 mt-1">{t("Calculate detailed traditional horoscopes instantly", "विवरण भरकर पारंपरिक वैदिक कुण्डली प्राप्त करें")}</p>
@@ -2300,10 +2837,10 @@ function VedicKundliApp() {
                     <button
                       type="button"
                       onClick={() => {
-                        setNameInput("Puneet Vashishtha");
-                        setGenderInput("Male");
-                        setDobInput("1979-02-16");
-                        setTobInput("00:05");
+                        setNameInput("Nisha (AstroSage Verified)");
+                        setGenderInput("Female");
+                        setDobInput("1979-12-10");
+                        setTobInput("07:10");
                         setBirthPlaceInput(t("Muzaffarnagar, Uttar Pradesh, India", "मुजफ्फरनगर, उत्तर प्रदेश, भारत"));
                         setLatitudeInput(29.4727);
                         setLongitudeInput(77.7085);
@@ -2313,32 +2850,24 @@ function VedicKundliApp() {
                         setTimeout(() => {
                           const newProfile = {
                             id: Date.now(),
-                            name: "Puneet Vashishtha",
-                            gender: "Male",
-                            dob: "1979-02-16",
-                            tob: "00:05",
+                            name: "Nisha (AstroSage Verified)",
+                            gender: "Female",
+                            dob: "1979-12-10",
+                            tob: "07:10",
                             place: t("Muzaffarnagar, Uttar Pradesh, India", "मुजफ्फरनगर, उत्तर प्रदेश, भारत"),
                             lat: 29.4727,
                             lon: 77.7085,
                             timezone: "Asia/Kolkata"
                           };
-                          setSavedKundlis(prev => {
-                            const exists = prev.some(k => k.name.trim().toLowerCase() === "puneet vashishtha");
-                            if (!exists) {
-                              const updated = [newProfile, ...prev];
-                              return updated;
-                            }
-                            return prev;
-                          });
                           setActiveProfileMemory(newProfile);
                           setCurrentScreen('KUNDLI_REPORT');
                         }, 50);
                       }}
                       className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100/80 border border-[#cca43b]/40 text-[#936a18] rounded-lg text-xs font-bold transition flex items-center gap-1 text-[11px]"
-                      title="Generates chart for Puneet Vashishtha with correct exalted Jupiter in 10th House instantly"
+                      title="Generates chart for Nisha with correct AstroSage reference model instantly"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-[#cca43b] animate-pulse" />
-                      <span>{t("✨ Demo Puneet Profile (1-Click)", "✨ पुणेत वशिष्ठ कुंडली (1-क्लिक)")}</span>
+                      <span>{t("✨ Demo Nisha Profile (1-Click)", "✨ निशा कुंडली (1-क्लिक)")}</span>
                     </button>
                   </div>
 
@@ -2957,12 +3486,26 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                   <button
                     key={tab.id}
                     onClick={() => setReportTab(tab.id)}
-                    className="px-4 py-2 text-xs font-bold font-cinzel rounded-xl transition duration-150 border uppercase tracking-wider whitespace-nowrap shadow-md focus:outline-none"
-                    style={{
-                      backgroundColor: isActive ? tObj.primary : tObj.bgBadge,
-                      color: isActive ? '#FFFFFF' : tObj.textMain,
-                      borderColor: isActive ? tObj.accent : tObj.border,
-                    }}
+                    className="pva-nav-btn px-4 py-2 text-xs font-bold font-cinzel rounded-xl transition duration-150 border uppercase tracking-wider whitespace-nowrap shadow-md focus:outline-none"
+                    style={
+                      isActive ? {
+                        '--nav-bg': tObj.primary,
+                        '--nav-text': '#FFFFFF',
+                        '--nav-border': tObj.accent || tObj.primary,
+                        '--nav-hover-bg': tObj.primaryHover || tObj.primary,
+                        '--nav-hover-text': '#FFFFFF',
+                        '--nav-hover-border': tObj.primaryHover || tObj.primary,
+                        '--nav-shadow-color': `${tObj.primary}40`
+                      } : {
+                        '--nav-bg': tObj.bgBadge,
+                        '--nav-text': tObj.textMain,
+                        '--nav-border': tObj.border,
+                        '--nav-hover-bg': tObj.primary,
+                        '--nav-hover-text': '#FFFFFF',
+                        '--nav-hover-border': tObj.primary,
+                        '--nav-shadow-color': `${tObj.primary}20`
+                      }
+                    }
                   >
                     {tab.label}
                   </button>
@@ -3690,6 +4233,8 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
               usageMonitor={usageMonitor}
               usersList={usersList}
               setUsersList={setUsersList}
+              splashConfig={splashConfig}
+              setSplashConfig={setSplashConfig}
             />
           </div>
         )}
@@ -4145,7 +4690,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                   🌌 PV-ASTRO SECURE VAULT
                 </span>
                 <h2 className="text-2xl md:text-4xl font-extrabold font-cinzel text-white mt-1.5">
-                  {t("Vedic Kundli Library", "वैदिक कुण्डली संग्रहालय")}
+                  {t("Open Kundli", "ओपन कुंडली")}
                 </h2>
                 <p className="text-xs text-slate-400 mt-1 max-w-xl">
                   {t("Manage your digital collection of analyzed birth charts. Keep family members, spouses, children, or clientele sorted securely under high-end cloud partitions.",
@@ -4154,7 +4699,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
               </div>
               <button 
                 onClick={handleNewKundliClick}
-                className="px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 text-xs font-black uppercase tracking-widest rounded-xl transition shadow-lg flex items-center gap-2 self-start md:self-center"
+                className="px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 text-xs font-black uppercase tracking-widest rounded-xl transition shadow-lg flex items-center gap-2 self-start md:self-center animate-pvastro-blink"
               >
                 <PlusCircle className="w-4 h-4" />
                 <span>{t("Calculate New Kundli", "नई कुंडली विश्लेषण")}</span>
@@ -4665,7 +5210,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                         name="profileName"
                         type="text"
                         defaultValue={userProfileData.name || ''}
-                        placeholder="E.g. Puneet Kumar"
+                        placeholder="E.g. Nisha Sharma"
                         className="w-full bg-[#07080f] border border-slate-800 focus:border-amber-450 text-xs px-3 py-2 text-white placeholder-slate-705 rounded-lg focus:outline-none"
                       />
                     </div>
@@ -4786,6 +5331,16 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
               </div>
             )}
           </div>
+        )}
+
+        {currentScreen === 'AI_CHAT' && (
+          <CosmicAIChat 
+            t={t} 
+            tObj={tObj} 
+            currentLanguage={currentLanguage} 
+            onBack={() => setCurrentScreen('DASHBOARD')} 
+            currentUser={currentUser} 
+          />
         )}
 
         {/* PV-ASTRO FLOATING TOASTS NOTIFICATION PANEL */}
@@ -5304,6 +5859,130 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
 
       </main>
 
+      {/* Mobile-Only Bottom Utility Area: Website Theme, Font Size, Database status, Free Marquee and News */}
+      <div className="block md:hidden w-full max-w-7xl mx-auto px-4 mt-6 space-y-6 border-t border-slate-800/40 pt-8 pb-2">
+        {/* Title */}
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-amber-500 text-sm">🌌</span>
+          <h3 className="text-xs font-black tracking-widest text-[#cca43b] uppercase">
+            {t("Cosmic Utilities & News Feed", "कॉस्मिक यूटिलिटीज और लाइव समाचार")}
+          </h3>
+        </div>
+
+        {/* Theme & Font Control Grid */}
+        <div className="grid grid-cols-2 gap-3 bg-[#0c0d1b] border border-slate-800/60 p-3.5 rounded-xl">
+          {/* Theme Selector */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">
+              🎨 {t("Color Theme", "वेबसाइट रंग थीम")}
+            </span>
+            <div className="flex items-center gap-2 bg-[#12142d]/30 border border-slate-800/45 rounded-full p-1.5 w-fit">
+              {Object.keys(THEMES).map(themeKey => (
+                <button
+                  key={themeKey}
+                  onClick={() => setCurrentTheme(themeKey)}
+                  className={`w-4.5 h-4.5 rounded-full border-2 transition ${currentTheme === themeKey ? 'border-[#cca43b] scale-125 ring-2 ring-[#cca43b]/30' : 'border-slate-600'}`}
+                  style={{ backgroundColor: THEMES[themeKey].primary }}
+                  title={`${THEMES[themeKey].name} Theme`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Font Controls */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">
+              🔎 {t("Text Font Size", "अक्षरों का आकार")}
+            </span>
+            <div className="flex items-center gap-1 bg-[#12142d]/30 border border-slate-800/40 rounded-lg p-1">
+              {['SMALL', 'NORMAL', 'LARGE', 'XLARGE'].map((scale, i) => {
+                const labels = ['A-', 'A', 'A+', 'A++'];
+                return (
+                  <button
+                    key={scale}
+                    onClick={() => setFontScale(scale)}
+                    className={`flex-1 py-1 text-[10px] font-black rounded transition-all text-center ${fontScale === scale ? 'bg-[#cca43b] text-slate-950 font-black' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    {labels[i]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Database Live Connected Status */}
+        <div 
+          onClick={() => {
+            if (isUserAdmin) {
+              setCurrentScreen('INTEGRATIONS');
+            } else {
+              triggerNotification(
+                "Database Workspace Status", 
+                `Currently connected in ${storageConfig.mode === 'SUPABASE' ? 'Supabase cloud' : 'Sandbox (local)'} mode. Credentials can be adjusted in the admin panel.`, 
+                "info"
+              );
+            }
+          }}
+          className={`flex items-center justify-between p-3.5 rounded-xl border-2 cursor-pointer transition uppercase tracking-wider font-extrabold shadow-md ${
+            storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
+              ? 'bg-[#091510] border-emerald-500/50 text-emerald-300 hover:bg-[#0c241a]' 
+              : 'bg-red-950/40 border-red-500/50 text-red-300 hover:bg-red-900/45'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${
+              storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
+                ? 'bg-emerald-400 animate-pulse ring-2 ring-emerald-400/50' 
+                : 'bg-red-400 animate-pulse ring-2 ring-red-400/50'
+            }`}></span>
+            <span className="text-[10px] font-bold">
+              {storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
+                ? t("DATABASE CONNECTION - LIVE", "डेटाबेस कनेक्शन - लाइव") 
+                : t("DATABASE CONNECTION - OFF", "डेटाबेस कनेक्शन - बंद")
+              }
+            </span>
+          </div>
+          <span className="text-[8px] bg-slate-800/40 px-2 py-0.5 rounded text-slate-450 font-mono">
+            {storageConfig.mode}
+          </span>
+        </div>
+
+        {/* Animated Marquee Ribbon: Free Services breaking */}
+        <div className="w-full overflow-hidden bg-[#12142a] border text-white rounded-xl py-2.5 relative shadow-xl flex items-center select-none" style={{ borderColor: tObj.border }}>
+          <div className="absolute left-0 top-0 bottom-0 bg-[#936a18] px-2.5 z-10 flex items-center shadow-md font-cinzel font-black text-[8px] uppercase tracking-wider text-[#FFF] animate-pulse">
+            🔥 {t("FREE", "मुफ़्त")}
+          </div>
+          <div className="whitespace-nowrap flex items-center w-full overflow-hidden">
+            <div className="animate-marquee inline-block font-sans font-extrabold text-[10px] uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-200 pl-12 pb-0.5">
+              ✨ 🕊️ {t("ALL DIGITAL HOROSCOPE GENERATION, LAL KITAB ANALYSIS, DAILY PANCHANG, AND KP ASTROLOGY MODULES ARE 100% FREE FOR THE DEVOUT PUBLIC!", "सभी डिजिटल जन्मपत्री, लाल किताब फलादेश, दैनिक महा पंचांग और केपी ज्योतिष कुण्डली फलित सर्वसाधारण के लिए शत-प्रतिशत निःशुल्क हैं!")} ✦ {t("NO HIDDEN FEES OR PREMIUM SUBSCRIPTION REQUIRED — SPREAD THE DIVINE LIGHT!", "कोई छिपा हुआ शुल्क या प्रीमियम सब्सक्रिप्शन आवश्यक नहीं — सनातन दैवीय ज्ञान सभी के लिए खुला है!")} 🕊️ ✨
+            </div>
+          </div>
+        </div>
+
+        {/* Kundli News Updates Container */}
+        <div className="w-full bg-[#0b0c16]/90 border rounded-xl p-4 shadow-xl relative font-sans text-slate-200 flex flex-col items-stretch gap-3 border-l-4 border-l-rose-600" style={{ borderColor: tObj.border, borderLeftColor: '#e11d48' }}>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-rose-600 animate-ping relative"></span>
+              <span className="text-[9px] uppercase font-bold tracking-widest text-rose-500 font-mono">✦ {t("BREAKING KUNDLI NEWS", "ब्रेकिंग न्यूज़ अपडेट")}</span>
+            </div>
+            <p className="text-[12px] leading-relaxed text-slate-300 font-medium italic">
+              {currentLanguage === 'English' ? breakingNewsEng : breakingNews}
+            </p>
+          </div>
+
+          {activeUserIsPremium && (
+            <button
+              onClick={() => setShowNewsEditor(!showNewsEditor)}
+              className="w-full text-center py-2 bg-rose-600/10 border border-rose-500/20 text-rose-400 hover:bg-rose-600 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition"
+            >
+              ✏️ {t("Update News", "अपडेट न्यूज़")}
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Luxury Footer with tech indicators */}
       <footer className="mt-12 py-6 bg-[#0a0c1a] border-t border-slate-800/80 px-4 text-center">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-slate-500 font-mono">
@@ -5318,6 +5997,308 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
           </div>
         </div>
       </footer>
+
+      {/* Immersive Mobile Android Bottom Navigation Bar */}
+      <div 
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-2 py-1.5 flex items-center justify-around h-[68px] border-t shadow-lg !backdrop-blur-md"
+        style={{
+          backgroundColor: `${tObj.bgCard}f0`,
+          borderColor: tObj.border,
+          boxShadow: `0 -4px 20px ${tObj.primary}12`
+        }}
+      >
+        {/* Tab 1: Home Dashboard */}
+        <button
+          onClick={() => setCurrentScreen('DASHBOARD')}
+          className="flex flex-col items-center justify-center flex-1 py-1 transition-all"
+          style={{ color: currentScreen === 'DASHBOARD' ? tObj.primary : tObj.textMuted }}
+        >
+          <Compass 
+            className="w-5 h-5 transition-transform duration-250 shrink-0" 
+            style={{ 
+              color: currentScreen === 'DASHBOARD' ? tObj.primary : tObj.textMuted,
+              transform: currentScreen === 'DASHBOARD' ? 'scale(1.2)' : 'scale(1)',
+              strokeWidth: currentScreen === 'DASHBOARD' ? '2.5' : '1.8'
+            }} 
+          />
+          <span 
+            className="text-[10px] font-black mt-0.5 tracking-wider transition-colors duration-250"
+            style={{ color: currentScreen === 'DASHBOARD' ? tObj.primary : tObj.textMuted }}
+          >
+            {t("Home", "मुख्य")}
+          </span>
+        </button>
+
+        {/* Tab 2: Panchang */}
+        <button
+          onClick={() => setCurrentScreen('PANCHANG')}
+          className="flex flex-col items-center justify-center flex-1 py-1 transition-all"
+          style={{ color: currentScreen === 'PANCHANG' ? tObj.primary : tObj.textMuted }}
+        >
+          <Calendar 
+            className="w-5 h-5 transition-transform duration-250 shrink-0" 
+            style={{ 
+              color: currentScreen === 'PANCHANG' ? tObj.primary : tObj.textMuted,
+              transform: currentScreen === 'PANCHANG' ? 'scale(1.2)' : 'scale(1)',
+              strokeWidth: currentScreen === 'PANCHANG' ? '2.5' : '1.8'
+            }} 
+          />
+          <span 
+            className="text-[10px] font-black mt-0.5 tracking-wider transition-colors duration-250"
+            style={{ color: currentScreen === 'PANCHANG' ? tObj.primary : tObj.textMuted }}
+          >
+            {t("Panchang", "पंचांग")}
+          </span>
+        </button>
+
+        {/* Tab 3: FAB Button - Center floating circular Add Kundli */}
+        <div className="relative -top-3.5 flex flex-col items-center justify-center w-14 z-50 animate-pvastro-blink">
+          <button
+            onClick={() => setCurrentScreen('ADD_KUNDLI')}
+            className="flex items-center justify-center w-12 h-12 rounded-full shadow-md border-2 transition-transform active:scale-95 hover:brightness-110"
+            style={{
+              background: `linear-gradient(135deg, ${tObj.primary}, ${tObj.accent || tObj.primary})`,
+              borderColor: tObj.bgPage,
+              boxShadow: `0 4px 15px ${tObj.primary}50`
+            }}
+            title={t("New Chart", "कुंडली बनाएँ")}
+          >
+            <PlusCircle className="w-7 h-7 stroke-[2.5]" style={{ color: '#FFFFFF' }} />
+          </button>
+          <span 
+            className="text-[9px] font-black mt-1 text-center whitespace-nowrap tracking-wide"
+            style={{ color: tObj.primary }}
+          >
+            {t("Chart", "कुंडली")}
+          </span>
+        </div>
+
+        {/* Tab 4: Matchmaking */}
+        <button
+          onClick={() => setCurrentScreen('MATCHMAKING')}
+          className="flex flex-col items-center justify-center flex-1 py-1 transition-all"
+          style={{ color: currentScreen === 'MATCHMAKING' ? tObj.primary : tObj.textMuted }}
+        >
+          <Heart 
+            className="w-5 h-5 transition-transform duration-250 shrink-0" 
+            style={{ 
+              color: currentScreen === 'MATCHMAKING' ? tObj.primary : tObj.textMuted,
+              transform: currentScreen === 'MATCHMAKING' ? 'scale(1.2)' : 'scale(1)',
+              strokeWidth: currentScreen === 'MATCHMAKING' ? '2.5' : '1.8'
+            }} 
+          />
+          <span 
+            className="text-[10px] font-black mt-0.5 tracking-wider transition-colors duration-250"
+            style={{ color: currentScreen === 'MATCHMAKING' ? tObj.primary : tObj.textMuted }}
+          >
+            {t("Match", "मिलान")}
+          </span>
+        </button>
+
+        {/* Tab 5: Library */}
+        <button
+          onClick={() => setCurrentScreen('KUNDLI_LIBRARY')}
+          className="flex flex-col items-center justify-center flex-1 py-1 transition-all"
+          style={{ color: currentScreen === 'KUNDLI_LIBRARY' ? tObj.primary : tObj.textMuted }}
+        >
+          <BookOpen 
+            className="w-5 h-5 transition-transform duration-250 shrink-0" 
+            style={{ 
+              color: currentScreen === 'KUNDLI_LIBRARY' ? tObj.primary : tObj.textMuted,
+              transform: currentScreen === 'KUNDLI_LIBRARY' ? 'scale(1.2)' : 'scale(1)',
+              strokeWidth: currentScreen === 'KUNDLI_LIBRARY' ? '2.5' : '1.8'
+            }} 
+          />
+          <span 
+            className="text-[10px] font-black mt-0.5 tracking-wider transition-colors duration-250"
+            style={{ color: currentScreen === 'KUNDLI_LIBRARY' ? tObj.primary : tObj.textMuted }}
+          >
+            {t("Open Kundli", "ओपन कुंडली")}
+          </span>
+        </button>
+      </div>
+
+      {/* Immersive high HD animated Lord Ganesha & Swastik Splash Screen Popup on Startup */}
+      {showSplash && (
+        <div 
+          className={`fixed inset-0 z-[100000] flex flex-col items-center justify-center p-6 bg-[#05060c] text-white font-sans transition-all duration-700 ease-in-out select-none ${splashFade ? 'opacity-0 pointer-events-none scale-105' : 'opacity-100'}`}
+          style={{
+            backgroundImage: `radial-gradient(circle at center, #0f112a 0%, #05060c 100%)`
+          }}
+        >
+          {/* Skip Button */}
+          <button 
+            onClick={handleSkipSplash}
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 px-4 py-2.5 bg-black/60 hover:bg-black/90 hover:border-amber-400 text-amber-500 hover:text-white active:scale-95 text-xs font-black uppercase tracking-widest border border-amber-500/30 rounded-xl transition-all duration-200 shadow-md flex items-center gap-2 z-[100001]"
+          >
+            <span>{t("Skip", "आगे बढ़ें")}</span>
+            <span className="text-sm">⏭</span>
+          </button>
+
+          {/* Sound Status Badge */}
+          {splashConfig.playSound !== false && (
+            <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 flex items-center gap-2 px-3.5 py-1.5 bg-orange-500/10 border border-orange-500/25 rounded-full text-[9px] font-black uppercase tracking-widest text-amber-400 select-none animate-pulse z-[100001]">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+              <span>🔊 {t("Sacred OM Chant active", "दिव्य मंत्र गूंज रहा है")}</span>
+            </div>
+          )}
+
+          {/* Animated Stars Background */}
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMC44IiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIwLjMiLz48L3N2Zz4=')] opacity-40 mix-blend-screen animate-pulse" />
+
+          {/* Golden Rotating Planetary Orbits Circles in Background */}
+          <div className="absolute w-[320px] h-[320px] sm:w-[420px] sm:h-[420px] rounded-full border border-orange-500/10 border-dashed animate-[spin_60s_linear_infinite] pointer-events-none" />
+          <div className="absolute w-[240px] h-[240px] sm:w-[320px] sm:h-[320px] rounded-full border border-amber-400/20 border-dotted animate-[spin_40s_linear_infinite_reverse] pointer-events-none" />
+
+          {/* Central Devotional Assembly */}
+          <div className="relative flex flex-col items-center gap-6 z-10 max-w-lg text-center animate-scale-up">
+            
+            {/* Dynamic Symbol Trilogy (Swastiks flanking Central Ganesha) */}
+            <div className="flex items-center justify-center gap-5 sm:gap-10 my-2">
+              
+              {/* Auspicious Left Swastik (Spinning Clockwise) */}
+              <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-full bg-orange-500/5 border border-orange-500/20 shadow-[0_0_15px_rgba(255,101,0,0.15)] animate-[spin_25s_linear_infinite] shrink-0">
+                <svg viewBox="0 0 60 60" className="w-8 h-8 sm:w-10 sm:h-10 text-amber-500">
+                  <path 
+                    d="M 12 30 L 48 30 M 30 12 L 30 48 M 12 12 L 12 30 M 48 30 L 48 48 M 30 12 L 48 12 M 12 48 L 30 48" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="3.5" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                  />
+                  <circle cx="21" cy="21" r="2" fill="#FF3D00" />
+                  <circle cx="39" cy="21" r="2" fill="#FF3D00" />
+                  <circle cx="21" cy="39" r="2" fill="#FF3D00" />
+                  <circle cx="39" cy="39" r="2" fill="#FF3D00" />
+                </svg>
+              </div>
+
+              {/* Glorious High-HD Golden Lord Ganesha Silhouette */}
+              <div className="relative p-2 rounded-full bg-orange-500/10 border border-orange-500/30 shadow-[0_0_40px_rgba(255,101,0,0.35)] hover:scale-105 transition-transform duration-300">
+                <svg viewBox="0 0 100 100" className="w-28 h-28 sm:w-36 sm:h-36 drop-shadow-[0_0_15px_rgba(255,101,0,0.5)] animate-pulse">
+                  <defs>
+                    <linearGradient id="ganeshaGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#FFE082" />
+                      <stop offset="40%" stopColor="#FFC107" />
+                      <stop offset="85%" stopColor="#FF8F00" />
+                      <stop offset="100%" stopColor="#E65100" />
+                    </linearGradient>
+                    <radialGradient id="divineGlow" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="#FF6D00" stopOpacity="0.4" />
+                      <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+                    </radialGradient>
+                  </defs>
+
+                  {/* Aura Halo background */}
+                  <circle cx="50" cy="50" r="46" fill="url(#divineGlow)" />
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="url(#ganeshaGold)" strokeWidth="0.5" strokeDasharray="2 3" />
+
+                  {/* Left Ear Curve */}
+                  <path d="M 40 40 C 25 38, 20 52, 33 60 C 38 63, 42 60, 42 55" fill="none" stroke="url(#ganeshaGold)" strokeWidth="2" strokeLinecap="round" />
+                  
+                  {/* Right Ear Curve */}
+                  <path d="M 60 40 C 75 38, 80 52, 67 60 C 62 63, 58 60, 58 55" fill="none" stroke="url(#ganeshaGold)" strokeWidth="2" strokeLinecap="round" />
+                  
+                  {/* Crown (Mukut) Head */}
+                  <path d="M 38 32 C 38 22, 50 12, 50 12 C 50 12, 62 22, 62 32 Z" fill="none" stroke="url(#ganeshaGold)" strokeWidth="2.2" strokeLinejoin="round" />
+                  <path d="M 42 27 L 58 27 M 45 22 L 55 22 M 48 17 L 52 17" fill="none" stroke="url(#ganeshaGold)" strokeWidth="1.5" strokeLinecap="round" />
+                  <circle cx="50" cy="7" r="1.5" fill="#FF1744" className="animate-ping" />
+                  <circle cx="50" cy="7" r="1" fill="#FF1744" />
+
+                  {/* Sacred Tilak Forehead */}
+                  <path d="M 48 35 Q 50 41 52 35" fill="none" stroke="#FF1744" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="46" y1="38" x2="54" y2="38" stroke="#FFE082" strokeWidth="1" />
+                  <circle cx="50" cy="33" r="1" fill="#FF1744" />
+
+                  {/* Flowing Graceful curves of the Trunk (Sond) */}
+                  <path d="M 45 42 Q 50 44 48 56 Q 46 68, 54 74 Q 61 78, 65 72 Q 67 64, 59 66" fill="none" stroke="url(#ganeshaGold)" strokeWidth="2.5" strokeLinecap="round" />
+
+                  {/* Tusk elements */}
+                  <path d="M 44 47 L 41 48" fill="none" stroke="url(#ganeshaGold)" strokeWidth="1.2" strokeLinecap="round" />
+                  <path d="M 56 47 L 58 48" fill="none" stroke="url(#ganeshaGold)" strokeWidth="0.8" strokeLinecap="round" /> {/* Broken right tusk */}
+
+                  {/* Tiny Holy Swastik inside */}
+                  <g transform="translate(46, 46) scale(0.08)" stroke="url(#ganeshaGold)" strokeWidth="2.5" fill="none">
+                    <path d="M 10 30 L 50 30 M 30 10 L 30 50 M 10 10 L 10 30 M 50 30 L 50 50 M 30 10 L 50 10 M 10 50 L 30 50" strokeLinecap="round" strokeLinejoin="round" />
+                  </g>
+                </svg>
+              </div>
+
+              {/* Auspicious Right Swastik (Spinning Counter-Clockwise) */}
+              <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-full bg-orange-500/5 border border-orange-500/20 shadow-[0_0_15px_rgba(255,101,0,0.15)] animate-[spin_25s_linear_infinite_reverse] shrink-0">
+                <svg viewBox="0 0 60 60" className="w-8 h-8 sm:w-10 sm:h-10 text-amber-500">
+                  <path 
+                    d="M 12 30 L 48 30 M 30 12 L 30 48 M 12 12 L 12 30 M 48 30 L 48 48 M 30 12 L 48 12 M 12 48 L 30 48" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="3.5" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                  />
+                  <circle cx="21" cy="21" r="2" fill="#FF3D00" />
+                  <circle cx="39" cy="21" r="2" fill="#FF3D00" />
+                  <circle cx="21" cy="39" r="2" fill="#FF3D00" />
+                  <circle cx="39" cy="39" r="2" fill="#FF3D00" />
+                </svg>
+              </div>
+
+            </div>
+
+            {/* Sacred Devotional Text & Divine Benediction */}
+            <div className="space-y-2 mt-2">
+              <span className="text-[10px] sm:text-xs font-extrabold uppercase text-amber-500 tracking-widest font-cinzel animate-pulse block">
+                ॥ श्री गणेशाय नमः ॥
+              </span>
+              <p className="text-xs sm:text-sm text-slate-300 font-bold px-2 block leading-relaxed max-w-md">
+                वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ ।<br />
+                निर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा ॥
+              </p>
+            </div>
+
+            {/* Brand Logo Identity */}
+            <div className="mt-4 flex flex-col items-center">
+              <PVAstroLogo className="w-24 h-24 sm:w-32 sm:h-32 mb-2" />
+              <h2 className="text-2xl sm:text-4xl font-extrabold tracking-[0.25em] font-cinzel leading-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-orange-400 to-amber-200 animate-pvastro-logo">
+                PVASTRO
+              </h2>
+              <p className="text-[8px] sm:text-[10px] uppercase font-bold tracking-widest text-slate-400 select-none">
+                {t("Vedic Cosmic Astrological Suite", "वैदिक ब्रह्मांडीय ज्योतिषीय केंद्र")}
+              </p>
+
+              {/* Radiant Bright Tagline on Startup Splash Popup */}
+              <div className="mt-4.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-red-500/20 to-amber-500/10 border-2 border-amber-400/60 shadow-[0_0_30px_rgba(251,191,36,0.3)] animate-pulse max-w-sm">
+                <span className="text-[10px] sm:text-xs font-black tracking-widest text-[#ffff00] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] uppercase block font-sans">
+                  "ASTRO IS DIVINE WORK, BLESSINGS ARE FREE FOR ALL"
+                </span>
+                <span className="text-[8.5px] sm:text-[9.5px] text-amber-300 font-extrabold block mt-1 tracking-wide">
+                  {t("ज्योतिष दैवीय कार्य है, आशीर्वाद पूर्णतः निःशुल्क हैं", "ज्योतिष दैवीय कार्य है, आशीर्वाद पूर्णतः निःशुल्क हैं")}
+                </span>
+              </div>
+            </div>
+
+            {/* Progress loading engine */}
+            <div className="w-56 sm:w-64 mt-6">
+              <div className="flex items-center justify-between text-[9px] font-bold text-slate-400 mb-1 font-mono uppercase tracking-widest">
+                <span>{t("Aligning Spheres", "ग्रह संरेखण")}</span>
+                <span>{splashProgress}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-800 p-[1px]">
+                <div 
+                  className="h-full rounded-full bg-gradient-to-r from-[#ffe082] via-[#ffb300] to-[#ff3d00] transition-all duration-300 shadow-[0_0_8px_#ffb300]"
+                  style={{ width: `${splashProgress}%` }}
+                />
+              </div>
+              <span className="text-[8.5px] italic text-slate-550 mt-2 block tracking-wider animate-pulse font-medium">
+                {splashProgress < 35 ? t("Calibrating Nakshatras...", "नक्षत्रों की काल गणना...") :
+                 splashProgress < 70 ? t("Casting Planetary Spheres...", "ग्रह चक्रों की स्थापना हो रही है...") :
+                 t("Establishing Spiritual Connection...", "दिव्य ब्रह्मांडीय संपर्क स्थापित हो रहा है...")}
+              </span>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

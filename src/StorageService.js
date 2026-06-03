@@ -182,38 +182,43 @@ export const checkDatabaseHealth = async () => {
   let allOk = true;
   let isNetworkFail = false;
   
-  for (const t of tables) {
-    try {
-      const { error } = await supabase.from(t).select('id').limit(1);
-      if (error) {
-        const errorMsg = (error.message || "").toLowerCase();
-        if (
-          errorMsg.includes('failed to fetch') || 
-          errorMsg.includes('networkerror') || 
-          errorMsg.includes('fetch') || 
-          errorMsg.includes('typeerror') ||
-          errorMsg.includes('failed to connect')
-        ) {
+  try {
+    // Perform all table checks in parallel to minimize network latency
+    const results = await Promise.all(
+      tables.map(async (t) => {
+        try {
+          const { error } = await supabase.from(t).select('id').limit(1);
+          if (error) {
+            const errorMsg = (error.message || "").toLowerCase();
+            const isNet = errorMsg.includes('failed to fetch') || 
+                          errorMsg.includes('networkerror') || 
+                          errorMsg.includes('fetch') || 
+                          errorMsg.includes('typeerror') ||
+                          errorMsg.includes('failed to connect');
+            const isNotExist = error.code === '42P01' || errorMsg.includes('does not exist') || errorMsg.includes('relation');
+            return { t, ok: false, isNetworkFail: isNet, isNotExist };
+          }
+          return { t, ok: true };
+        } catch (e) {
+          const exMsg = String(e).toLowerCase();
+          const isNet = exMsg.includes('fetch') || exMsg.includes('network') || exMsg.includes('typeerror') || exMsg.includes('connect');
+          return { t, ok: false, isNetworkFail: isNet };
+        }
+      })
+    );
+
+    for (const r of results) {
+      status[r.t] = r.ok;
+      if (!r.ok) {
+        allOk = false;
+        if (r.isNetworkFail) {
           isNetworkFail = true;
         }
-        if (error.code === '42P01' || errorMsg.includes('does not exist') || errorMsg.includes('relation')) {
-          status[t] = false;
-          allOk = false;
-        } else {
-          status[t] = false;
-          allOk = false;
-        }
-      } else {
-        status[t] = true;
       }
-    } catch (e) {
-      const exMsg = String(e).toLowerCase();
-      if (exMsg.includes('fetch') || exMsg.includes('network') || exMsg.includes('typeerror') || exMsg.includes('connect')) {
-        isNetworkFail = true;
-      }
-      status[t] = false;
-      allOk = false;
     }
+  } catch (e) {
+    console.error("Database check execution fail:", e);
+    allOk = false;
   }
   
   let finalStatus = 'needs_setup';
@@ -954,28 +959,30 @@ export const kundliDbService = {
   fetchSavedKundlis: async (emailOrId) => {
     if (!emailOrId) return [];
     const config = getDefaultStorageConfig();
+    const isAdmin = typeof emailOrId === 'string' && emailOrId.toLowerCase().trim() === 'nespuneet2501@gmail.com';
 
     if (isSupabaseConfigured() && config.mode === 'SUPABASE') {
       const supabase = getSupabaseClient();
       try {
-        // Find our mapped uuid if email was passed
-        let targetId = emailOrId;
-        if (emailOrId.includes('@')) {
-          const { data: userProfile } = await supabase
-            .from('users')
-            .select('id')
-            .eq('email', emailOrId)
-            .maybeSingle();
-          if (userProfile?.id) {
-            targetId = userProfile.id;
+        let query = supabase.from('kundlis').select('*');
+
+        if (!isAdmin) {
+          // Find our mapped uuid if email was passed
+          let targetId = emailOrId;
+          if (emailOrId.includes('@')) {
+            const { data: userProfile } = await supabase
+              .from('users')
+              .select('id')
+              .eq('email', emailOrId)
+              .maybeSingle();
+            if (userProfile?.id) {
+              targetId = userProfile.id;
+            }
           }
+          query = query.eq('user_id', targetId);
         }
 
-        const { data, error } = await supabase
-          .from('kundlis')
-          .select('*')
-          .eq('user_id', targetId)
-          .order('created_at', { ascending: false });
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) throw error;
 
@@ -1027,6 +1034,9 @@ export const kundliDbService = {
     if (rawLocal) {
       try {
         const parsed = JSON.parse(rawLocal);
+        if (isAdmin) {
+          return parsed; // Admin sees ALL locally saved charts
+        }
         // Filter elements belonging to this active sandbox target
         return parsed.filter(item => item.user_id === emailOrId);
       } catch (e) {

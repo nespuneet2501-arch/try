@@ -1671,7 +1671,14 @@ export function AstroPaywallLock({ tab, t, tObj, onUpgrade }) {
   const details = getTeaserDetails();
 
   return (
-    <div className="my-6 relative rounded-3xl border border-slate-850 bg-[#090a15]/95 p-6 md:p-10 overflow-hidden shadow-2xl animate-fade-in text-slate-100 font-sans">
+    <div className="my-6 relative rounded-3xl border border-slate-850 bg-[#090a15]/95 p-6 md:p-10 pt-12 md:pt-14 overflow-hidden shadow-2xl animate-fade-in text-slate-100 font-sans">
+      {/* Divine Bright Tagline Banner in Paywall Popup */}
+      <div className="absolute top-0 left-0 right-0 bg-[#ffd600] text-[#1a1c23] text-center py-2 px-3 font-extrabold text-[9.5px] sm:text-xs tracking-widest uppercase shadow-sm flex items-center justify-center gap-1.5 z-20 animate-pulse border-b border-[#cca43b]/40">
+        <span className="text-sm">✨</span>
+        <span>ASTRO IS DIVINE WORK, BLESSINGS ARE FREE FOR ALL</span>
+        <span className="text-sm">✨</span>
+      </div>
+
       {/* Decorative Gold Radial Mesh Background */}
       <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-[#cca43b]/10 blur-3xl -mr-24 -mt-24 pointer-events-none"></div>
       <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full bg-amber-600/5 blur-3xl -ml-24 -mb-24 pointer-events-none"></div>
@@ -1759,7 +1766,12 @@ export function AdminControlWorkstation({
   setSubscriptionPlans,
   usageMonitor,
   usersList,
-  setUsersList
+  setUsersList,
+  splashConfig = { enabled: true, duration: 3400, playSound: true },
+  setSplashConfig,
+  setShowSplash,
+  setSplashProgress,
+  setSplashFade
 }) {
   const [activeAdminTab, setActiveAdminTab] = useState('analytics'); // analytics, modules, payplans, users, telemetry
   const [editingUserId, setEditingUserId] = useState(null);
@@ -1887,6 +1899,7 @@ export function AdminControlWorkstation({
           { id: 'modules', label: t("Astrological Modules", "ज्योतिषीय मॉड्यूल नियंत्रण"), icon: "⚙️" },
           { id: 'payplans', label: t("Subscription Pricing Plans", "मूल्य निर्धारण योजनाएं"), icon: "💎" },
           { id: 'users', label: t("User Permission Hub", "उपयोगकर्ता अनुमतियां"), icon: "👥" },
+          { id: 'splash', label: t("Divine Greeting Setup", "गणेश वंदना पॉप-अप"), icon: "🕉️" },
           { id: 'telemetry', label: t("Real-Time Telemetry Logs", "लाइव टेलीमेट्री लॉग"), icon: "📈" }
         ].map((tab) => {
           const isActive = activeAdminTab === tab.id;
@@ -2227,6 +2240,221 @@ export function AdminControlWorkstation({
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* SUBTAB CONTENT: DIVINE GREETING SETUP (SPLASH POPUP) */}
+      {activeAdminTab === 'splash' && (
+        <div className="space-y-6 animate-fade-in font-sans text-slate-800">
+          <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 tracking-wider">
+                🕉️ {t("Divine Startup Greeting Setup", "श्री गणेश वंदना पॉप-अप सेटिंग्स")}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {t("Configure the animated Lord Ganesha & Swastik devotional popup sequence shown upon app loading.", "वैदिक सुवाच्य और स्वरमय श्री गणेश वंदना पॉप-अप के समय, ध्वनि और स्थिति को यहाँ से नियंत्रित करें।")}
+              </p>
+            </div>
+            
+            <button
+              onClick={() => {
+                if (setSplashProgress) setSplashProgress(0);
+                if (setSplashFade) setSplashFade(false);
+                if (setShowSplash) setShowSplash(true);
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white text-xs font-black rounded-xl shadow-md flex items-center gap-2 transition duration-150 uppercase tracking-wider"
+            >
+              <span>👁️ {t("Test Live Preview", "लाइव प्रीव्यू परखें")}</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Left side settings card */}
+            <div className="bg-white border rounded-2xl p-5 shadow-sm space-y-6" style={{ borderColor: tObj.border }}>
+              
+              {/* Toggle Enable State */}
+              <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                <div>
+                  <span className="text-xs font-extrabold uppercase tracking-widest text-slate-700 block">
+                    {t("Devotional Popup Status", "पॉप-अप सक्रियता स्थिति")}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    {splashConfig.enabled !== false 
+                      ? t("ON - Displays Lord Ganesha upon startup", "सक्रिय - प्रत्येक रीलोड पर वंदना दर्शित होगी") 
+                      : t("OFF - Completely skip devotional intro on load", "निष्क्रिय - सीधा मुख्य वर्कस्टेशन खुलेगा")
+                    }
+                  </span>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => setSplashConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
+                  className={`w-14 h-7 rounded-full transition-all relative flex items-center p-1 focus:outline-none ${
+                    splashConfig.enabled !== false ? 'bg-emerald-500' : 'bg-slate-350'
+                  }`}
+                >
+                  <span className={`w-5 h-5 rounded-full bg-white shadow-md block transform transition-transform duration-200 ${
+                    splashConfig.enabled !== false ? 'translate-x-7' : 'translate-x-0'
+                  }`}></span>
+                </button>
+              </div>
+
+              {/* Sound Toggle */}
+              <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                <div>
+                  <span className="text-xs font-extrabold uppercase tracking-widest text-slate-700 block col-span-2">
+                    {t("OM Chant Sound", "दिव्य मंत्र सुरीली ध्वनि")}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
+                    {t("Plays resonant 'Om' chanting during startup screen.", "पॉप-अप चालू होने पर मधुर व दिव्य 'ओम् उच्चारण' की ध्वनि बजाता है।")}
+                  </span>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => setSplashConfig(prev => ({ ...prev, playSound: prev.playSound === false ? true : false }))}
+                  className={`w-14 h-7 rounded-full transition-all relative flex items-center p-1 focus:outline-none ${
+                    splashConfig.playSound !== false ? 'bg-orange-500' : 'bg-slate-350'
+                  }`}
+                >
+                  <span className={`w-5 h-5 rounded-full bg-white shadow-md block transform transition-transform duration-200 ${
+                    splashConfig.playSound !== false ? 'translate-x-7' : 'translate-x-0'
+                  }`}></span>
+                </button>
+              </div>
+
+              {/* Duration Control Panel */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-slate-700 block">
+                      {t("Display Active Duration", "पॉप-अप प्रदर्शन समय सीमा")}
+                    </span>
+                    <span className="text-xs font-black text-[#e65100]">
+                      {splashConfig.duration || 3400}ms ({( (splashConfig.duration || 3400) / 1000 ).toFixed(2)}s)
+                    </span>
+                  </div>
+                  
+                  {/* Shortcut resets */}
+                  <button 
+                    onClick={() => setSplashConfig(prev => ({ ...prev, duration: 3400 }))}
+                    className="px-2.5 py-1 bg-white hover:bg-slate-100 border text-[9px] text-slate-650 font-bold rounded-lg uppercase tracking-wider"
+                  >
+                    🔄 {t("Default (3.4s)", "सामान्य (3.4s)")}
+                  </button>
+                </div>
+
+                {/* Range Slider */}
+                <div className="space-y-1">
+                  <input 
+                    type="range"
+                    min="1000"
+                    max="10000"
+                    step="100"
+                    value={splashConfig.duration || 3400}
+                    onChange={(e) => setSplashConfig(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
+                    className="w-full accent-orange-500 cursor-pointer h-2 bg-slate-200 rounded-lg appearance-none"
+                  />
+                  <div className="flex justify-between text-[9px] text-slate-400 font-mono font-bold">
+                    <span>1.0s (Quick / तीव्र)</span>
+                    <span>5.5s (Medium)</span>
+                    <span>10.0s (Immersive / दीर्घ)</span>
+                  </div>
+                </div>
+
+                {/* Tactile Adjuster Buttons */}
+                <div className="grid grid-cols-4 gap-2">
+                  <button 
+                    onClick={() => setSplashConfig(prev => ({ ...prev, duration: Math.max(1000, (prev.duration || 3400) - 1000) }))}
+                    className="py-1.5 bg-white hover:bg-red-50 text-red-650 border text-xs font-black rounded-lg transition shadow-xs"
+                  >
+                    -1.0s
+                  </button>
+                  <button 
+                    onClick={() => setSplashConfig(prev => ({ ...prev, duration: Math.max(1000, (prev.duration || 3400) - 500) }))}
+                    className="py-1.5 bg-white hover:bg-orange-50 text-orange-650 border text-xs font-black rounded-lg transition shadow-xs"
+                  >
+                    -0.5s
+                  </button>
+                  <button 
+                    onClick={() => setSplashConfig(prev => ({ ...prev, duration: Math.min(10000, (prev.duration || 3400) + 500) }))}
+                    className="py-1.5 bg-white hover:bg-amber-50 text-amber-650 border text-xs font-black rounded-lg transition shadow-xs"
+                  >
+                    +0.5s
+                  </button>
+                  <button 
+                    onClick={() => setSplashConfig(prev => ({ ...prev, duration: Math.min(10000, (prev.duration || 3400) + 1000) }))}
+                    className="py-1.5 bg-white hover:bg-emerald-50 text-emerald-650 border text-xs font-black rounded-lg transition shadow-xs"
+                  >
+                    +1.0s
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Right side live monitoring / schema visual card */}
+            <div className="bg-[#05060d] border border-orange-500/20 text-white rounded-2xl p-5 shadow-inner space-y-4 flex flex-col justify-between">
+              
+              <div className="space-y-2">
+                <span className="bg-orange-500/10 border border-orange-500/30 text-amber-500 text-[9px] font-black uppercase px-2.5 py-1 rounded-full inline-block">
+                  🏛️ {t("PLATFORM INTRO ENGINE DIAGNOSIS", "प्लेटफॉर्म स्वागत अनुक्रम निदान")}
+                </span>
+                <p className="text-xs text-slate-350 leading-relaxed font-sans">
+                  {t("Every startup sequence parses the cached durations to structure custom timer events. When a user logs in, they can immediately skip if the display length exceeds expectation, avoiding bottleneck interactions.", "प्रत्येक परिचय अनुक्रम अनुकूलित टाइमर घटनाओं को सेट करने के लिए संचित सेटिंग्स को पार्स करता है। जब उपयोगकर्ता प्रवेश करते हैं, तो वे अपनी सुविधानुसार इसे बदल या तुरंत छोड़ सकते हैं।")}
+                </p>
+              </div>
+
+              {/* Live Preview Display Box (Subtle design mock) */}
+              <div className="p-4 bg-[#0a0c14] border border-slate-900 rounded-xl relative overflow-hidden flex flex-col items-center justify-center py-6">
+                
+                {/* Visual mini-ganesha aura circle */}
+                <div className="absolute w-24 h-24 rounded-full border border-orange-500/15 border-dashed animate-[spin_12s_linear_infinite]" />
+                
+                {/* Mini Swastik */}
+                <div className="relative text-amber-500 text-xs font-bold animate-pulse">
+                  ॐ ॥ श्री गणेशाय नमः ॥ 卐
+                </div>
+                
+                <p className="text-[10px] text-slate-400 mt-2 tracking-widest text-center select-none font-cinzel">
+                  {t("PVASTRO INITIALIZING", "पीवी-एस्ट्रो लोडिंग")}
+                </p>
+
+                <div className="w-36 mt-4.5 space-y-1">
+                  <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[#ffe082] via-orange-500 to-red-500 rounded-full animate-pulse"
+                      style={{ width: '70%' }}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-[7.5px] font-bold text-slate-500 tracking-wider">
+                    <span>{splashConfig.duration || 3400}ms</span>
+                    <span>Active</span>
+                  </div>
+                </div>
+
+                {/* Fake badge skip mock */}
+                <div className="absolute top-2 right-2 text-[8px] bg-slate-850/60 px-1.5 py-0.5 rounded text-amber-400 border border-slate-700/50 select-none">
+                  Skip Active
+                </div>
+              </div>
+
+              <div className="mt-2 text-center">
+                <button
+                  onClick={() => {
+                    if (setSplashProgress) setSplashProgress(0);
+                    if (setSplashFade) setSplashFade(false);
+                    if (setShowSplash) setShowSplash(true);
+                  }}
+                  className="w-full py-2 bg-[#1a120c] hover:bg-[#251b12] text-orange-400 hover:text-orange-300 rounded-lg border border-orange-500/25 active:scale-[0.98] text-[11px] font-black uppercase tracking-widest transition"
+                >
+                  🎭 {t("Simulate Vedic Intro Sequences Now", "वैदिक स्वागत अनुक्रम का सीधा अनुकरण करें")}
+                </button>
+              </div>
+
+            </div>
+
           </div>
         </div>
       )}
