@@ -4,7 +4,8 @@ import {
   PlusCircle, Calendar, ArrowLeft, Languages, UserCheck, 
   ChevronRight, Gem, Flame, BookOpen, Heart, ToggleLeft, 
   ToggleRight, Settings, Trash2, Smartphone, Key, CircleCheck,
-  Edit, Search, Cloud, RefreshCw, LogIn, LogOut, Check, Megaphone, X, Star, Database
+  Edit, Search, Cloud, RefreshCw, LogIn, LogOut, Check, Megaphone, X, Star, Database,
+  PhoneCall
 } from 'lucide-react';
 import { calculateAstrology, calculateMatchmaking, getDailyPanchang, Planet, signNamesEnglish, signNamesHindi } from './VedicAstrologyEngine';
 import { 
@@ -1041,10 +1042,7 @@ function VedicKundliApp() {
 
   // Saved profiles with memory state initialization
   const [savedKundlis, setSavedKundlis] = useState(() => {
-    return [
-      { id: 2, name: 'Nisha (AstroSage Verified)', dob: '1979-12-10', tob: '07:10', place: 'Muzaffarnagar, UP, India', lat: 29.4727, lon: 77.7085 },
-      { id: 3, name: 'Priya Sharma', dob: '1995-10-24', tob: '11:35', place: 'New Delhi, India', lat: 28.6139, lon: 77.2090 }
-    ];
+    return [];
   });
 
   const [activeChartType, setActiveChartType] = useState('D1 - Lagna'); // 'D1 - Lagna', 'D9 - Navamsha'
@@ -2832,43 +2830,6 @@ function VedicKundliApp() {
                         <p className="text-[10px] text-slate-400 mt-1">{t("Calculate detailed traditional horoscopes instantly", "विवरण भरकर पारंपरिक वैदिक कुण्डली प्राप्त करें")}</p>
                       </div>
                     </div>
-
-                    {/* Auto-fill demo button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNameInput("Nisha (AstroSage Verified)");
-                        setGenderInput("Female");
-                        setDobInput("1979-12-10");
-                        setTobInput("07:10");
-                        setBirthPlaceInput(t("Muzaffarnagar, Uttar Pradesh, India", "मुजफ्फरनगर, उत्तर प्रदेश, भारत"));
-                        setLatitudeInput(29.4727);
-                        setLongitudeInput(77.7085);
-                        setTimezoneInput("Asia/Kolkata");
-                        
-                        // Auto trigger generation
-                        setTimeout(() => {
-                          const newProfile = {
-                            id: Date.now(),
-                            name: "Nisha (AstroSage Verified)",
-                            gender: "Female",
-                            dob: "1979-12-10",
-                            tob: "07:10",
-                            place: t("Muzaffarnagar, Uttar Pradesh, India", "मुजफ्फरनगर, उत्तर प्रदेश, भारत"),
-                            lat: 29.4727,
-                            lon: 77.7085,
-                            timezone: "Asia/Kolkata"
-                          };
-                          setActiveProfileMemory(newProfile);
-                          setCurrentScreen('KUNDLI_REPORT');
-                        }, 50);
-                      }}
-                      className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100/80 border border-[#cca43b]/40 text-[#936a18] rounded-lg text-xs font-bold transition flex items-center gap-1 text-[11px]"
-                      title="Generates chart for Nisha with correct AstroSage reference model instantly"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-[#cca43b] animate-pulse" />
-                      <span>{t("✨ Demo Nisha Profile (1-Click)", "✨ निशा कुंडली (1-क्लिक)")}</span>
-                    </button>
                   </div>
 
                   {/* Form fields */}
@@ -6000,30 +5961,25 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
 
       {/* Immersive Mobile Android Bottom Navigation Bar */}
       <div 
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-2 py-1.5 flex items-center justify-around h-[68px] border-t shadow-lg !backdrop-blur-md"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-2 py-2 flex items-center justify-around h-[72px] border-t shadow-2xl backdrop-blur-xl bg-[#090a15]/95"
         style={{
-          backgroundColor: `${tObj.bgCard}f0`,
-          borderColor: tObj.border,
-          boxShadow: `0 -4px 20px ${tObj.primary}12`
+          borderColor: 'rgba(204,164,59,0.15)',
+          boxShadow: '0 -10px 30px rgba(0,0,0,0.8)'
         }}
       >
         {/* Tab 1: Home Dashboard */}
         <button
           onClick={() => setCurrentScreen('DASHBOARD')}
           className="flex flex-col items-center justify-center flex-1 py-1 transition-all"
-          style={{ color: currentScreen === 'DASHBOARD' ? tObj.primary : tObj.textMuted }}
         >
           <Compass 
-            className="w-5 h-5 transition-transform duration-250 shrink-0" 
+            className={`w-5.5 h-5.5 transition-all duration-300 shrink-0 ${currentScreen === 'DASHBOARD' ? 'text-[#ffbf00] drop-shadow-[0_0_12px_rgba(255,191,0,0.9)] scale-125' : 'text-slate-400 opacity-80'}`} 
             style={{ 
-              color: currentScreen === 'DASHBOARD' ? tObj.primary : tObj.textMuted,
-              transform: currentScreen === 'DASHBOARD' ? 'scale(1.2)' : 'scale(1)',
-              strokeWidth: currentScreen === 'DASHBOARD' ? '2.5' : '1.8'
+              strokeWidth: currentScreen === 'DASHBOARD' ? '2.8' : '1.8'
             }} 
           />
           <span 
-            className="text-[10px] font-black mt-0.5 tracking-wider transition-colors duration-250"
-            style={{ color: currentScreen === 'DASHBOARD' ? tObj.primary : tObj.textMuted }}
+            className={`text-[10px] font-black mt-1 tracking-wider transition-all duration-300 ${currentScreen === 'DASHBOARD' ? 'text-[#ffbf00] scale-105 drop-shadow-[0_0_8px_rgba(255,191,0,0.6)] font-extrabold' : 'text-slate-400'}`}
           >
             {t("Home", "मुख्य")}
           </span>
@@ -6033,41 +5989,35 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
         <button
           onClick={() => setCurrentScreen('PANCHANG')}
           className="flex flex-col items-center justify-center flex-1 py-1 transition-all"
-          style={{ color: currentScreen === 'PANCHANG' ? tObj.primary : tObj.textMuted }}
         >
           <Calendar 
-            className="w-5 h-5 transition-transform duration-250 shrink-0" 
+            className={`w-5.5 h-5.5 transition-all duration-300 shrink-0 ${currentScreen === 'PANCHANG' ? 'text-[#00e5ff] drop-shadow-[0_0_12px_rgba(0,229,255,0.9)] scale-125' : 'text-slate-400 opacity-80'}`} 
             style={{ 
-              color: currentScreen === 'PANCHANG' ? tObj.primary : tObj.textMuted,
-              transform: currentScreen === 'PANCHANG' ? 'scale(1.2)' : 'scale(1)',
-              strokeWidth: currentScreen === 'PANCHANG' ? '2.5' : '1.8'
+              strokeWidth: currentScreen === 'PANCHANG' ? '2.8' : '1.8'
             }} 
           />
           <span 
-            className="text-[10px] font-black mt-0.5 tracking-wider transition-colors duration-250"
-            style={{ color: currentScreen === 'PANCHANG' ? tObj.primary : tObj.textMuted }}
+            className={`text-[10px] font-black mt-1 tracking-wider transition-all duration-300 ${currentScreen === 'PANCHANG' ? 'text-[#00e5ff] scale-105 drop-shadow-[0_0_8px_rgba(0,229,255,0.6)] font-extrabold' : 'text-slate-400'}`}
           >
             {t("Panchang", "पंचांग")}
           </span>
         </button>
 
         {/* Tab 3: FAB Button - Center floating circular Add Kundli */}
-        <div className="relative -top-3.5 flex flex-col items-center justify-center w-14 z-50 animate-pvastro-blink">
+        <div className="relative -top-3.5 flex flex-col items-center justify-center w-14 z-50">
           <button
             onClick={() => setCurrentScreen('ADD_KUNDLI')}
-            className="flex items-center justify-center w-12 h-12 rounded-full shadow-md border-2 transition-transform active:scale-95 hover:brightness-110"
-            style={{
-              background: `linear-gradient(135deg, ${tObj.primary}, ${tObj.accent || tObj.primary})`,
-              borderColor: tObj.bgPage,
-              boxShadow: `0 4px 15px ${tObj.primary}50`
-            }}
+            className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 hover:scale-105 active:scale-95 ${
+              currentScreen === 'ADD_KUNDLI' 
+                ? 'bg-gradient-to-tr from-[#ff3d00] to-[#ffea00] border-yellow-200 shadow-[0_0_20px_rgba(255,61,0,0.9)] scale-110' 
+                : 'bg-gradient-to-tr from-amber-600 to-amber-400 border-[#cca43b]/40 shadow-[0_4px_12px_rgba(0,0,0,0.3)]'
+            }`}
             title={t("New Chart", "कुंडली बनाएँ")}
           >
-            <PlusCircle className="w-7 h-7 stroke-[2.5]" style={{ color: '#FFFFFF' }} />
+            <PlusCircle className="w-7 h-7 stroke-[2.8] text-white" />
           </button>
           <span 
-            className="text-[9px] font-black mt-1 text-center whitespace-nowrap tracking-wide"
-            style={{ color: tObj.primary }}
+            className={`text-[9.5px] font-black mt-1 text-center whitespace-nowrap tracking-wide transition-all duration-300 ${currentScreen === 'ADD_KUNDLI' ? 'text-[#ffea00] scale-105 drop-shadow-[0_0_8px_rgba(255,234,0,0.6)] font-extrabold' : 'text-slate-400'}`}
           >
             {t("Chart", "कुंडली")}
           </span>
@@ -6077,43 +6027,35 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
         <button
           onClick={() => setCurrentScreen('MATCHMAKING')}
           className="flex flex-col items-center justify-center flex-1 py-1 transition-all"
-          style={{ color: currentScreen === 'MATCHMAKING' ? tObj.primary : tObj.textMuted }}
         >
           <Heart 
-            className="w-5 h-5 transition-transform duration-250 shrink-0" 
+            className={`w-5.5 h-5.5 transition-all duration-300 shrink-0 ${currentScreen === 'MATCHMAKING' ? 'text-[#ff1744] drop-shadow-[0_0_12px_rgba(255,23,68,0.9)] scale-125' : 'text-slate-400 opacity-80'}`} 
             style={{ 
-              color: currentScreen === 'MATCHMAKING' ? tObj.primary : tObj.textMuted,
-              transform: currentScreen === 'MATCHMAKING' ? 'scale(1.2)' : 'scale(1)',
-              strokeWidth: currentScreen === 'MATCHMAKING' ? '2.5' : '1.8'
+              strokeWidth: currentScreen === 'MATCHMAKING' ? '2.8' : '1.8'
             }} 
           />
           <span 
-            className="text-[10px] font-black mt-0.5 tracking-wider transition-colors duration-250"
-            style={{ color: currentScreen === 'MATCHMAKING' ? tObj.primary : tObj.textMuted }}
+            className={`text-[10px] font-black mt-1 tracking-wider transition-all duration-300 ${currentScreen === 'MATCHMAKING' ? 'text-[#ff1744] scale-105 drop-shadow-[0_0_8px_rgba(255,23,68,0.6)] font-extrabold' : 'text-slate-400'}`}
           >
             {t("Match", "मिलान")}
           </span>
         </button>
 
-        {/* Tab 5: Library */}
+        {/* Tab 5: Contact Guru */}
         <button
-          onClick={() => setCurrentScreen('KUNDLI_LIBRARY')}
+          onClick={() => setCurrentScreen('AI_CHAT')}
           className="flex flex-col items-center justify-center flex-1 py-1 transition-all"
-          style={{ color: currentScreen === 'KUNDLI_LIBRARY' ? tObj.primary : tObj.textMuted }}
         >
-          <BookOpen 
-            className="w-5 h-5 transition-transform duration-250 shrink-0" 
+          <PhoneCall 
+            className={`w-5.5 h-5.5 transition-all duration-300 shrink-0 ${currentScreen === 'AI_CHAT' ? 'text-[#00e676] drop-shadow-[0_0_12px_rgba(0,230,118,0.9)] scale-125' : 'text-slate-400 opacity-80'}`} 
             style={{ 
-              color: currentScreen === 'KUNDLI_LIBRARY' ? tObj.primary : tObj.textMuted,
-              transform: currentScreen === 'KUNDLI_LIBRARY' ? 'scale(1.2)' : 'scale(1)',
-              strokeWidth: currentScreen === 'KUNDLI_LIBRARY' ? '2.5' : '1.8'
+              strokeWidth: currentScreen === 'AI_CHAT' ? '2.8' : '1.8'
             }} 
           />
           <span 
-            className="text-[10px] font-black mt-0.5 tracking-wider transition-colors duration-250"
-            style={{ color: currentScreen === 'KUNDLI_LIBRARY' ? tObj.primary : tObj.textMuted }}
+            className={`text-[10px] font-black mt-1 tracking-wider transition-all duration-300 ${currentScreen === 'AI_CHAT' ? 'text-[#00e676] scale-105 drop-shadow-[0_0_8px_rgba(0,230,118,0.6)] font-extrabold' : 'text-slate-400'}`}
           >
-            {t("Open Kundli", "ओपन कुंडली")}
+            {t("Contact", "संपर्क")}
           </span>
         </button>
       </div>
