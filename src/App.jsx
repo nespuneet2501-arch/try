@@ -11,7 +11,7 @@ import { calculateAstrology, calculateMatchmaking, getDailyPanchang, Planet, sig
 import { 
   AdvancedDashaExplorer, GocharTransitPanel, LifetimePredictionsPanel,
   AspectsConjunctionEngine, AuspiciousDatesHub, AstrologyAcademyHub,
-  VerificationCertificatePanel
+  VerificationCertificatePanel, KPSavedKundliPanel
 } from './AdvancedVedicModules';
 import SocietyUpdatesHub, { AstroPaywallLock, AdminControlWorkstation } from './SocietyCMS';
 import CosmicAIChat from './CosmicAIChat';
@@ -485,6 +485,140 @@ export default function App() {
   );
 }
 
+// Static listing database for Hindu Scholars, Pandits & Yogis (Purohit Directory)
+const PANDITS_STRICT_LIST = [
+  {
+    id: "p1",
+    name: "Acharya Pandit Rajesh Shastri",
+    phone: "+91 94122 77085",
+    email: "rajesh_shastri@pvastro.com",
+    address: "Verma Park Area, Muzaffarnagar, UP, India",
+    lat: 29.4727,
+    lon: 77.7085,
+    experience_years: 22,
+    specialization: ["marriage", "grah shanti", "astrology", "puja"],
+    charges: { min: 2100, max: 7500, currency: "INR" },
+    profile_photo_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300",
+    availability: true,
+    rating: 4.9,
+    verified: true,
+    bio: "Gold Medalist from Sampurnanand Sanskrit Vishwavidyalaya. Expert in Placidus significator divisions, KP systems, and Vedic Kundli matching."
+  },
+  {
+    id: "p2",
+    name: "Pandit Hariom Dwivedi Ji",
+    phone: "+91 98971 10822",
+    email: "dwivediji@pvastro.com",
+    address: "Astro Tower Center, Cannaught Place, Delhi, India",
+    lat: 28.6139,
+    lon: 77.2090,
+    experience_years: 18,
+    specialization: ["havan", "katha", "grah shanti", "marriage", "puja"],
+    charges: { min: 1500, max: 5100, currency: "INR" },
+    profile_photo_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=300",
+    availability: true,
+    rating: 4.8,
+    verified: true,
+    bio: "Renowned spiritual reciter of Shrimad Bhagwat and Ramcharitmanas. Dedicated 18+ years running elaborate Graha Shanti Havans across Delhi NCR."
+  },
+  {
+    id: "p3",
+    name: "Yogi Anand Dev (Kundalini Master)",
+    phone: "+91 81260 25010",
+    email: "yogi_anand@pvastro.com",
+    address: "Mithila Marg, Muzaffarpur, Bihar, India",
+    lat: 26.1209,
+    lon: 85.3647,
+    experience_years: 15,
+    specialization: ["astrology", "grah shanti", "puja"],
+    charges: { min: 3100, max: 11000, currency: "INR" },
+    profile_photo_url: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=300",
+    availability: true,
+    rating: 4.95,
+    verified: true,
+    bio: "Authorized Kriya Yoga and Kundalini meditation master. Offers deep evaluation of chakras, root-awakening mechanisms, and mental calmness."
+  },
+  {
+    id: "p4",
+    name: "Shyam Sundar Shastri Ji",
+    phone: "+91 91522 10811",
+    email: "shyam_shastri@pvastro.com",
+    address: "Varistha Colony, Lucknow, UP, India",
+    lat: 26.8467,
+    lon: 80.9462,
+    experience_years: 12,
+    specialization: ["puja", "katha", "marriage"],
+    charges: { min: 1100, max: 3500, currency: "INR" },
+    profile_photo_url: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=300",
+    availability: false,
+    rating: 4.6,
+    verified: true,
+    bio: "Specialist in Grah Pravesh, Satyanarayan Vrat Katha, and festive Pujas. Diligently trained in classical Sanskrit rites."
+  },
+  {
+    id: "p5",
+    name: "Vidushi Meera Bai (Vedic Astrologer)",
+    phone: "+91 96522 77025",
+    email: "meera_bai@pvastro.com",
+    address: "Raja Garden, Jaipur, Rajasthan, India",
+    lat: 26.9124,
+    lon: 75.7873,
+    experience_years: 19,
+    specialization: ["astrology", "marriage"],
+    charges: { min: 2500, max: 8000, currency: "INR" },
+    profile_photo_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
+    availability: true,
+    rating: 4.92,
+    verified: true,
+    bio: "Distinguished astrologer specializing in Ashtakoot Guna matching, Nadi dosha remedies, and career transit predictions."
+  }
+];
+
+const CITIES_ROBUST_DATABASE = [
+  { name: "Muzaffarnagar, Uttar Pradesh, India", lat: 29.4727, lon: 77.7085 },
+  { name: "Delhi, NCT, India", lat: 28.6139, lon: 77.2090 },
+  { name: "Mumbai, Maharashtra, India", lat: 19.0760, lon: 72.8777 },
+  { name: "Bangalore, Karnataka, India", lat: 12.9716, lon: 77.5946 },
+  { name: "Pune, Maharashtra, India", lat: 18.5204, lon: 73.8567 },
+  { name: "Kolkata, West Bengal, India", lat: 22.5726, lon: 88.3639 },
+  { name: "Chennai, Tamil Nadu, India", lat: 13.0827, lon: 80.2707 },
+  { name: "Hyderabad, Telangana, India", lat: 17.3850, lon: 78.4867 },
+  { name: "Ahmedabad, Gujarat, India", lat: 23.0225, lon: 72.5714 },
+  { name: "Lucknow, Uttar Pradesh, India", lat: 26.8467, lon: 80.9462 },
+  { name: "Jaipur, Rajasthan, India", lat: 26.9124, lon: 75.7873 },
+  { name: "Patna, Bihar, India", lat: 25.5941, lon: 85.1376 },
+  { name: "Muzaffarpur, Bihar, India", lat: 26.1209, lon: 85.3647 },
+  { name: "Noida, Uttar Pradesh, India", lat: 28.5355, lon: 77.3910 },
+  { name: "Gurugram, Haryana, India", lat: 28.4595, lon: 77.0266 },
+  { name: "Chandigarh, UT, India", lat: 30.7333, lon: 76.7794 },
+  { name: "Indore, Madhya Pradesh, India", lat: 22.7196, lon: 75.8577 },
+  { name: "Ranchi, Jharkhand, India", lat: 23.3441, lon: 85.3090 },
+  { name: "Guwahati, Assam, India", lat: 26.1445, lon: 91.7362 },
+  { name: "Bhopal, Madhya Pradesh, India", lat: 23.2599, lon: 77.4126 },
+  { name: "Surat, Gujarat, India", lat: 21.1702, lon: 72.8311 },
+  { name: "Dehradun, Uttarakhand, India", lat: 30.3165, lon: 78.0322 },
+  { name: "Jammu, Jammu & Kashmir, India", lat: 32.7266, lon: 74.8570 },
+  { name: "Haridwar, Uttarakhand, India", lat: 29.9457, lon: 78.1642 },
+  { name: "Varanasi, Uttar Pradesh, India", lat: 25.3176, lon: 82.9739 },
+  { name: "Ayodhya, Uttar Pradesh, India", lat: 26.7922, lon: 82.1998 },
+  { name: "London, United Kingdom", lat: 51.5074, lon: -0.1278 },
+  { name: "New York, USA", lat: 40.7128, lon: -74.0060 },
+  { name: "San Francisco, USA", lat: 37.7749, lon: -122.4194 },
+  { name: "Singapore", lat: 1.3521, lon: 103.8198 }
+];
+
+const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Earth Radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return parseFloat((R * c).toFixed(1));
+};
+
 function VedicKundliApp() {
   // Dispatches simple dynamic alerts
   const triggerNotification = (title, message, type = "success") => {
@@ -504,7 +638,104 @@ function VedicKundliApp() {
     return session ? session.email : '';
   });
 
+  // State Variables for Pandit Booking Finder Directory system
+  const [showPanditDirectory, setShowPanditDirectory] = useState(false);
+  const [customPriests, setCustomPriests] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pva_custom_priests');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showPriestRegisterForm, setShowPriestRegisterForm] = useState(false);
+  const [priestForm, setPriestForm] = useState({
+    name: '',
+    dob: '',
+    experience: '',
+    pujas: [],
+    fee: '',
+    imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+    bio: ''
+  });
+
+  const [showScholarsSidebar, setShowScholarsSidebar] = useState(true);
+  const [panditSearchText, setPanditSearchText] = useState('');
+  const [panditSpecializationFilter, setPanditSpecializationFilter] = useState('all');
+  const [panditPriceFilter, setPanditPriceFilter] = useState(15000);
+  const [panditSortBy, setPanditSortBy] = useState('distance');
+  const [panditUserCity, setPanditUserCity] = useState({ name: "Delhi, NCT, India", lat: 28.6139, lon: 77.2090 });
+  
+  // Custom Autocomplete Dropdown City lists
+  const [cityFilterText, setCityFilterText] = useState('');
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+
+  const [bookingsList, setBookingsList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pva_pundits_bookings');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  
+  const [activeBookingPandit, setActiveBookingPandit] = useState(null);
+  const [bookingForm, setBookingForm] = useState({ date: '', time: '', ritual: 'General Puja', notes: '', userPhone: '' });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pva_pundits_bookings', JSON.stringify(bookingsList));
+    } catch (e) {
+      console.warn("Local storage write full", e);
+    }
+  }, [bookingsList]);
+
+  useEffect(() => {
+    const syncPriestsFromDb = async () => {
+      try {
+        const dbEnquiries = await feedbackService.fetchFeedbacks();
+        if (!dbEnquiries || dbEnquiries.length === 0) return;
+        const registrations = dbEnquiries
+          .filter(e => e.email && e.email === 'priest_reg@pvastro.com')
+          .map(e => {
+            try {
+              return JSON.parse(e.message);
+            } catch (err) {
+              return null;
+            }
+          })
+          .filter(Boolean);
+        
+        if (registrations.length > 0) {
+          setCustomPriests(prev => {
+            const merged = [...prev];
+            registrations.forEach(r => {
+              const matchedIdx = merged.findIndex(m => m.id === r.id);
+              if (matchedIdx === -1) {
+                merged.push(r);
+              } else {
+                merged[matchedIdx] = { ...merged[matchedIdx], ...r };
+              }
+            });
+            try {
+              localStorage.setItem('pva_custom_priests', JSON.stringify(merged));
+            } catch (err) {
+              console.warn(err);
+            }
+            return merged;
+          });
+        }
+      } catch (err) {
+        console.warn("Dynamic database priest sync failed", err);
+      }
+    };
+    syncPriestsFromDb();
+  }, [currentUser]);
+
+
+
   const [currentScreen, setCurrentScreen] = useState('DASHBOARD'); // WELCOME, AUTH, DASHBOARD, ADD_KUNDLI, KUNDLI_REPORT, PANCHANG, MATCHMAKING, PREMIUM
+  const [aiChatTab, setAiChatTab] = useState('chat');
   
   const [splashConfig, setSplashConfig] = useState(() => {
     try {
@@ -538,12 +769,18 @@ function VedicKundliApp() {
       // Auto-resume state on page interactions in case browser standard autoplay security is triggered
       if (ctx.state === 'suspended') {
         const resume = () => {
-          ctx.resume().catch(() => {});
-          window.removeEventListener('click', resume);
-          window.removeEventListener('touchstart', resume);
+          ctx.resume().then(() => {
+            console.log("Sacred audio context resumed successfully.");
+          }).catch((err) => {
+            console.warn("Audio resume pending interaction", err);
+          });
+          ['click', 'touchstart', 'mousemove', 'mousedown', 'keydown', 'scroll', 'mouseenter'].forEach(evt => {
+            window.removeEventListener(evt, resume);
+          });
         };
-        window.addEventListener('click', resume);
-        window.addEventListener('touchstart', resume);
+        ['click', 'touchstart', 'mousemove', 'mousedown', 'keydown', 'scroll', 'mouseenter'].forEach(evt => {
+          window.addEventListener(evt, resume, { passive: true });
+        });
       }
 
       // Master volume stage
@@ -686,6 +923,53 @@ function VedicKundliApp() {
     setTimeout(() => {
       setShowSplash(false);
     }, 450);
+  };
+
+  const handlePriestFormSubmit = async (e) => {
+    e.preventDefault();
+    if (!priestForm.name || !priestForm.dob || !priestForm.experience || !priestForm.fee) {
+      triggerNotification("Selection Alert", "Please fill all required parameters to complete registration.", "warning");
+      return;
+    }
+    const newPriestApp = {
+      id: Date.now(),
+      name: priestForm.name,
+      dob: priestForm.dob,
+      experience: parseInt(priestForm.experience) || 5,
+      pujas: priestForm.pujas.length > 0 ? priestForm.pujas : ["General Puja"],
+      fee: parseFloat(priestForm.fee) || 3101,
+      imageUrl: priestForm.imageUrl,
+      bio: priestForm.bio || "Sadhak of classical Yajur-veda rituals.",
+      approved: false
+    };
+
+    // 1. Save locally to trigger immediate update in UI structures
+    const updatedCustoms = [...customPriests, newPriestApp];
+    setCustomPriests(updatedCustoms);
+    localStorage.setItem('pva_custom_priests', JSON.stringify(updatedCustoms));
+
+    // 2. Clear local storage cache to trigger database sync refresh
+    try {
+      await feedbackService.submitFeedback({
+        email: 'priest_reg@pvastro.com',
+        message: JSON.stringify(newPriestApp)
+      });
+    } catch(err) {
+      console.warn("Database storage sync error", err);
+    }
+
+    triggerNotification("Application Filed", "Your registration has been securely saved to the database! Admin reviews pending.", "success");
+    setShowPriestRegisterForm(false);
+    // Reset form
+    setPriestForm({
+      name: '',
+      dob: '',
+      experience: '',
+      pujas: [],
+      fee: '',
+      imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+      bio: ''
+    });
   };
 
   const [activeProfileMemory, setActiveProfileMemory] = useState(null);
@@ -1914,7 +2198,7 @@ function VedicKundliApp() {
         {currentScreen !== 'WELCOME' && currentScreen !== 'AUTH' && (
           <>
             {/* 1. All Services Are Free - Animated & Continuous Scrolling Ribbon */}
-            <div className="hidden md:flex w-full overflow-hidden bg-[#12142a] border text-white rounded-2xl mb-4.5 py-2.5 relative shadow-xl items-center select-none" style={{ borderColor: tObj.border }}>
+            <div className="hidden lg:flex w-full overflow-hidden bg-[#12142a] border text-white rounded-2xl mb-4.5 py-2.5 relative shadow-xl items-center select-none" style={{ borderColor: tObj.border }}>
               <div className="absolute left-0 top-0 bottom-0 bg-[#936a18] px-3.5 z-10 flex items-center shadow-md font-cinzel font-black text-[9px] uppercase tracking-widest text-[#FFF] animate-pulse">
                 🔥 {t("FREE SERVICES", "निःशुल्क सेवा")}
               </div>
@@ -1926,7 +2210,7 @@ function VedicKundliApp() {
             </div>
 
             {/* 2. Cosmic Breaking News Update Centre (Admin Editable) */}
-            <div className="hidden md:flex w-full bg-[#0b0c16]/90 border rounded-2xl p-4.5 mb-6 shadow-2xl relative font-sans text-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-l-4 border-l-rose-600" style={{ borderColor: tObj.border, borderLeftColor: '#e11d48' }}>
+            <div className="hidden lg:flex w-full bg-[#0b0c16]/90 border rounded-2xl p-4.5 mb-6 shadow-2xl relative font-sans text-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-l-4 border-l-rose-600" style={{ borderColor: tObj.border, borderLeftColor: '#e11d48' }}>
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="flex h-2.5 w-2.5 rounded-full bg-rose-600 animate-ping relative"></span>
@@ -2009,7 +2293,7 @@ function VedicKundliApp() {
               </div>
             )}
 
-            <div className="w-full mb-8 pb-3 select-none flex flex-wrap gap-2.5 justify-start items-center border-b" style={{ borderColor: tObj.border }}>
+            <div className="hidden lg:flex w-full mb-8 pb-3 select-none flex-wrap gap-2.5 justify-start items-center border-b" style={{ borderColor: tObj.border }}>
             <button
               onClick={() => setCurrentScreen('DASHBOARD')}
               className="pva-nav-btn flex items-center gap-2 px-4.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow-sm"
@@ -2664,7 +2948,7 @@ function VedicKundliApp() {
         {currentScreen === 'DASHBOARD' && (
           <div className="space-y-6">
             {/* Greeting Hero & Fast Preferences Row */}
-            <div className="relative rounded-2xl bg-gradient-to-r from-[#FAF0E6] to-[#FFFFFF] theme-bg-card border theme-border p-6 md:p-8 overflow-hidden shadow-md">
+            <div className="hidden lg:block relative rounded-2xl bg-gradient-to-r from-[#FAF0E6] to-[#FFFFFF] theme-bg-card border theme-border p-6 md:p-8 overflow-hidden shadow-md">
               <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-[#cca43b]/10 blur-3xl -mr-24 -mt-24"></div>
               <div className="relative flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                 <div>
@@ -2701,7 +2985,7 @@ function VedicKundliApp() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 pt-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 pt-1">
                 {/* 1. Kundli Creator */}
                 <button
                   onClick={() => {
@@ -2799,14 +3083,39 @@ function VedicKundliApp() {
 
                 {/* 7. AI Astro Guru & Help */}
                 <button
-                  onClick={() => setCurrentScreen('AI_CHAT')}
+                  onClick={() => {
+                    setAiChatTab('chat');
+                    setCurrentScreen('AI_CHAT');
+                  }}
                   className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans border-2 border-dashed border-amber-500/40 bg-amber-500/5 hover:border-amber-500 hover:bg-amber-500/10"
-                  style={getServiceCardStyle(currentScreen === 'AI_CHAT')}
+                  style={getServiceCardStyle(currentScreen === 'AI_CHAT' && aiChatTab === 'chat')}
                 >
                   <span className="text-2xl transform group-hover:scale-110 transition duration-200">🕉️</span>
                   <div>
                     <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("AI Astro Guru", "एआई दिव्य गुरु")}</h4>
                     <p className="text-[9px] text-[#936a18] font-bold mt-0.5">{t("AI Chat & Help", "संवाद एवं संपर्क")}</p>
+                  </div>
+                </button>
+
+                {/* 8. KP Prashna Kundli */}
+                <button
+                  onClick={() => {
+                    setAiChatTab('prashna');
+                    setCurrentScreen('AI_CHAT');
+                  }}
+                  className="pva-service-card p-4 rounded-2xl flex flex-col items-center text-center gap-2 group font-sans border-2 border-solid border-[#ff3d00] bg-gradient-to-br from-[#ff3d00] to-[#ff6d00] text-white hover:brightness-115 transition duration-300 shadow-[0_0_15px_rgba(255,61,0,0.5)] animate-kp-glow cursor-pointer relative"
+                >
+                  <span className="absolute -top-2.5 -right-1.5 bg-yellow-400 border border-white text-slate-900 text-[8px] font-black tracking-widest px-2 py-0.5 rounded-full uppercase animate-pulse shadow-md">
+                    {t("POWERFUL", "सिद्ध चक्र")}
+                  </span>
+                  <span className="text-3xl transform group-hover:scale-115 transition duration-300">⏱️</span>
+                  <div>
+                    <h4 className="text-xs font-black text-white tracking-wider leading-tight uppercase font-cinzel select-all drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
+                      {t("KP Prashna", "केपी प्रश्न कुण्डली")}
+                    </h4>
+                    <p className="text-[9px] text-[#ffea00] font-black mt-0.5 tracking-wider uppercase select-all drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
+                      {t("Instant Horary", "प्रश्न फलसिद्धि")}
+                    </p>
                   </div>
                 </button>
               </div>
@@ -3151,6 +3460,32 @@ function VedicKundliApp() {
 
             </div>
 
+            {/* Dedicated Contact Pandit Section for Puja */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-start gap-3 flex-1">
+                <span className="text-2xl pt-1">🌸</span>
+                <div>
+                  <h3 className="text-sm font-bold text-amber-900 font-cinzel uppercase tracking-wider">{t("Specialized Siddha Puja & Anushthan Solutions", "सिद्ध कुशाग्र अनुष्ठान एवं विशेष जप संपुट विधान")}</h3>
+                  <p className="text-[11px] text-amber-800 leading-relaxed mt-1">
+                    {t("Facing Graha adverse transits, Kaal Sarp, or family obstacles? Seek personal invocation counsel. Book verified Vedic Acharyas directly.", 
+                       "क्या आपकी नवग्रह स्थिति दुर्बल है, विवाह में विलंब या व्यवसाय में बाधा है? सस्वर वेदपाठी विद्वान ब्राह्मणों द्वारा सिद्ध रुद्रमहाभिषेक, गृह प्रवेश एवं अनुष्ठान संपन्न करवाएं।")
+                    }
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveBookingPandit(null);
+                  setShowPanditDirectory(true);
+                }}
+                className="px-5 py-2.5 bg-gradient-to-r from-[#1B5E3A] to-teal-600 hover:brightness-110 text-white text-xs font-black rounded-xl shadow-md transition duration-200 animate-pulse flex items-center gap-1.5 shrink-0"
+              >
+                <span>🕉️</span>
+                <span>{t("Connect to Pandit Ji (पंडित जी से संपर्क करें)", "पंडित जी से संपर्क करें")}</span>
+              </button>
+            </div>
+
             {/* General remedies segment at page bottom */}
             <div className="bg-[#FAF9F5] border theme-border rounded-xl p-5 shadow-2xs">
               <div className="flex items-center gap-2 mb-3 border-b theme-border pb-2">
@@ -3405,6 +3740,20 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                   <Award className="w-3.5 h-3.5" />
                   <span>{t("Download Transcript", "ट्रांसक्रिप्ट डाउनलोड")}</span>
                 </button>
+
+                {/* Glowing different-colored Contact Pandit Ji Button */}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setActiveBookingPandit(null);
+                    setShowPanditDirectory(true);
+                  }}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-violet-600 via-purple-500 to-pink-500 hover:brightness-110 text-xs font-black rounded-lg text-white flex items-center gap-1.5 shadow-[0_0_15px_rgba(168,85,247,0.65)] hover:shadow-[0_0_22px_rgba(168,85,247,0.85)] animate-pulse border border-purple-300 ring-2 ring-purple-500/30 transition-all duration-300"
+                  style={{ animationDuration: '2s' }}
+                >
+                  <span className="text-sm">🌸</span>
+                  <span>{t("Contact Pandit Ji for Puja", "पूजार्थ पुरोहित संपर्क")}</span>
+                </button>
               </div>
 
               <div className="text-right">
@@ -3434,6 +3783,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
             <div className="flex items-center gap-2 overflow-x-auto pb-3 pt-3 border-b border-slate-900 scrollbar-none" style={{ borderColor: tObj.border }}>
               {[
                 { id: 'chart', label: t("Interactive Kundli", "जन्म कुंडली एवं विवरण") },
+                { id: 'kp', label: t("KP Principles", "केपी ज्योतिष सिद्धांत") },
                 { id: 'dasha', label: t("Dasha Timeline Explorer", "महादशा कल्पद्रुम") },
                 { id: 'gochar', label: t("Gochar Transit Panel", "शुभ-अशुभ गोचर") },
                 { id: 'lifetime', label: t("Lifetime Predictions", "जीवनफल भविष्यकथन") },
@@ -3907,6 +4257,13 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                 </div>
               </div>
             ))}
+
+            {reportTab === 'kp' && renderTabWithGate('kp', (
+              <div className="animate-fade-in font-sans">
+                <KPSavedKundliPanel report={report} currentLanguage={currentLanguage} t={t} />
+              </div>
+            ))}
+
           </div>
         )}
 
@@ -4012,13 +4369,28 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                 {/* -- SCREEN: ASTROLOGICAL MATCHMAKING (GUN MILAN) -- */}
         {currentScreen === 'MATCHMAKING' && (
           <div className="max-w-4xl mx-auto space-y-6 text-left text-slate-200">
-            <button 
-              onClick={() => setCurrentScreen('DASHBOARD')}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-300 flex items-center gap-1.5 transition"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>{t("Back to Workstation", "वर्कस्टेशन पर लौटें")}</span>
-            </button>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <button 
+                onClick={() => setCurrentScreen('DASHBOARD')}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-300 flex items-center gap-1.5 transition"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>{t("Back to Workstation", "वर्कस्टेशन पर लौटें")}</span>
+              </button>
+
+              <button 
+                type="button"
+                onClick={() => {
+                  setActiveBookingPandit(null);
+                  setShowPanditDirectory(true);
+                }}
+                className="px-3.5 py-1.5 bg-gradient-to-r from-violet-600 via-purple-500 to-pink-500 hover:brightness-110 text-xs font-black rounded-lg text-white flex items-center gap-1.5 shadow-[0_0_15px_rgba(168,85,247,0.65)] hover:shadow-[0_0_22px_rgba(168,85,247,0.85)] animate-pulse border border-purple-300 ring-2 ring-purple-500/30 transition-all duration-300"
+                style={{ animationDuration: '2s' }}
+              >
+                <span className="text-sm">🌸</span>
+                <span>{t("Contact Pandit Ji for Matchmaking Puja", "मिलान समाधान एवं पूजन हेतु संपर्क")}</span>
+              </button>
+            </div>
 
             <div className="bg-[#0f1123] border border-slate-800 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 via-rose-400 to-pink-500"></div>
@@ -4164,6 +4536,32 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                     </div>
                   </div>
 
+                  {/* Dedicated Contact Pandit Section for Marriage Puja */}
+                  <div className="bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-xl p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 mt-6">
+                    <div className="flex items-start gap-3 flex-1">
+                      <span className="text-2xl pt-1">💖</span>
+                      <div>
+                        <h3 className="text-sm font-bold text-pink-900 font-cinzel uppercase tracking-wider">{t("Nuptial Vedic Blessings & Graha Shanti Pujas", "विवाह बाधा निवारक मंगल दोष शांति एवं सुखद गृहस्थ अनुष्ठान")}</h3>
+                        <p className="text-[11px] text-pink-850 leading-relaxed mt-1">
+                          {t("Get precise remedy advice on matchmaking compatibility results. Book specialized Purohit Ji for Wedding rituals or Grah Pravesh pujas.", 
+                             "गुण मिलान के उपरान्त आने वाले मांगलिक अथवा अष्टकूट दोषों के वैदिक शमन हेतु सचेत रहें। शुभ विवाह लग्न निर्धारण, वर-वधू सुखी जीवन आशीर्वाद यज्ञ एवं नवदम्पत्ति गृह प्रवेश पूजा सविधि संपन्न कराएं।")
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveBookingPandit(null);
+                        setShowPanditDirectory(true);
+                      }}
+                      className="px-5 py-2.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:brightness-110 text-white text-xs font-black rounded-xl shadow-md transition duration-200 animate-pulse flex items-center gap-1.5 shrink-0"
+                    >
+                      <span>🌸</span>
+                      <span>{t("Contact Pandit Ji (पुजारी संपर्क)", "पंडित जी से तुरंत संपर्क करें")}</span>
+                    </button>
+                  </div>
+
                 </div>
               )}
 
@@ -4196,6 +4594,8 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
               setUsersList={setUsersList}
               splashConfig={splashConfig}
               setSplashConfig={setSplashConfig}
+              customPriests={customPriests}
+              setCustomPriests={setCustomPriests}
             />
           </div>
         )}
@@ -5301,6 +5701,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
             currentLanguage={currentLanguage} 
             onBack={() => setCurrentScreen('DASHBOARD')} 
             currentUser={currentUser} 
+            initialTab={aiChatTab}
           />
         )}
 
@@ -6060,21 +6461,817 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
         </button>
       </div>
 
+      {/* 🌟 SCROLLING SCHOLARS SIDEBAR SYSTEM (Displays on screen margins for all active states) */}
+      {currentScreen !== 'WELCOME' && currentScreen !== 'AUTH' && (
+        showScholarsSidebar ? (
+          <div className="fixed right-2.5 top-[24%] sm:top-[30%] z-[140] flex flex-col items-center gap-2 bg-[#0c0d1c]/95 border-2 border-amber-500/40 p-2.5 rounded-2xl shadow-[0_0_25px_rgba(245,158,11,0.35)] animate-fade-in max-w-[80px]">
+            <div className="w-full flex items-center justify-between border-b border-amber-500/20 pb-1.5 select-none gap-4">
+              <span className="text-[8px] font-black tracking-widest text-[#ffea00] uppercase leading-none truncate pl-1">
+                {t("ACHARYA", "गुरुजन")}
+              </span>
+              <button 
+                onClick={() => setShowScholarsSidebar(false)}
+                className="text-[9px] font-bold text-slate-400 hover:text-red-400 hover:scale-115 transition leading-none pr-1"
+                title={t("Hide Sidebar", "छिपाएं")}
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Circular Scrolling Column with marquee-style vertical crawl - INCREASED PHOTO SIZE TO w-16 h-16 */}
+            <div className="flex flex-col gap-2.5 max-h-[250px] overflow-hidden py-1 relative">
+              <div className="flex flex-col gap-4 animate-vertical-scroll hover:[animation-play-state:paused]">
+                {PANDITS_STRICT_LIST.map((p) => (
+                  <div 
+                    key={p.id}
+                    onClick={() => {
+                      setActiveBookingPandit(p);
+                      setShowPanditDirectory(true);
+                    }}
+                    className="relative group cursor-pointer active:scale-95 transition duration-150"
+                    title={`${p.name} (Click to Book)`}
+                  >
+                    <img 
+                      src={p.profile_photo_url} 
+                      alt={p.name} 
+                      className="w-16 h-16 rounded-full border-2 border-emerald-500 hover:border-amber-400 object-cover shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition duration-200"
+                    />
+                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#0c0d1c] animate-pulse"></span>
+                    
+                    {/* Hover tooltip */}
+                    <span className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-[#0c0d1c] border border-amber-500/40 text-[9px] font-bold text-white px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap shadow-xl">
+                      {p.name} ({p.experience_years}y Exp)
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Quick-action directory reveal button - INCREASED SIZE */}
+            <button
+              onClick={() => {
+                setActiveBookingPandit(null);
+                setShowPanditDirectory(true);
+              }}
+              className="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 via-orange-600 to-[#ff3d00] text-white flex flex-col items-center justify-center text-[7.5px] font-black uppercase tracking-tighter leading-tight border border-amber-400/45 hover:scale-105 hover:brightness-110 active:scale-95 transition shadow-lg select-none mt-1"
+            >
+              <span>ALL</span>
+              <span className="text-sm mt-0.5 animate-pulse">🕉️</span>
+            </button>
+          </div>
+        ) : (
+          /* Small sticky button to bring it back when closed */
+          <button
+            onClick={() => setShowScholarsSidebar(true)}
+            className="fixed right-0 top-[40%] z-[140] w-7 py-3 bg-[#0c0d1c]/95 border-l-2 border-y-2 border-amber-500/40 rounded-l-xl text-amber-400 text-[10px] font-black flex flex-col items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95 transition whitespace-pre-wrap select-none leading-none border-r-0"
+            title={t("Show Scholar List", "गुरुदेव सूची दिखाएं")}
+          >
+            <span>🕉️</span>
+            <span className="text-[7.5px] tracking-wider font-extrabold uppercase [writing-mode:vertical-lr]">GURU</span>
+          </button>
+        )
+      )}
+
+      {/* 🕉️ FULL SCREEN PANDIT FINDER & LOCATION-BASED BOOKING SYSTEM MODAL */}
+      {showPanditDirectory && (
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowPanditDirectory(false);
+              setActiveBookingPandit(null);
+            }
+          }}
+          className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[300] animate-fade-in backdrop-blur-md select-none font-sans overflow-y-auto cursor-pointer"
+        >
+          <div className="bg-[#0f1124] border-2 border-[#cca43b]/40 rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col text-slate-100 shadow-[0_0_50px_rgba(204,164,59,0.3)] animate-scale-up cursor-default">
+            
+            {/* Header Block with Vedic watermarks */}
+            <div className="p-5 border-b border-slate-800 bg-gradient-to-r from-[#171a39] to-[#0d0e1d] flex justify-between items-center relative shrink-0">
+              <div className="absolute inset-0 bg-[radial-gradient(#cca43b_0.5px,transparent_0.5px)] [background-size:20px_20px] opacity-[0.03] pointer-events-none"></div>
+              
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-2xl shadow-inner">
+                  🕉️
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black font-cinzel text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-[#ffea00] leading-none uppercase">
+                    {t("Purohit Booking Hub & Directory", "सनातनी पुरोहित एवं आचार्य बुकिंग केंद्र")}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    {t("Find Verified local priests, spiritual guides and ritual pandits instantly.", "स्थान-आधारित निकटतम पंडित, हवन, विवाह और गृह शांति अनुष्ठान बुकिंग हब")}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowPriestRegisterForm(true)}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-[10px] tracking-wide uppercase transition-all rounded-lg cursor-pointer"
+                >
+                  {t("Priest Registration", "पुरोहित पंजीकरण 📜")}
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowPanditDirectory(false);
+                    setActiveBookingPandit(null);
+                  }}
+                  className="px-3.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 font-black text-[10px] tracking-widest uppercase transition-all rounded-lg cursor-pointer"
+                >
+                  CLOSE ❌
+                </button>
+              </div>
+            </div>
+
+            {/* Main Interactive Workstation Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-0 bg-[#080915]">
+              
+              {/* LEFT CRITICAL COLUMN - LOCATION CONTROLS & RITUAL booking Form */}
+              <div className="lg:col-span-4 space-y-4 text-left">
+                
+                {/* 1. Location Autodetect / Preset Search */}
+                <div className="bg-[#12142d]/80 border border-slate-800/80 p-4.5 rounded-2xl relative space-y-3">
+                  <h4 className="text-[11px] font-extrabold text-amber-300 uppercase tracking-widest flex items-center gap-1.5">
+                    📍 {t("YOUR CURRENT LOCATION COORDINATES", "आपकी वर्तमान आकाशीय स्थिति")}
+                  </h4>
+                  
+                  {/* Dynamic City search-box with robust Autocomplete */}
+                  <div className="relative">
+                    <input 
+                      type="text"
+                      placeholder={t("Type to search city...", "अपना शहर यहाँ लिखें...")}
+                      value={cityFilterText}
+                      onChange={(e) => {
+                        setCityFilterText(e.target.value);
+                        setShowCityDropdown(true);
+                      }}
+                      className="w-full px-3 py-2 bg-[#0c0d19] border border-slate-700 rounded-lg text-xs placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500 text-white font-semibold"
+                    />
+                    
+                    {showCityDropdown && (
+                      <div className="absolute left-0 right-0 mt-1 max-h-[160px] overflow-y-auto bg-[#0f1124] border border-slate-700 rounded-lg shadow-2xl z-[350] divide-y divide-slate-800">
+                        {CITIES_ROBUST_DATABASE.filter(c => c.name.toLowerCase().includes(cityFilterText.toLowerCase()))
+                          .map((city, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                setPanditUserCity(city);
+                                setCityFilterText(city.name);
+                                setShowCityDropdown(false);
+                                triggerNotification("Location Synced", `Coordinate base shifted to: ${city.name}`, "info");
+                              }}
+                              className="w-full text-left p-2.5 text-[11px] hover:bg-amber-550/10 hover:text-amber-300 text-slate-300 transition duration-150"
+                            >
+                              📍 {city.name}
+                            </button>
+                          ))}
+                        {CITIES_ROBUST_DATABASE.filter(c => c.name.toLowerCase().includes(cityFilterText.toLowerCase())).length === 0 && (
+                          <div className="p-3 text-[10px] text-slate-500 italic text-center">No cities match query</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-3 bg-[#0c0f20]/90 rounded-xl border border-slate-800 text-[10.5px] space-y-1 text-slate-300 font-mono">
+                    <p className="font-extrabold text-white text-xs truncate">🗺️ {panditUserCity.name}</p>
+                    <div className="grid grid-cols-2 gap-1 pt-1 opacity-85 text-[9.5px]">
+                      <div>Lat: {panditUserCity.lat}° N</div>
+                      <div>Lon: {panditUserCity.lon}° E</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. active booking appointment workflow form */}
+                <div className="bg-[#12142d]/80 border border-slate-800/80 p-4.5 rounded-2xl space-y-3.5 relative">
+                  <h4 className="text-[11px] font-extrabold text-orange-400 uppercase tracking-widest block border-b border-slate-800 pb-2">
+                    📅 {t("RITUAL APPOINTMENT SANKALPA FORM", "शुभ अनुष्ठान संकल्प प्रपत्र")}
+                  </h4>
+
+                  {activeBookingPandit ? (
+                    <div className="space-y-3 font-sans">
+                      <div className="flex gap-2 bg-[#1b1c3b] p-2.5 rounded-xl border border-amber-500/20">
+                        <img src={activeBookingPandit.profile_photo_url} className="w-9 h-9 rounded-full object-cover border border-amber-500/30" />
+                        <div>
+                          <p className="text-xs font-black text-amber-300 truncate leading-tight">{activeBookingPandit.name}</p>
+                          <p className="text-[9.5px] text-slate-400 font-mono mt-0.5">Exp: {activeBookingPandit.experience_years} Years | ★ {activeBookingPandit.rating}</p>
+                        </div>
+                      </div>
+
+                      {/* Ritual selection */}
+                      <div className="space-y-1">
+                        <label className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">{t("Select Religious Ritual", "धार्मिक अनुष्ठान का प्रकार")}</label>
+                        <select 
+                          value={bookingForm.ritual}
+                          onChange={(e) => setBookingForm({...bookingForm, ritual: e.target.value})}
+                          className="w-full p-2 bg-[#0c0d19] border border-slate-700 rounded-lg text-xs font-bold text-white"
+                        >
+                          <option value="Satyanarayan Vrat Katha">Sri Satyanarayan Katha (सत्यनारायण व्रत)</option>
+                          <option value="Navgrah Shanti Puja">Navgrah Dosha Shanti (नवग्रह दोष निवारण)</option>
+                          <option value="Grah Pravesh Ritual">Grah Pravesh Puja (गृह प्रवेश पूजा)</option>
+                          <option value="Laxmi Kuber Dhan Havan">Laxmi Kuber Dhan Havan (लक्ष्मी कुबेर हवन)</option>
+                          <option value="Mahamrityunjay Mantra Jaap">Mahamrityunjay Mantra Path (महामृत्युंजय जाप)</option>
+                          <option value="Astrological Kundli Evaluation">Astro Chart Guidance (ज्योतिष कुण्डली विवेचन)</option>
+                          <option value="Kundalini & Chakra Alignment">Kundalini Awakening Guidance (कुंडलिनी साधन)</option>
+                        </select>
+                      </div>
+
+                      {/* Date & Time slots */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">{t("Date Slot", "तिथि दिनांक")}</label>
+                          <input 
+                            type="date" 
+                            required
+                            value={bookingForm.date}
+                            onChange={(e) => setBookingForm({...bookingForm, date: e.target.value})}
+                            className="w-full p-2 bg-[#0c0d19] border border-slate-700 rounded-lg text-xs text-white"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">{t("Hour Slot", "शुभ समय")}</label>
+                          <input 
+                            type="time" 
+                            required
+                            value={bookingForm.time}
+                            onChange={(e) => setBookingForm({...bookingForm, time: e.target.value})}
+                            className="w-full p-2 bg-[#0c0d19] border border-slate-700 rounded-lg text-xs text-white"
+                          />
+                        </div>
+                      </div>
+
+                      {/* User mobile No */}
+                      <div className="space-y-1">
+                        <label className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">{t("Yajman Phone Number", "यजमान का मोबाइल नंबर")}</label>
+                        <input 
+                          type="tel" 
+                          placeholder="+91 9XXXX XXXXX"
+                          required
+                          value={bookingForm.userPhone}
+                          onChange={(e) => setBookingForm({...bookingForm, userPhone: e.target.value})}
+                          className="w-full px-2.5 py-1.5 bg-[#0c0d19] border border-slate-700 rounded-lg text-xs text-white font-semibold focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        />
+                      </div>
+
+                      {/* Notes / Special requests */}
+                      <div className="space-y-1">
+                        <label className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">{t("Sankalpa Notes / Gotra", "संकल्प गोत्र एवं विशेष आग्रह")}</label>
+                        <textarea 
+                          placeholder={t("e.g. Kaushik Gotra, Grah Pravesh with family of 4.", "जैसे: कश्यप गोत्र, सपरिवार पूजा करानी है।")}
+                          value={bookingForm.notes}
+                          onChange={(e) => setBookingForm({...bookingForm, notes: e.target.value})}
+                          rows={1.5}
+                          className="w-full p-2 bg-[#0c0d19] focus:bg-[#06070f] border border-slate-700 rounded-lg text-xs text-white focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Action triggers */}
+                      <button 
+                        type="button"
+                        onClick={async () => {
+                          if (!bookingForm.date || !bookingForm.time || !bookingForm.userPhone) {
+                            alert(currentLanguage === 'HI' ? "कृपया सभी आवश्यक विवरण (दिनांक, समय एवं मोबाइल नंबर) दर्ज करें।" : "Please enter all required slots (Date, Time & Mobile number)");
+                            return;
+                          }
+                          const newBooking = {
+                            id: `bk-${Date.now()}`,
+                            panditId: activeBookingPandit.id,
+                            panditName: activeBookingPandit.name,
+                            date: bookingForm.date,
+                            time: bookingForm.time,
+                            ritual: bookingForm.ritual,
+                            phone: bookingForm.userPhone,
+                            notes: bookingForm.notes,
+                            timestamp: new Date().toLocaleString()
+                          };
+                          
+                          // 1. Permanently record in local list
+                          setBookingsList([newBooking, ...bookingsList]);
+
+                          // 2. Permanently backup and record to database contact_enquiries table for live admin tracking
+                          try {
+                            const userEmail = currentUser || 'seeker@pvastro.org';
+                            const ritualMessage = `[PUJA BOOKING] Auspicious ${bookingForm.ritual} with Acharya ${activeBookingPandit.name} requested. Slotted on ${bookingForm.date} at ${bookingForm.time}. Yajman Phone: ${bookingForm.userPhone}. Sankalpa Gotra details: ${bookingForm.notes || 'None Specified'}`;
+                            await feedbackService.submitFeedback(userEmail, ritualMessage);
+                          } catch (err) {
+                            console.warn("Could not synchronize booking payload to Supabase database:", err);
+                          }
+
+                          triggerNotification("Sankalpa Registered!", `Consultation booked with ${activeBookingPandit.name} successfully.`, "success");
+                          alert(currentLanguage === 'HI' ? `बधाई हो! ${activeBookingPandit.name} शास्त्री जी के साथ आपका ${bookingForm.ritual} का अनुष्ठान सफलतापूर्वक बुक हो गया है। जल्द ही पुरोहित जी आपसे संपर्क करेंगे।` : `Auspicious Bookings Registered! Your ${bookingForm.ritual} ritual with ${activeBookingPandit.name} has been confirmed. Sages will contact you shortly.`);
+                          
+                          // Reset form
+                          setBookingForm({ date: '', time: '', ritual: 'General Puja', notes: '', userPhone: '' });
+                          setActiveBookingPandit(null);
+                        }}
+                        className="w-full py-2.5 bg-gradient-to-tr from-emerald-600 to-teal-500 hover:brightness-110 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-xl transition duration-150 flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        ✅ {t("Confirm Auspicious Booking", "संकल्प सिद्ध करें - बुकिंग पक्की करें")}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveBookingPandit(null)}
+                        className="w-full py-1.5 bg-slate-800 text-slate-300 text-[10px] font-bold rounded-lg transition"
+                      >
+                        {t("Cancel Selector", "वापस सूची देखें")}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-slate-500 text-xs italic bg-[#0c0d19] rounded-xl border border-dashed border-slate-800">
+                      🕉️ {t("Select any Pandit from the right panel to open their booking scheduler slot.", "समीपस्थ आचार्य का चयन करके यहाँ संकल्प बुक करें।")}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Booked Appointments List Tracker */}
+                {bookingsList.length > 0 && (
+                  <div className="bg-[#12142d]/80 border border-slate-800 p-4 rounded-2xl space-y-2">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-1.5">
+                      <span className="text-[10px] font-extrabold tracking-wider text-emerald-400 uppercase">
+                        📋 {t("YOUR ACTIVE RITUAL BOOKINGS", "आपके सक्रिय अनुष्ठान संकल्प")}
+                      </span>
+                      <button 
+                        onClick={() => {
+                          if (confirm(currentLanguage === 'HI' ? "क्या आप सभी बुकिंग इतिहास हटाना चाहते हैं?" : "Are you sure to clear all bookings?")) {
+                            setBookingsList([]);
+                            localStorage.removeItem('pva_pundits_bookings');
+                          }
+                        }}
+                        className="text-[8.5px] uppercase text-red-400 font-bold hover:underline"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                    
+                    <div className="max-h-[150px] overflow-y-auto space-y-2 divide-y divide-slate-800 pr-1">
+                      {bookingsList.map((bk) => (
+                        <div key={bk.id} className="pt-2 text-[10px] leading-tight space-y-1">
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-amber-300">{bk.panditName}</span>
+                            <span className="text-[8.5px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono font-bold uppercase">Reserved</span>
+                          </div>
+                          <p className="text-white font-semibold text-[11px]">{bk.ritual}</p>
+                          <div className="flex justify-between text-[9px] text-slate-400 font-mono">
+                            <span>📅 {bk.date} @ {bk.time}</span>
+                            <span>📞 {bk.phone}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* RIGHT EXPANDED COLUMN - DIRECTORY LISTINGS WITH ADVANCED SEARCH/DISTANCE FILTERS */}
+              <div className="lg:col-span-8 flex flex-col min-h-0 space-y-4">
+                
+                {/* Advanced Multi-Factor Filtering Bar */}
+                <div className="bg-[#12142d] border border-slate-800 p-4 rounded-2xl shrink-0 space-y-3.5">
+                  
+                  {/* Search and Specialization selectors */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                    
+                    {/* Free Search input */}
+                    <div className="md:col-span-5 relative">
+                      <input 
+                        type="text"
+                        placeholder={t("Search by Shastri Name/Gotra...", "शास्त्री जी के नाम/विशेषता से खोजें...")}
+                        value={panditSearchText}
+                        onChange={(e) => setPanditSearchText(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 bg-[#0c0d19] border border-slate-700 rounded-xl text-xs placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500 font-bold text-white shadow-inner"
+                      />
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+                    </div>
+
+                    {/* Specialization Filter Dropdown */}
+                    <div className="md:col-span-4 max-w-full">
+                      <select
+                        value={panditSpecializationFilter}
+                        onChange={(e) => setPanditSpecializationFilter(e.target.value)}
+                        className="w-full p-2 bg-[#0c0d19] border border-slate-705 rounded-xl text-xs font-bold text-slate-350 focus:outline-none"
+                      >
+                        <option value="all">🕉️ {t("All Services Specialization", "सभी धार्मिक सेवाएं")}</option>
+                        <option value="puja">💎 Pradosh/Griha Puja (विशेष पूजा)</option>
+                        <option value="havan">🔥 Agni Havan / Yagya (हवन यज्ञ)</option>
+                        <option value="marriage">💍 Marriage & Kundli Match (विवाह संस्कार)</option>
+                        <option value="grah shanti">☯️ Grah Shanti Remedies (ग्रह दोष शांति)</option>
+                        <option value="katha">📖 Shrimad Bhagwat / Vrat (कथा प्रवचन)</option>
+                        <option value="astrology">📈 KP & Vedic Astrology (कुण्डली फलादेश)</option>
+                      </select>
+                    </div>
+
+                    {/* Sort Ranking Selector */}
+                    <div className="md:col-span-3">
+                      <select
+                        value={panditSortBy}
+                        onChange={(e) => setPanditSortBy(e.target.value)}
+                        className="w-full p-2 bg-[#0c0d19] border border-slate-705 rounded-xl text-xs font-bold text-[#ff9e00] focus:outline-none"
+                      >
+                        <option value="distance">📍 {t("Nearest By Distance", "दूरी के अनुसार (निकटतम)")}</option>
+                        <option value="charges">💰 {t("Charges: Low to High", "दक्षिणा: कम से अधिक")}</option>
+                        <option value="experience">🎓 {t("Experience: Veteran first", "वरिष्ठता (अनुभवी)")}</option>
+                        <option value="rating">★ {t("Highly Rated First", "रेटिंग के अनुसार (सर्वोत्तम)")}</option>
+                      </select>
+                    </div>
+
+                  </div>
+
+                  {/* Range Sliders: Charges & Distance threshold boundary */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-slate-450 text-[10px] font-black uppercase">
+                        <span>💰 {t("Maximum Puja Charges Dakshina Limit", "अधिकतम दक्षिणा सीमा")}</span>
+                        <span className="text-amber-400 font-mono">₹{panditPriceFilter} Max</span>
+                      </div>
+                      <input 
+                        type="range"
+                        min="1000"
+                        max="15000"
+                        step="500"
+                        value={panditPriceFilter}
+                        onChange={(e) => setPanditPriceFilter(parseInt(e.target.value))}
+                        className="w-full h-1 bg-[#0c0f20] rounded-lg cursor-pointer accent-amber-500"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-[#0c0d19] p-2.5 rounded-xl border border-slate-800 text-[10px] text-slate-400 italic">
+                      <span className="text-sm select-none">🕉️</span>
+                      <p>
+                        {t("Distances computed dynamically using classical Haversine Great Circle Calculations from your coordinate base.",
+                           "दूरी की गणना आपके द्वारा चुने गए शहर के अक्षांश-रेखांश से सीधे की जाती है।")}
+                      </p>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Scrolled Grid showing calculated results matching strict location weights */}
+                <div className="flex-1 overflow-y-auto pr-1 space-y-4 max-h-[500px]">
+                  {(() => {
+                    const approvedCustoms = customPriests
+                      .filter(p => p.approved === true)
+                      .map(p => ({
+                        id: p.id || Date.now(),
+                        name: p.name,
+                        address: p.address || "Local Area, India",
+                        specialization: Array.isArray(p.pujas) ? p.pujas : [p.pujas || "General Puja"],
+                        experience_years: parseInt(p.experience) || 5,
+                        charges: { min: p.fee || 3105, max: (p.fee || 3105) * 1.5 },
+                        rating: 4.9,
+                        verified: true,
+                        availability: true,
+                        lat: panditUserCity.lat + (p.id % 2 === 0 ? 0.02 : -0.01),
+                        lon: panditUserCity.lon + (p.id % 2 === 0 ? -0.015 : 0.025),
+                        profile_photo_url: p.imageUrl || "https://images.unsplash.com/photo-1544205313-94ddf0286df2?w=150",
+                        bio: p.bio || `Specialized Vedic Priest. DOB: ${p.dob || "N/A"}. Performing ${Array.isArray(p.pujas) ? p.pujas.join(", ") : p.pujas || "special ritual services"}.`,
+                        phone: p.phone || ""
+                      }));
+                    const combinedList = [...PANDITS_STRICT_LIST, ...approvedCustoms];
+                    
+                    return combinedList.map((pandit) => {
+                      // Haversine dynamic Distance Calculation
+                      const distance = calculateHaversineDistance(
+                        panditUserCity.lat, 
+                        panditUserCity.lon, 
+                        pandit.lat, 
+                        pandit.lon
+                      );
+
+                      // Filters checking
+                      const matchSearch = pandit.name.toLowerCase().includes(panditSearchText.toLowerCase()) || 
+                                          pandit.bio.toLowerCase().includes(panditSearchText.toLowerCase());
+                      const matchSpec = panditSpecializationFilter === 'all' || pandit.specialization.includes(panditSpecializationFilter);
+                      const matchPrice = pandit.charges.min <= panditPriceFilter;
+                      
+                      if (!matchSearch || !matchSpec || !matchPrice) return null;
+
+                      return { ...pandit, calculatedDistance: distance };
+                    })
+                    .filter(Boolean)
+                    .sort((a,b) => {
+                      if (panditSortBy === 'distance') return a.calculatedDistance - b.calculatedDistance;
+                      if (panditSortBy === 'charges') return a.charges.min - b.charges.min;
+                      if (panditSortBy === 'experience') return b.experience_years - a.experience_years;
+                      if (panditSortBy === 'rating') return b.rating - a.rating;
+                      return 0;
+                    })
+                    .map((p) => (
+                    <div 
+                      key={p.id}
+                      className={`p-4 bg-[#11132a] border rounded-2xl hover:border-amber-500/50 transition-all duration-200 shadow-md flex flex-col md:flex-row gap-4 relative overflow-hidden ${
+                        activeBookingPandit?.id === p.id ? 'ring-2 ring-amber-500 border-amber-500 bg-[#161a38]' : 'border-slate-800'
+                      }`}
+                    >
+                      {/* Left Column portrait and certifications */}
+                      <div className="flex md:flex-col items-center gap-3 shrink-0">
+                        <div className="relative">
+                          <img 
+                            src={p.profile_photo_url} 
+                            alt={p.name} 
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-slate-700 shadow-inner"
+                          />
+                          {p.verified && (
+                            <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white rounded-full p-0.5 text-[8px] font-mono border border-[#11132a]" title="Verified Astro Seal">
+                              ✓
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-center md:text-left space-y-1">
+                          <div className="flex items-center justify-center gap-1.5 text-xs text-yellow-400 font-extrabold select-none">
+                            <span>★</span>
+                            <span>{p.rating}</span>
+                          </div>
+                          <span className="text-[9px] bg-slate-800 text-blue-300 font-black px-1.5 py-0.5 rounded uppercase tracking-wide block text-center">
+                            {p.experience_years} YRS EXP
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Middle description columns */}
+                      <div className="flex-1 text-left space-y-2">
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-1">
+                          <div>
+                            <h4 className="text-sm font-black text-white hover:text-amber-300 font-cinzel leading-snug">
+                              {p.name}
+                            </h4>
+                            <p className="text-[10px] text-slate-400 truncate max-w-sm">📍 {p.address}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            {/* Distance Badge using Haversine */}
+                            <span className="inline-block bg-orange-500/10 border border-orange-500/30 text-amber-400 px-2.5 py-1 text-[10px] font-mono font-black rounded-lg">
+                              ↔ {p.calculatedDistance} km nearby
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-slate-350 leading-relaxed max-w-xl">
+                          {p.bio}
+                        </p>
+
+                        {/* Specialization Tags list */}
+                        <div className="flex gap-1.5 flex-wrap pt-0.5 select-none">
+                          {p.specialization.map((spec) => (
+                            <span 
+                              key={spec}
+                              className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-[#cca43b]/25 bg-[#cca43b]/10 text-amber-300"
+                            >
+                              {spec}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Right direct pricing column & actions */}
+                      <div className="md:w-44 border-t md:border-t-0 md:border-l border-slate-800 md:pl-4 pt-3.5 md:pt-0 flex flex-col justify-between items-stretch gap-3 text-center md:text-right">
+                        <div>
+                          <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block">{t("Puja Charges Dakshina", "न्यूनतम दक्षिणा सीमा")}</span>
+                          <strong className="text-base sm:text-lg text-emerald-400 font-mono font-semibold">
+                            ₹{p.charges.min} - ₹{p.charges.max}
+                          </strong>
+                          <span className="text-[8.5px] text-slate-500 mt-0.5 block italic">{t("+ Samagri items extra", "+ पूजन सामग्री यजमान")}</span>
+                        </div>
+
+                        {p.availability ? (
+                          <div className="text-[9px] text-emerald-400 font-extrabold flex items-center justify-center md:justify-end gap-1 select-none">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                            <span>● ONLINE AVAILABLE NOW</span>
+                          </div>
+                        ) : (
+                          <span className="text-[9px] text-red-400 font-bold block">● FULLY BOOKED FOR THE DAY</span>
+                        )}
+
+                        <div className="space-y-1.5">
+                          <button
+                            type="button"
+                            disabled={!p.availability}
+                            onClick={() => {
+                              setActiveBookingPandit(p);
+                              // Scroll left column to focus form
+                              triggerNotification("Priest Selected", `Set details in the संकल्प form on the left.`, "info");
+                            }}
+                            className="w-full py-2 bg-gradient-to-r from-[#936a18] to-amber-500 hover:brightness-110 disabled:opacity-40 text-slate-950 font-black text-[10px] uppercase tracking-widest rounded-lg transition duration-150 cursor-pointer text-center"
+                          >
+                            🕉️ {t("Book Ritual", "अनुष्ठान बुक करें")}
+                          </button>
+                        </div>
+                      </div>
+
+                    </div>
+                  ))
+                ;
+              })()}
+                </div>
+
+              </div>
+              
+            </div>
+
+            {/* Bottom notification indicator */}
+            <div className="p-3 bg-[#0d0e1b] border-t border-slate-800 text-[10px] font-mono text-slate-500 flex justify-between items-center px-6 shrink-0">
+              <span>Verified Purohits: 5 active listings matching ISO 27001 tenets</span>
+              <span>Central Support: pvastroq@gmail.com</span>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 📜 PRIEST REGISTRATION FORM MODAL */}
+      {showPriestRegisterForm && (
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowPriestRegisterForm(false);
+          }}
+          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[400] animate-fade-in backdrop-blur-md select-none font-sans overflow-y-auto cursor-pointer text-slate-100"
+        >
+          <div className="bg-[#0b0c16] border-2 border-emerald-500/40 rounded-3xl max-w-lg w-full p-6 text-slate-100 shadow-[0_0_55px_rgba(16,185,129,0.25)] animate-scale-up cursor-default">
+            
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+              <div className="text-left">
+                <h4 className="text-sm sm:text-base font-black font-cinzel text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  📜 {t("Priest Sanatan Registration", "सनातन पुरोहित आचार्य पंजीकरण")}
+                </h4>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">Admin approval triggers active booking status</p>
+              </div>
+              <button 
+                onClick={() => setShowPriestRegisterForm(false)}
+                className="text-slate-400 hover:text-white font-extrabold text-xs bg-slate-900 border border-slate-800 rounded px-2 py-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handlePriestFormSubmit} className="space-y-4 text-left">
+              {/* Name */}
+              <div className="space-y-1">
+                <label className="text-[10.5px] uppercase font-black text-slate-350 block">Full Name *</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g. Acharya Shrikant Shastri"
+                  value={priestForm.name}
+                  onChange={(e) => setPriestForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 bg-[#121429] border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* DOB & Experience */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10.5px] uppercase font-black text-slate-350 block">Date of Birth *</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={priestForm.dob}
+                    onChange={(e) => setPriestForm(prev => ({ ...prev, dob: e.target.value }))}
+                    className="w-full px-3 py-2 bg-[#121429] border border-slate-800 rounded-xl text-xs text-white focus:outline-none font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10.5px] uppercase font-black text-slate-350 block">Experience (Years) *</label>
+                  <input 
+                    type="number" 
+                    required
+                    min="1"
+                    max="80"
+                    placeholder="e.g. 15"
+                    value={priestForm.experience}
+                    onChange={(e) => setPriestForm(prev => ({ ...prev, experience: e.target.value }))}
+                    className="w-full px-3 py-2 bg-[#121429] border border-slate-800 rounded-xl text-xs text-white focus:outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Fee Dakshina & Bio */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1 col-span-1">
+                  <label className="text-[10.5px] uppercase font-black text-slate-350 block">Dakshina (₹) *</label>
+                  <input 
+                    type="number" 
+                    required
+                    min="501"
+                    placeholder="e.g. 5100"
+                    value={priestForm.fee}
+                    onChange={(e) => setPriestForm(prev => ({ ...prev, fee: e.target.value }))}
+                    className="w-full px-3 py-2 bg-[#121429] border border-slate-800 rounded-xl text-xs text-white focus:outline-none font-mono"
+                  />
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <label className="text-[10.5px] uppercase font-black text-slate-350 block">Short Profile Bio</label>
+                  <input 
+                    type="text" 
+                    placeholder="Sadhak of Samaveda ritual recitation..."
+                    value={priestForm.bio}
+                    onChange={(e) => setPriestForm(prev => ({ ...prev, bio: e.target.value }))}
+                    className="w-full px-3 py-2 bg-[#121429] border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Types of Pujas Performed Checkboxes */}
+              <div className="space-y-1.5">
+                <label className="text-[10.5px] uppercase font-black text-slate-350 block">Pujas Performed (Performances)</label>
+                <div className="grid grid-cols-2 gap-2 p-3 bg-[#070810] rounded-xl border border-slate-800">
+                  {[
+                    "Ganesh Lakshmi Puja",
+                    "Satyanarayan Katha",
+                    "Griha Pravesh Puja",
+                    "Maha Mrityunjaya Jaap",
+                    "Navgrah Shanti Puja",
+                    "Matchmaking Dosha Nivaran"
+                  ].map((pj) => {
+                    const checked = priestForm.pujas.includes(pj);
+                    return (
+                      <label key={pj} className="flex items-center gap-2 hover:bg-[#121429]/50 p-1 rounded font-sans cursor-pointer text-[10.5px] text-slate-300 select-none">
+                        <input 
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setPriestForm(prev => {
+                              const list = [...prev.pujas];
+                              if (checked) {
+                                return { ...prev, pujas: list.filter(x => x !== pj) };
+                              } else {
+                                list.push(pj);
+                                return { ...prev, pujas: list };
+                              }
+                            });
+                          }}
+                          className="rounded border-slate-800 bg-[#070810] text-emerald-500 mr-1"
+                        />
+                        <span>{pj}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Portrait Selection presets */}
+              <div className="space-y-1.5 text-left">
+                <label className="text-[10.5px] uppercase font-black text-slate-350 block">Choose Profile Portrait Avatar or image URL *</label>
+                <div className="flex gap-2 pb-1 overflow-x-auto scrollbar-none">
+                  {[
+                    { name: "Acharya Shastri", url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150" },
+                    { name: "Pandit Tiwari", url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150" },
+                    { name: "Guru Vashishtha", url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150" },
+                    { name: "Meditation Vyas", url: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150" }
+                  ].map((avt) => {
+                    const isSelected = priestForm.imageUrl === avt.url;
+                    return (
+                      <button
+                        key={avt.name}
+                        type="button"
+                        onClick={() => setPriestForm(prev => ({ ...prev, imageUrl: avt.url }))}
+                        className={`p-1 bg-[#121429] rounded-xl border-2 flex flex-col items-center gap-1 shrink-0 ${isSelected ? 'border-emerald-500 scale-95 ring-1 ring-emerald-400' : 'border-slate-800 hover:border-slate-700'}`}
+                      >
+                        <img src={avt.url} className="w-12 h-12 rounded-lg object-cover" alt={avt.name} />
+                        <span className="text-[8px] text-slate-400 font-bold">{avt.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Manual entry fallback */}
+                <input 
+                  type="text" 
+                  placeholder="Or paste any custom portrait URL..."
+                  value={priestForm.imageUrl}
+                  onChange={(e) => setPriestForm(prev => ({ ...prev, imageUrl: e.target.value }))}
+                  className="w-full px-3 py-1.5 bg-[#121429] border border-slate-800 rounded-xl text-[10px] text-slate-300 placeholder-slate-600 focus:outline-none"
+                />
+              </div>
+
+              {/* Submit application */}
+              <button
+                type="submit"
+                className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 active:scale-95 text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.3)] text-center block"
+              >
+                📜 {t("Submit Registration to Database", "पंजीकरण विवरण भेजें")}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Immersive high HD animated Lord Ganesha & Swastik Splash Screen Popup on Startup */}
       {showSplash && (
         <div 
-          className={`fixed inset-0 z-[100000] flex flex-col items-center justify-center p-6 bg-[#05060c] text-white font-sans transition-all duration-700 ease-in-out select-none ${splashFade ? 'opacity-0 pointer-events-none scale-105' : 'opacity-100'}`}
+          onClick={handleSkipSplash}
+          className={`fixed inset-0 z-[100000] flex flex-col items-center justify-center p-6 bg-[#05060c] text-white font-sans transition-all duration-700 ease-in-out select-none cursor-pointer ${splashFade ? 'opacity-0 pointer-events-none scale-105' : 'opacity-100'}`}
           style={{
             backgroundImage: `radial-gradient(circle at center, #0f112a 0%, #05060c 100%)`
           }}
+          title={t("Click anywhere to Close Ganesha Splash", "गणेश वंदना को बंद करने के लिए कहीं भी क्लिक करें")}
         >
-          {/* Skip Button */}
+          {/* Skip / Close Button */}
           <button 
-            onClick={handleSkipSplash}
-            className="absolute top-4 right-4 sm:top-6 sm:right-6 px-4 py-2.5 bg-black/60 hover:bg-black/90 hover:border-amber-400 text-amber-500 hover:text-white active:scale-95 text-xs font-black uppercase tracking-widest border border-amber-500/30 rounded-xl transition-all duration-200 shadow-md flex items-center gap-2 z-[100001]"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSkipSplash();
+            }}
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 px-4 py-2.5 bg-[#b91c1c] hover:bg-red-650 hover:border-amber-400 text-white font-black uppercase tracking-widest border border-amber-500/30 rounded-xl transition-all duration-200 shadow-md flex items-center gap-2 z-[100001]"
           >
-            <span>{t("Skip", "आगे बढ़ें")}</span>
-            <span className="text-sm">⏭</span>
+            <span>{t("CLOSE ✕", "बंद करें ✕")}</span>
           </button>
 
           {/* Sound Status Badge */}

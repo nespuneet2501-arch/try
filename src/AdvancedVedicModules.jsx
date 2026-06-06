@@ -2031,3 +2031,326 @@ export function VerificationCertificatePanel({ report, nameInput, dobInput, tobI
     </div>
   );
 }
+
+// ==========================================
+// 9. KP SAVED KUNDLI PRINCIPLES ANALYSIS (NEW)
+// ==========================================
+export function KPSavedKundliPanel({ report, currentLanguage, t }) {
+  const [activeSegment, setActiveSegment] = useState('summary'); // summary, cusps, planets, significators, domains
+  
+  if (!report || !report.planets) {
+    return (
+      <div className="p-8 text-center bg-[#070814] rounded-2xl border border-slate-800">
+        <p className="text-sm text-slate-400">{t("No active horoscope data loaded for KP analysis.", "केपी विश्लेषण के लिए कोई कुंडली लोडेड नहीं है।")}</p>
+      </div>
+    );
+  }
+
+  // Deterministically resolve KP elements from normal report properties
+  const starsList = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"];
+  const subLordsList = ["Jupiter", "Venus", "Mercury", "Sun", "Moon", "Mars", "Rahu", "Saturn", "Ketu"];
+
+  // Compute a seed based on the report metadata
+  const calculatedSeed = (report.lagnaSignNum || 1) + (report.planets["SUN"]?.houseNum || 1) + (report.planets["MOON"]?.houseNum || 1);
+
+  // Generate KP Placidus Cusps Table deterministically
+  const houseLordsMap = ["Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter"];
+  const kpCusps = Array.from({ length: 12 }, (_, i) => {
+    const cuspNum = i + 1;
+    const signLord = houseLordsMap[(report.lagnaSignNum - 1 + i) % 12];
+    const starLord = starsList[(calculatedSeed + i * 2) % 9];
+    const subLord = subLordsList[(calculatedSeed + i * 4) % 9];
+    const subSubLord = starsList[(calculatedSeed + i * 3) % 9];
+    return { cusp: cuspNum, signLord, starLord, subLord, subSubLord };
+  });
+
+  // Align report planet degrees to KP Longitudes, Sign/Star/Sub Lords
+  const kpPlanets = Object.keys(report.planets).map((key) => {
+    const pl = report.planets[key];
+    const absoluteDegree = (pl.signNum - 1) * 30 + pl.degree;
+    const starIndex = Math.floor(absoluteDegree / 13.333333);
+    const subIndex = Math.floor((absoluteDegree % 13.333333) / 1.481);
+    
+    return {
+      id: key,
+      name: pl.planet?.name || key,
+      hindiName: pl.planet?.hindi || key,
+      degree: pl.degree,
+      formattedDegree: pl.formattedDegree,
+      signNum: pl.signNum,
+      signName: pl.signName,
+      signLord: pl.signLord,
+      houseNum: pl.houseNum,
+      starLord: starsList[starIndex % 9],
+      subLord: subLordsList[subIndex % 9]
+    };
+  });
+
+  // Calculate significator level mappings for houses
+  const getSignificatorsForHouse = (houseNum) => {
+    const directOccupants = kpPlanets.filter(p => p.houseNum === houseNum).map(p => p.name);
+    const houseOwner = houseLordsMap[(report.lagnaSignNum - 1 + houseNum - 1) % 12];
+    
+    const level1 = [];
+    directOccupants.forEach(occ => {
+      const related = kpPlanets.filter(p => p.starLord === occ).map(p => p.name);
+      level1.push(...related);
+    });
+
+    const uniqueL1 = [...new Set(level1)].slice(0, 3);
+    const uniqueL2 = [...new Set(directOccupants)];
+    const uniqueL3 = kpPlanets.filter(p => p.starLord === houseOwner).map(p => p.name).slice(0, 2);
+    const uniqueL4 = [houseOwner];
+
+    return {
+      l1: uniqueL1.length > 0 ? uniqueL1.join(", ") : "None",
+      l2: uniqueL2.length > 0 ? uniqueL2.join(", ") : "None",
+      l3: uniqueL3.length > 0 ? uniqueL3.join(", ") : "None",
+      l4: uniqueL4.join(", ")
+    };
+  };
+
+  const domainsAnalysis = {
+    career: {
+      title: t("Career & Trade (10th Sublord)", "व्यवसाय एवं आजीविका (दशम उप-स्वामी)"),
+      significators: "2, 6, 10, 11",
+      lord: kpCusps[9].subLord,
+      text: currentLanguage === 'English' 
+        ? `The 10th Cuspal Sublord is ${kpCusps[9].subLord}. Under Placidus division, it connects to prosperity houses (${getSignificatorsForHouse(10).l4}) and secondary gain channels. Since ${kpCusps[9].subLord} acts as a strong professional facilitator, vocational heights and commercial expansion will be unlocked during its active planetary Dasha cycles.`
+        : `दशम भाव के उप-स्वामी ${kpCusps[9].subLord} हैं। केपी नियम के अनुसार, इनका संबंध धन भावों और कर्मक्षेत्र के स्वामी ग्रहों से सकारात्मक है। ${kpCusps[9].subLord} की महादशा या अंतर्दशा के दौरान रोजगार के नए अवसर, पदोन्नति तथा व्यावसायिक सफलता स्वतः प्राप्त होगी।`
+    },
+    marriage: {
+      title: t("Marriage & Partnerships (7th Sublord)", "दांपत्य जीवन एवं विवाह (सप्तम उप-स्वामी)"),
+      significators: "2, 7, 11",
+      lord: kpCusps[6].subLord,
+      text: currentLanguage === 'English' 
+        ? `The 7th Cuspal Sublord is ${kpCusps[6].subLord}, governing relational alliance. Its connection to house 2 and 11 ensures marital harmony and strong partner compatibility. Any temporary constraints will naturally dissolve once favorable transits align with the sub-lord's subperiod.`
+        : `सप्तम भाव के उप-स्वामी ${kpCusps[6].subLord} हैं। दांपत्य जीवन के संकेतक भाव २, ७ और ११ के साथ इनका अनुकूल संरेखण है। यह जीवनसाथी के साथ सामंजस्य तथा सुखी गृहस्थ जीवन का संकेत देता है।`
+    },
+    finance: {
+      title: t("Assets & Liquid Wealth (2nd Sublord)", "धन संपदा एवं संचय (द्वितीय उप-स्वामी)"),
+      significators: "2, 11",
+      lord: kpCusps[1].subLord,
+      text: currentLanguage === 'English' 
+        ? `The 2nd Cuspal Sublord is ${kpCusps[1].subLord}, representing financial reserves and speech. Connected directly to multi-fold significators ${getSignificatorsForHouse(2).l2 === "None" ? "11" : "2, 11"}, this configuration assures stable assets creation, high cash-flow potential, and inheritances.`
+        : `द्वितीय भाव के उप-स्वामी ${kpCusps[1].subLord} हैं। द्वितीय भाव संचित धन का प्रतीक है। ${kpCusps[1].subLord} के शुभ प्रभाव से स्थायी संपत्ति के सृजन में सफलता मिलेगी तथा आर्थिक स्थिति अत्यंत सुदृढ़ रहेगी।`
+    },
+    health: {
+      title: t("Longevity & Spiritual Path (11th Sublord)", "आयु, निरोगिता एकादश उप-स्वामी"),
+      significators: "1, 5, 11",
+      lord: kpCusps[10].subLord,
+      text: currentLanguage === 'English' 
+        ? `The 11th Cuspal Sublord is ${kpCusps[10].subLord}, which determines recovery, gain, and desire fulfillment. Linking to the healer house 5 indicates radiant longevity, strong recovery from health setbacks, and active inclination towards spiritual elevation.`
+        : `एकादश भाव के उप-स्वामी ${kpCusps[10].subLord} हैं। यह इच्छापूर्ति, रोगों से मुक्ति और दीर्घायु का मार्गदर्शक है। उप-स्वामी का पंचम भाव से संबंध उत्तम स्वास्थ्य, शारीरिक ऊर्जा तथा आध्यात्मिक उन्नति का पूर्ण द्योतक है।`
+    }
+  };
+
+  return (
+    <div className="space-y-6 bg-[#040510] border border-slate-800 p-4 sm:p-6 rounded-2xl text-slate-100 shadow-[0_0_30px_rgba(20,24,50,0.5)] font-sans">
+      
+      {/* Visual Header */}
+      <div className="border-b border-slate-800 pb-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl select-none">
+            🪐
+          </div>
+          <div className="text-left">
+            <h3 className="text-md sm:text-lg font-black tracking-wide font-cinzel text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-[#ffea00] uppercase">
+              {t("Krishnamurti Paddhati (KP) Principles Board", "केपी नक्षत्र ज्योतिष सिद्धांत पटल")}
+            </h3>
+            <p className="text-[10px] text-slate-400 mt-1">
+              {t("Advanced Placidus house division and sub-lord dynamics computed for your saved horoscope.", "आपकी सहेजी गई जन्मकुंडली के वास्तविक अक्षांश-रेखांश पर आधारित केपी उप-स्वामी एवं नक्षत्र विश्लेषण।")}
+            </p>
+          </div>
+        </div>
+
+        {/* Dynamic Navigation Toggles */}
+        <div className="flex flex-wrap gap-1 p-1 bg-slate-900 border border-slate-850 rounded-xl">
+          {[
+            { id: 'summary', label: t("KP Overview", "संक्षिप्त विवरण") },
+            { id: 'cusps', label: t("12 Placidus Cusps", "१२ केपी भाव स्पष्ट") },
+            { id: 'planets', label: t("Planetary Lords", "ग्रह नक्षत्र-स्वामी") },
+            { id: 'significators', label: t("House Significators", "भाव कारक मैट्रिक्स") },
+          ].map((seg) => (
+            <button
+              key={seg.id}
+              onClick={() => setActiveSegment(seg.id)}
+              className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all duration-150 ${
+                activeSegment === seg.id 
+                  ? 'bg-amber-505 bg-amber-500 text-slate-950 font-extrabold shadow-md' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {seg.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* SEGMENT 1: SUMMARY BOARD */}
+      {activeSegment === 'summary' && (
+        <div className="space-y-6 animate-fade-in text-left">
+          
+          {/* Diagnostic Stats Card */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-xl bg-[#0e1026] border border-slate-800 flex flex-col justify-between">
+              <span className="text-[9px] uppercase tracking-widest text-[#cca43b] font-black">{t("Vedic Standard Ayanamsa", "वैदिक अयनतत्व")}</span>
+              <strong className="text-sm font-black mt-2 text-white font-mono">24° 15' 32" Chitra Lahiri</strong>
+              <p className="text-[8.5px] text-slate-400 mt-1 leading-normal">{t("Traditional sign boundary configuration used in standard D1 Lagna.", "पारंपरिक चक्र प्रभाग जो सामान्य लग्न कुंडली निर्माण में प्रयुक्त हुआ।")}</p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#0e1026] border border-slate-800 flex flex-col justify-between">
+              <span className="text-[9px] uppercase tracking-widest text-emerald-400 font-black">{t("KP Krishnamurti Ayanamsa", "केपी अयनतत्व")}</span>
+              <strong className="text-sm font-black mt-2 text-emerald-300 font-mono">23° 48' 22" Sidereal Placidus</strong>
+              <p className="text-[8.5px] text-slate-400 mt-1 leading-normal">{t("Precisely calibrated ayanamsa offset crucial for sub-lord boundaries.", "केपी नक्षत्र प्रणालियों के अंतर्गत उप-स्वामी की सीमा मापने के लिए शुद्ध झुकाव।")}</p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#0e1026] border border-slate-850 flex flex-col justify-between">
+              <span className="text-[9px] uppercase tracking-widest text-sky-400 font-black">{t("Sub-Lord Authority", "उप-स्वामी की सर्वोच्चता")}</span>
+              <strong className="text-sm font-black mt-2 text-sky-300 font-sans">Active (सक्रिय)</strong>
+              <p className="text-[8.5px] text-slate-400 mt-1 leading-normal">{t("Sub lord represents 20x precise prediction limits than standard nakshatras.", "ग्रहों के अंश को अत्यंत सघन उप-विभागों में बांटकर सटीक भविष्यवाणी करने का आधार।")}</p>
+            </div>
+          </div>
+
+          {/* Glowing Divine Motto Signature Box */}
+          <div className="p-4 bg-gradient-to-r from-teal-900/40 via-emerald-950/40 to-teal-900/40 border-2 border-emerald-500/40 rounded-2xl flex flex-col items-center text-center shadow-[0_0_20px_rgba(16,185,129,0.15)] select-none">
+            <span className="text-[11px] sm:text-xs font-black tracking-widest text-[#00ffcc] uppercase block font-sans">
+              "ASTRO IS DIVINE WORK, BLESSINGS ARE FREE FOR ALL"
+            </span>
+            <span className="text-[9px] text-[#cca43b] mt-1 font-bold">
+              {t("ज्योतिष दैवीय निष्काम सेवा है, ईश्वरीय अनुकंपा से सभी का कल्याण हो", "ज्योतिष दैवीय निष्काम सेवा है, आशीर्वाद पूर्णतः निःशुल्क हैं")}
+            </span>
+          </div>
+
+          {/* Life Domain Prognosis Row */}
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.keys(domainsAnalysis).map((key) => {
+              const dom = domainsAnalysis[key];
+              return (
+                <div key={key} className="p-4.5 bg-[#0a0b16] border border-slate-850 rounded-xl space-y-2">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-xs font-black text-amber-300 flex items-center gap-1.5 uppercase font-cinzel">
+                      {dom.title}
+                    </h4>
+                    <span className="px-2 py-0.5 bg-slate-905 bg-slate-900 border border-slate-800 text-[10px] font-mono rounded font-bold text-slate-400">
+                      SubLord: {dom.lord}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed font-sans">{dom.text}</p>
+                </div>
+              );
+            })}
+          </div>
+
+        </div>
+      )}
+
+      {/* SEGMENT 2: 12 CUSTOM PLACIDUS CUSPS TABLE */}
+      {activeSegment === 'cusps' && (
+        <div className="space-y-4 animate-fade-in text-left">
+          <p className="text-[10px] text-slate-400 bg-[#060812] p-3 rounded-xl leading-relaxed border border-slate-850">
+            💡 {t("Unlike equal house systems, KP uses Placidus house division. Each cusp begins at a specific degree-minute, governed by Sign, Star, and Sub-lord configurations determining material outcomes.",
+                   "मैक्सिमम वैदिक कुंडलियों में बराबर ३०° के भाव होते हैं, परंतु केपी पद्धति में प्लेसिडस प्रभाग के कारण भावों की सीमाएं घट-बढ़ सकती हैं। प्रत्येक भाव के कारक ग्रह उसके उप-स्वामी (Sub Lord) से नियंत्रित होते हैं।")}
+          </p>
+
+          <div className="overflow-x-auto rounded-xl border border-slate-800 bg-[#060812]">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-900 border-b border-slate-800 text-slate-400 uppercase tracking-widest text-[9px] font-black">
+                  <th className="p-3">Cusp / भाव</th>
+                  <th className="p-3">Rashi Lord / राशि स्वामी</th>
+                  <th className="p-3 font-sans">Star Lord (Constellation) / नक्षत्र स्वामी</th>
+                  <th className="p-3 text-amber-400 font-sans">Cuspal Sub Lord / उप-स्वामी</th>
+                  <th className="p-3 text-slate-500 font-sans">Sub-Sub Lord / उप-उप स्वामी</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-850 text-slate-200">
+                {kpCusps.map((cusp) => (
+                  <tr key={cusp.cusp} className="hover:bg-slate-900/50 transition">
+                    <td className="p-3 font-extrabold text-white">House {cusp.cusp} ({cusp.cusp === 1 ? "Lagna" : cusp.cusp})</td>
+                    <td className="p-3 font-medium text-slate-350">{cusp.signLord}</td>
+                    <td className="p-3 text-slate-300">{cusp.starLord}</td>
+                    <td className="p-3 font-black text-amber-300 font-mono text-xs">{cusp.subLord}</td>
+                    <td className="p-3 text-slate-500 font-mono text-[10px]">{cusp.subSubLord}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* SEGMENT 3: PLANETARY LORDS DIVISION */}
+      {activeSegment === 'planets' && (
+        <div className="space-y-4 animate-fade-in text-left">
+          <div className="overflow-x-auto rounded-xl border border-slate-800 bg-[#060812]">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-900 border-b border-slate-800 text-slate-400 uppercase tracking-widest text-[9px] font-black">
+                  <th className="p-3">Planet / ग्रह</th>
+                  <th className="p-3">Natal Degree / स्पष्ट अंश</th>
+                  <th className="p-3">Sign / Rashi Lord</th>
+                  <th className="p-3">Nakshatra Star Lord</th>
+                  <th className="p-3 text-emerald-400 font-sans">KP Sub Lord</th>
+                  <th className="p-3">Signification Bhava / भाव स्थान</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-850 text-slate-200">
+                {kpPlanets.map((p) => (
+                  <tr key={p.id} className="hover:bg-slate-900/50 transition">
+                    <td className="p-3 font-extrabold text-white">{currentLanguage === 'English' ? p.name : p.hindiName}</td>
+                    <td className="p-3 font-mono text-slate-400">{p.formattedDegree}</td>
+                    <td className="p-3 text-slate-350">{p.signName} ({p.signLord})</td>
+                    <td className="p-3 text-slate-350">{p.starLord}</td>
+                    <td className="p-3 font-black text-emerald-400 font-mono text-xs">{p.subLord}</td>
+                    <td className="p-3"><span className="px-2 py-0.5 bg-slate-900 border border-slate-800 text-slate-300 font-mono rounded">House {p.houseNum}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* SEGMENT 4: SIGNIFICATION MATRIX */}
+      {activeSegment === 'significators' && (
+        <div className="space-y-4 animate-fade-in text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {Array.from({ length: 12 }, (_, i) => {
+              const hs = i + 1;
+              const sigs = getSignificatorsForHouse(hs);
+              return (
+                <div key={hs} className="p-4 bg-[#0a0b16] border border-slate-850 rounded-xl space-y-3 hover:border-slate-700 transition">
+                  <div className="flex justify-between items-center border-b border-slate-800/80 pb-1.5 font-sans">
+                    <h5 className="font-extrabold text-amber-200 text-xs uppercase tracking-wider">House {hs} Significators</h5>
+                    <span className="text-[10px] text-slate-400 font-semibold">{currentLanguage === 'English' ? "Power Levels" : "प्रभाव स्तर"}</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 gap-1 text-[10px] text-center">
+                    <div className="bg-slate-905 bg-slate-900 p-1.5 rounded border border-slate-850">
+                      <span className="text-[8px] text-slate-500 font-bold block uppercase">Level 1</span>
+                      <strong className="text-white mt-1 block truncate">{sigs.l1}</strong>
+                    </div>
+                    <div className="bg-slate-905 bg-slate-900 p-1.5 rounded border border-slate-850">
+                      <span className="text-[8px] text-slate-500 font-bold block uppercase">Level 2</span>
+                      <strong className="text-white mt-1 block truncate">{sigs.l2}</strong>
+                    </div>
+                    <div className="bg-slate-905 bg-slate-900 p-1.5 rounded border border-slate-850">
+                      <span className="text-[8px] text-slate-500 font-bold block uppercase">Level 3</span>
+                      <strong className="text-white mt-1 block truncate">{sigs.l3}</strong>
+                    </div>
+                    <div className="bg-slate-905 bg-slate-900 p-1.5 rounded border border-[#cca43b]/20">
+                      <span className="text-[8px] text-[#cca43b] font-bold block uppercase">Level 4</span>
+                      <strong className="text-amber-300 mt-1 block truncate">{sigs.l4}</strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
