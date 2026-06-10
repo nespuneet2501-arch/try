@@ -1477,17 +1477,28 @@ export const feedbackService = {
     if (isSupabaseConfigured() && config.mode === 'SUPABASE') {
       try {
         const supabase = getSupabaseClient();
-        await supabase.from('contact_enquiries').insert({
+        const payload = {
           id: `enq_${Date.now()}`,
           name: email.split('@')[0],
           email,
           message,
           created_at: new Date().toISOString()
-        });
+        };
+        const { data, error } = await supabase.from('contact_enquiries').insert(payload);
+        if (error) {
+          console.error("Supabase insert error inside feedbackService:", error);
+          const friendlyError = enrichSupabaseError(error);
+          triggerNotification("DB Insert Failed 🔌", friendlyError, "warning");
+          // Also save in localStorage as cache fallback so the user doesn't lose data
+          const cacheKey = `fallback_enq_${Date.now()}`;
+          localStorage.setItem(cacheKey, JSON.stringify(payload));
+          return false;
+        }
         triggerNotification("Vedic Contact Received", "Your enquiry has been filed inside our database! Dynamic admin review active.", "success");
         return true;
       } catch (e) {
-        console.warn("Contact writing failure inside Supabase:", e);
+        console.error("Contact writing failure inside Supabase exception:", e);
+        triggerNotification("Connection Error", "Failed to connect to the database server. Saved locally as fallback.", "warning");
       }
     }
 
@@ -1500,14 +1511,48 @@ export const feedbackService = {
     if (isSupabaseConfigured() && config.mode === 'SUPABASE') {
       try {
         const supabase = getSupabaseClient();
-        const { data } = await supabase.from('contact_enquiries').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabase.from('contact_enquiries').select('*').order('created_at', { ascending: false });
+        if (error) {
+          console.error("Supabase fetch feedbacks error:", error);
+          const friendlyError = enrichSupabaseError(error);
+          triggerNotification("DB Fetch Error 🔌", friendlyError, "warning");
+          // Read fallbacks from localStorage
+          const localKeys = Object.keys(localStorage).filter(k => k.startsWith('fallback_enq_'));
+          const localItems = localKeys.map(k => {
+            try {
+              return JSON.parse(localStorage.getItem(k));
+            } catch(e) {
+              return null;
+            }
+          }).filter(Boolean);
+          return localItems;
+        }
+        
+        // Also look for fallback keys and try to sync them in background!
+        const localKeys = Object.keys(localStorage).filter(k => k.startsWith('fallback_enq_'));
+        if (localKeys.length > 0) {
+          const supabase = getSupabaseClient();
+          for (const key of localKeys) {
+            try {
+              const payload = JSON.parse(localStorage.getItem(key));
+              const { error: syncErr } = await supabase.from('contact_enquiries').insert(payload);
+              if (!syncErr) {
+                localStorage.removeItem(key);
+                console.log("[Background Sync] Successfully synced pending record to Supabase!", payload);
+              }
+            } catch(se) {}
+          }
+        }
+
         return (data || []).map(d => ({
           email: d.email,
           name: d.name,
           message: d.message,
           created_at: d.created_at
         }));
-      } catch(e) {}
+      } catch(e) {
+        console.error("fetchFeedbacks exception in Supabase mode:", e);
+      }
     }
     return [
       { email: 'developer@pvastro.org', name: 'Acharya Seeker', message: 'Welcome to your premium astrologer workstation!' }
