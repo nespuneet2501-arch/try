@@ -2149,8 +2149,8 @@ function VedicKundliApp() {
       );
     }
 
-    // Check if module is premium-only and current user is free
-    if (setting && setting.premiumOnly && !activeUserIsPremium) {
+    // Check if module is premium-only and current user is free & not logged-in
+    if (setting && setting.premiumOnly && !activeUserIsPremium && !currentUser) {
       return (
         <AstroPaywallLock 
           tab={tabKey} 
@@ -2285,8 +2285,8 @@ function VedicKundliApp() {
             }`}></span>
             <span>
               {storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
-                ? t("DATABASE CONNECTION - LIVE", "डेटाबेस कनेक्शन - लाइव") 
-                : t("DATABASE CONNECTION - OFF", "डेटाबेस कनेक्शन - बंद")
+                ? t("COSMIC CLOUD SYNC - ONLINE", "वैदिकी क्लाउड सिंक - सक्रिय") 
+                : t("COSMIC CLOUD SYNC - LOCAL", "वैदिकी क्लाउड सिंक - स्थानीय")
               }
             </span>
           </div>
@@ -2303,7 +2303,7 @@ function VedicKundliApp() {
                   {currentUser}
                 </span>
                 <span className="text-[7.5px] uppercase tracking-wider font-extrabold text-slate-400">
-                  {activeUserIsPremium ? t("💎 Premium Admin", "💎 प्रीमियम संचालक") : t("👤 Standard Free", "👤 सामान्य निःशुल्क")}
+                  {activeUserIsPremium ? t("💎 Premium Member", "💎 प्रीमियम सदस्य") : t("👤 Standard Free", "👤 सामान्य निःशुल्क")}
                 </span>
               </div>
               
@@ -4508,7 +4508,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
 
                 {/* Girl Form */}
                 <div className="p-5 bg-[#090a15] rounded-xl border border-slate-800/85 space-y-4 text-left">
-                  <h3 className="font-bold text-white font-cinzel text-sm border-b border-slate-800 pb-2 text-transparent bg-clip-text bg-gradient-to-r from-[pink] to-rose-400">
+                  <h3 className="font-bold text-white font-cinzel text-sm border-b border-slate-800 pb-2 text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
                     👩 {t("Girl's Particulars (कन्या विवरण)", "कन्या का विवरण")}
                   </h3>
                   <div>
@@ -4551,9 +4551,9 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                   const result = calculateMatchmaking(boyName, boyDob, boyTob, girlName, girlDob, girlTob);
                   setMatchReport(result);
                 }}
-                className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:brightness-110 text-white font-bold rounded-xl transition shadow-lg flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-white font-bold rounded-xl transition shadow-lg flex items-center justify-center gap-2"
               >
-                <Heart className="w-5 h-5 fill-white" />
+                <Heart className="w-5 h-5 fill-white text-white" />
                 <span>{t("Calculate Ashtakoot Harmony", "अष्टकूट मिलान की गणना करें")}</span>
               </button>
 
@@ -4562,16 +4562,16 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                 <div className="mt-8 border-t border-slate-800/80 pt-6 space-y-6 text-left">
                   
                   {/* Score circle banner */}
-                  <div className="p-6 bg-gradient-to-tr from-pink-950/20 to-slate-900 rounded-xl border border-pink-500/20 flex flex-col sm:flex-row items-center gap-6">
-                    <div className="w-24 h-24 shrink-0 rounded-full border-4 border-pink-500 flex flex-col items-center justify-center bg-black/40 text-slate-100 shadow-xl bg-[#090a15]">
-                      <span className="text-3xl font-extrabold font-mono text-pink-400">${matchReport.score}</span>
+                  <div className="p-6 bg-gradient-to-tr from-amber-950/20 to-slate-900 rounded-xl border border-amber-500/20 flex flex-col sm:flex-row items-center gap-6">
+                    <div className="w-24 h-24 shrink-0 rounded-full border-4 border-amber-500 flex flex-col items-center justify-center bg-black/40 text-slate-100 shadow-xl bg-[#090a15]">
+                      <span className="text-3xl font-extrabold font-mono text-amber-500">${matchReport.score}</span>
                       <span className="text-[10px] font-bold text-slate-400">/ 36 Guna</span>
                     </div>
                     
                     <div className="space-y-1 text-center sm:text-left flex-1 font-sans">
                       <div className="flex flex-col sm:flex-row items-center gap-2">
-                        <span className="text-xs uppercase font-extrabold text-pink-400 tracking-wider">Astrologer Verdict:</span>
-                        <span className="px-2 py-0.5 bg-pink-500/10 text-pink-400 text-xs font-bold rounded">${matchReport.level}</span>
+                        <span className="text-xs uppercase font-extrabold text-amber-500 tracking-wider">Astrologer Verdict:</span>
+                        <span className="px-2 py-0.5 bg-amber-550/10 text-amber-500 text-xs font-bold rounded">${matchReport.level}</span>
                       </div>
                       <p className="text-sm font-semibold text-white pt-1">${matchReport.recommendation}</p>
                     </div>
@@ -4579,18 +4579,18 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
 
                   {/* Ashtakoot Grid Breakdown */}
                   <div className="space-y-3">
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-cinzel border-l-2 border-pink-500 pl-2">{t("Guna-by-Guna Breakdown Matrix", "गुणकूट गहन विश्लेषण मैट्रिक्स")}</h4>
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-cinzel border-l-2 border-amber-500 pl-2">{t("Guna-by-Guna Breakdown Matrix", "गुणकूट गहन विश्लेषण मैट्रिक्स")}</h4>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {matchReport.gunDetails.map((g, idx) => (
                         <div key={idx} className="p-3.5 bg-[#090a15] rounded-xl border border-slate-850">
                           <div className="flex justify-between items-center text-xs mb-1">
                             <span className="font-semibold text-white">${g.name}</span>
-                            <span className="font-mono font-bold text-pink-400">${g.points} / ${g.max} Points</span>
+                            <span className="font-mono font-bold text-amber-500">${g.points} / ${g.max} Points</span>
                           </div>
                           <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mb-2">
                             <div 
-                              className="bg-gradient-to-r from-pink-500 to-rose-500 h-full rounded-full" 
+                              className="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full" 
                               style={{ width: `${(g.points / g.max) * 100}%` }}
                             ></div>
                           </div>
@@ -4601,12 +4601,12 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                   </div>
 
                   {/* Dedicated Contact Pandit Section for Marriage Puja */}
-                  <div className="bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-xl p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 mt-6">
+                  <div className="bg-gradient-to-r from-amber-100 to-orange-50 border border-amber-200 rounded-xl p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 mt-6">
                     <div className="flex items-start gap-3 flex-1">
                       <span className="text-2xl pt-1">💖</span>
                       <div>
-                        <h3 className="text-sm font-bold text-pink-900 font-cinzel uppercase tracking-wider">{t("Nuptial Vedic Blessings & Graha Shanti Pujas", "विवाह बाधा निवारक मंगल दोष शांति एवं सुखद गृहस्थ अनुष्ठान")}</h3>
-                        <p className="text-[11px] text-pink-850 leading-relaxed mt-1">
+                        <h3 className="text-sm font-bold text-amber-950 font-cinzel uppercase tracking-wider">{t("Nuptial Vedic Blessings & Graha Shanti Pujas", "विवाह बाधा निवारक मंगल दोष शांति एवं सुखद गृहस्थ अनुष्ठान")}</h3>
+                        <p className="text-[11px] text-amber-900 leading-relaxed mt-1">
                           {t("Get precise remedy advice on matchmaking compatibility results. Book specialized Purohit Ji for Wedding rituals or Grah Pravesh pujas.", 
                              "गुण मिलान के उपरान्त आने वाले मांगलिक अथवा अष्टकूट दोषों के वैदिक शमन हेतु सचेत रहें। शुभ विवाह लग्न निर्धारण, वर-वधू सुखी जीवन आशीर्वाद यज्ञ एवं नवदम्पत्ति गृह प्रवेश पूजा सविधि संपन्न कराएं।")
                           }
@@ -4619,7 +4619,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                         setActiveBookingPandit(null);
                         setShowPanditDirectory(true);
                       }}
-                      className="px-5 py-2.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:brightness-110 text-white text-xs font-black rounded-xl shadow-md transition duration-200 animate-pulse flex items-center gap-1.5 shrink-0"
+                      className="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-orange-500 hover:brightness-110 text-white text-xs font-black rounded-xl shadow-md transition duration-200 animate-pulse flex items-center gap-1.5 shrink-0"
                     >
                       <span>🌸</span>
                       <span>{t("Contact Pandit Ji (पुजारी संपर्क)", "पंडित जी से तुरंत संपर्क करें")}</span>
@@ -6364,8 +6364,8 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
             }`}></span>
             <span className="text-[10px] font-bold">
               {storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
-                ? t("DATABASE CONNECTION - LIVE", "डेटाबेस कनेक्शन - लाइव") 
-                : t("DATABASE CONNECTION - OFF", "डेटाबेस कनेक्शन - बंद")
+                ? t("COSMIC CLOUD SYNC - ONLINE", "वैदिकी क्लाउड सिंक - सक्रिय") 
+                : t("COSMIC CLOUD SYNC - LOCAL", "वैदिकी क्लाउड सिंक - स्थानीय")
               }
             </span>
           </div>
@@ -7481,9 +7481,9 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
             // TAP ANYWHERE ON SCREEN GUARANTEES OM AUDIO EMISSION ON MOBILE CLIENTS
             playSplashOmSound();
           }}
-          className={`fixed inset-0 z-[100000] flex flex-col items-center justify-center p-6 bg-[#05060c] text-white font-sans transition-all duration-700 ease-in-out select-none cursor-pointer ${splashFade ? 'opacity-0 pointer-events-none scale-105' : 'opacity-100'}`}
+          className={`fixed inset-0 z-[100000] flex flex-col items-center justify-center p-6 bg-[#13173c] text-white font-sans transition-all duration-700 ease-in-out select-none cursor-pointer ${splashFade ? 'opacity-0 pointer-events-none scale-105' : 'opacity-100'}`}
           style={{
-            backgroundImage: `radial-gradient(circle at center, #0f112a 0%, #05060c 100%)`
+            backgroundImage: `radial-gradient(circle at center, #22296b 0%, #111435 100%)`
           }}
           title={t("Tap anywhere to activate Sound & resonance", "कल्याणकारी मंत्र उच्चारण शुरू करने के लिए स्पर्श करें")}
         >
