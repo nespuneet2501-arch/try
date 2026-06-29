@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { adminAnalyticsService } from './StorageService';
 import { 
   Megaphone, FileText, Youtube, FileDown, Calendar, Search, 
   Filter, Bell, Lock, LogIn, LogOut, Check, Pin, PlusCircle, 
@@ -1771,7 +1772,8 @@ export function AdminControlWorkstation({
   setSplashConfig,
   setShowSplash,
   setSplashProgress,
-  setSplashFade
+  setSplashFade,
+  adminDbError = null
 }) {
   const [activeAdminTab, setActiveAdminTab] = useState('analytics'); // analytics, modules, payplans, users, telemetry
   const [editingUserId, setEditingUserId] = useState(null);
@@ -1810,19 +1812,32 @@ export function AdminControlWorkstation({
     }));
   };
 
-  const handleToggleUserPremiumState = (email) => {
+  const handleToggleUserPremiumState = async (email) => {
     if (!isSuperUser) {
       alert(t("Security Exception: Only master administrators can edit user credentials directly.", "सुरक्षा अपवाद: केवल मुख्य व्यवस्थापक ही उपयोगकर्ताओं की अनुमतियों को बदल सकते हैं।"));
       return;
     }
-    setUsersList(prev => prev.map(u => {
-      if (u.email.toLowerCase() === email.toLowerCase()) {
-        const nextState = !u.isPremium;
-        alert(`Successfully toggled tier for ${email} to ${nextState ? 'Premium' : 'Free'}`);
-        return { ...u, isPremium: nextState };
+
+    const matched = usersList.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (!matched) return;
+    const nextPremium = !matched.isPremium;
+    const targetRole = nextPremium ? 'Admin' : 'User';
+
+    try {
+      const success = await adminAnalyticsService.toggleUserTier(email, targetRole);
+      if (success) {
+        setUsersList(prev => prev.map(u => {
+          if (u.email.toLowerCase() === email.toLowerCase()) {
+            return { ...u, isPremium: nextPremium, role: targetRole };
+          }
+          return u;
+        }));
+      } else {
+        alert("Failed to update user tier in database.");
       }
-      return u;
-    }));
+    } catch (err) {
+      alert(`Error updating tier: ${err.message || String(err)}`);
+    }
   };
 
   return (
@@ -1888,6 +1903,29 @@ export function AdminControlWorkstation({
           </div>
           <div>
             <strong>✓ MASTER PRIVILEGES INITIATED:</strong> {t("Authoritative write access to database schema verified. You can toggle Dasha/Gochar paywall flags and users.", "डेटाबेस राइट एक्सेस सत्यापित। आप लाइव महादशा/गोचर लॉक फ्लैग और यूजर सूची बदल सकते हैं।")}
+          </div>
+        </div>
+      )}
+
+      {adminDbError && (
+        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl mb-6 text-xs text-amber-300 leading-relaxed max-w-4xl space-y-2">
+          <div className="flex items-start gap-2.5">
+            <span className="text-sm shrink-0">⚠️</span>
+            <div>
+              <strong className="text-amber-400 block uppercase tracking-wider text-[11px] font-black font-mono">
+                {t("SUPABASE CLOUD RETRIEVAL FAILURE (SILENT FALLBACK ACTIVE)", "सुपाबेस क्लाउड सिंक विफलता")}
+              </strong>
+              <p className="text-[11px] text-slate-300 mt-0.5 leading-normal font-sans">
+                {t("The application failed to fetch live users or Kundlis directly from your cloud Supabase database. You are currently viewing localized cached Sandbox stats. Here are the active error details:",
+                   "अनुप्रयोग आपके क्लाउड डेटाबेस से लाइव उपयोगकर्ता या कुंडलियां प्राप्त नहीं कर सका। आप वर्तमान में स्थानीय सैंडबॉक्स आंकड़े देख रहे हैं।")}
+              </p>
+            </div>
+          </div>
+          <div className="p-2.5 bg-slate-950/80 border border-slate-800 rounded-xl font-mono text-[10px] text-red-300 break-all select-all">
+            {adminDbError}
+          </div>
+          <div className="text-[10px] text-slate-400 leading-normal font-sans pt-1">
+            💡 <strong>{t("How to resolve:", "समाधान:")}</strong> {t("This usually happens if your Supabase tables are not fully created yet, or your project is paused. Go to the 'Database Settings' (by clicking the connection indicator in the upper right), copy the auto-setup SQL script, paste it inside your Supabase project's SQL Editor, and click 'Run'.", "यह आमतौर पर तब होता है जब आपकी सुपाबेस तालिकाएँ पूरी तरह से निर्मित नहीं होती हैं या आपका प्रोजेक्ट रुका हुआ होता है। ऊपर दाईं ओर कनेक्शन संकेतक पर क्लिक करें, और आवश्यक SQL स्क्रिप्ट चलाएं।")}
           </div>
         </div>
       )}

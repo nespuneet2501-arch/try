@@ -1144,6 +1144,7 @@ function VedicKundliApp() {
   const [pendingKundliToSave, setPendingKundliToSave] = useState(null);
   const [storageConfig, setStorageConfig] = useState(() => getDefaultStorageConfig());
   const [isSeedingDb, setIsSeedingDb] = useState(false);
+  const [adminDbError, setAdminDbError] = useState(null);
 
   const [dbHealth, setDbHealth] = useState({ 
     configured: true, 
@@ -1345,8 +1346,15 @@ function VedicKundliApp() {
         try {
           // Fetch live telemetry metrics and registered users from specified DB mode
           const metrics = await adminAnalyticsService.getSystemMetrics();
-          if (isSubscribed && metrics && Array.isArray(metrics.usersList)) {
-            setUsersList(metrics.usersList);
+          if (isSubscribed && metrics) {
+            if (metrics.dbError) {
+              setAdminDbError(metrics.dbError);
+            } else {
+              setAdminDbError(null);
+            }
+            if (Array.isArray(metrics.usersList)) {
+              setUsersList(metrics.usersList);
+            }
           }
           // Fetch live saved Kundlis across the entire database
           const liveKundlis = await kundliDbService.fetchSavedKundlis(currentUser);
@@ -2263,11 +2271,58 @@ function VedicKundliApp() {
 
       {/* Top Luxury Dynamic Header */}
       <header className="sticky top-0 z-50 theme-bg-card backdrop-blur-md border-b theme-border px-3 sm:px-4 py-2.5 sm:py-3 flex flex-row items-center justify-between gap-2 sm:gap-3 shadow-lg">
-        <div className="flex items-center gap-1.5 sm:gap-3 cursor-pointer" onClick={() => setCurrentScreen('DASHBOARD')}>
-          <PVAstroLogo className="w-8 h-8 sm:w-11 sm:h-11 transition duration-300 hover:scale-105" />
-          <div>
-            <h1 className="text-sm sm:text-lg font-black tracking-widest font-cinzel leading-tight animate-pvastro-logo">PVASTRO</h1>
-            <p className="hidden sm:block text-[8px] sm:text-[9.5px] uppercase tracking-wider text-slate-400 font-semibold">{t("Vedic Cosmic Insights", "वैदिक ब्रह्मांडीय अंतर्दृष्टि")}</p>
+        <div className="flex items-center gap-1.5 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-3 cursor-pointer" onClick={() => setCurrentScreen('DASHBOARD')}>
+            <PVAstroLogo className="w-8 h-8 sm:w-11 sm:h-11 transition duration-300 hover:scale-105" />
+            <div>
+              <h1 className="text-sm sm:text-lg font-black tracking-widest font-cinzel leading-tight animate-pvastro-logo">PVASTRO</h1>
+              <p className="hidden sm:block text-[8px] sm:text-[9.5px] uppercase tracking-wider text-slate-400 font-semibold">{t("Vedic Cosmic Insights", "वैदिक ब्रह्मांडीय अंतर्दृष्टि")}</p>
+            </div>
+          </div>
+
+          {/* Database Live Connected Status - Positioned on left next to logo */}
+          <div
+            onClick={() => {
+              setCurrentScreen('INTEGRATIONS');
+            }}
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-1 text-[9px] rounded-full border cursor-pointer transition uppercase tracking-wider font-extrabold shadow-sm ${
+              storageConfig.mode === 'SUPABASE'
+                ? dbHealth.status === 'healthy'
+                  ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/80' 
+                  : dbHealth.status === 'needs_setup'
+                    ? 'bg-amber-950/80 border-amber-500/50 text-amber-300 hover:bg-amber-900/80'
+                    : 'bg-red-950/80 border-red-500/50 text-red-300 hover:bg-red-900/80'
+                : 'bg-slate-900/80 border-slate-700 text-slate-300 hover:bg-slate-800'
+            }`}
+            title={
+              storageConfig.mode === 'SUPABASE'
+                ? dbHealth.status === 'healthy'
+                  ? "Supabase Database: Online & Healthy" 
+                  : dbHealth.status === 'needs_setup'
+                    ? "Supabase Database: Setup Pending"
+                    : "Supabase Database: Offline"
+                : "Database: Local Sandbox Browser Storage Mode"
+            }
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              storageConfig.mode === 'SUPABASE'
+                ? dbHealth.status === 'healthy'
+                  ? 'bg-emerald-400 animate-pulse ring-1 ring-emerald-400/50' 
+                  : dbHealth.status === 'needs_setup'
+                    ? 'bg-amber-400 animate-pulse ring-1 ring-amber-400/50'
+                    : 'bg-red-400 animate-pulse ring-1 ring-red-400/50'
+                : 'bg-slate-400'
+            }`}></span>
+            <span>
+              {storageConfig.mode === 'SUPABASE'
+                ? dbHealth.status === 'healthy'
+                  ? t("COSMIC CLOUD SYNC - ONLINE", "वैदिकी क्लाउड सिंक - सक्रिय") 
+                  : dbHealth.status === 'needs_setup'
+                    ? t("COSMIC CLOUD - SETUP PENDING", "वैदिकी क्लाउड - तालिका सेटअप आवश्यक")
+                    : t("COSMIC CLOUD - UNREACHABLE", "वैदिकी क्लाउड - संपर्क विफल")
+                : t("LOCAL SANDBOX ENGINE", "स्थानीय डेटाबेस")
+              }
+            </span>
           </div>
         </div>
 
@@ -2355,50 +2410,6 @@ function VedicKundliApp() {
               </span>
             </button>
           )}
-
-          <div
-            onClick={() => {
-              setCurrentScreen('INTEGRATIONS');
-            }}
-            className={`hidden md:flex items-center gap-2 px-3.5 py-1.5 text-[10px] rounded-full border-2 cursor-pointer transition uppercase tracking-wider font-extrabold shadow-md ${
-              storageConfig.mode === 'SUPABASE'
-                ? dbHealth.status === 'healthy'
-                  ? 'bg-emerald-950/85 border-emerald-500 text-emerald-300 hover:bg-emerald-900/80' 
-                  : dbHealth.status === 'needs_setup'
-                    ? 'bg-amber-950/85 border-amber-500 text-amber-300 hover:bg-amber-900/80'
-                    : 'bg-red-950/85 border-red-500 text-red-300 hover:bg-red-900/80'
-                : 'bg-slate-900/85 border-slate-600 text-slate-300 hover:bg-slate-800'
-            }`}
-            title={
-              storageConfig.mode === 'SUPABASE'
-                ? dbHealth.status === 'healthy'
-                  ? "Supabase Database: Online & Healthy (Connected)" 
-                  : dbHealth.status === 'needs_setup'
-                    ? "Supabase Database: Connected but tables are not built yet! Click to run setup."
-                    : "Supabase Database: Offline or Unreachable. Verify configuration."
-                : "Database: Local Sandbox Browser Storage Mode"
-            }
-          >
-            <span className={`w-2 h-2 rounded-full ${
-              storageConfig.mode === 'SUPABASE'
-                ? dbHealth.status === 'healthy'
-                  ? 'bg-emerald-400 animate-pulse ring-2 ring-emerald-400/50' 
-                  : dbHealth.status === 'needs_setup'
-                    ? 'bg-amber-400 animate-pulse ring-2 ring-amber-400/50'
-                    : 'bg-red-400 animate-pulse ring-2 ring-red-400/50'
-                : 'bg-slate-400'
-            }`}></span>
-            <span>
-              {storageConfig.mode === 'SUPABASE'
-                ? dbHealth.status === 'healthy'
-                  ? t("COSMIC CLOUD SYNC - ONLINE", "वैदिकी क्लाउड सिंक - सक्रिय") 
-                  : dbHealth.status === 'needs_setup'
-                    ? t("COSMIC CLOUD - SETUP PENDING", "वैदिकी क्लाउड - तालिका सेटअप आवश्यक")
-                    : t("COSMIC CLOUD - UNREACHABLE", "वैदिकी क्लाउड - संपर्क विफल")
-                : t("LOCAL SANDBOX ENGINE", "स्थानीय डेटाबेस")
-              }
-            </span>
-          </div>
 
           {/* Premium Selector Indicator */}
           <button 
@@ -4764,6 +4775,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
               setSplashConfig={setSplashConfig}
               customPriests={customPriests}
               setCustomPriests={setCustomPriests}
+              adminDbError={adminDbError}
             />
           </div>
         )}
@@ -6513,46 +6525,6 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
           </div>
         </div>
 
-        {/* Database Live Connected Status */}
-        <div 
-          onClick={() => {
-            setCurrentScreen('INTEGRATIONS');
-          }}
-          className={`flex items-center justify-between p-3.5 rounded-xl border-2 cursor-pointer transition uppercase tracking-wider font-extrabold shadow-md ${
-            storageConfig.mode === 'SUPABASE'
-              ? dbHealth.status === 'healthy'
-                ? 'bg-[#091510] border-emerald-500/50 text-emerald-300 hover:bg-[#0c241a]' 
-                : dbHealth.status === 'needs_setup'
-                  ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 hover:bg-amber-900/45'
-                  : 'bg-red-950/40 border-red-500/50 text-red-300 hover:bg-red-900/45'
-              : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${
-              storageConfig.mode === 'SUPABASE'
-                ? dbHealth.status === 'healthy'
-                  ? 'bg-emerald-400 animate-pulse ring-2 ring-emerald-400/50' 
-                  : dbHealth.status === 'needs_setup'
-                    ? 'bg-amber-400 animate-pulse ring-2 ring-amber-400/50'
-                    : 'bg-red-400 animate-pulse ring-2 ring-red-400/50'
-                : 'bg-slate-400'
-            }`}></span>
-            <span className="text-[10px] font-bold">
-              {storageConfig.mode === 'SUPABASE'
-                ? dbHealth.status === 'healthy'
-                  ? t("COSMIC CLOUD SYNC - ONLINE", "वैदिकी क्लाउड सिंक - सक्रिय") 
-                  : dbHealth.status === 'needs_setup'
-                    ? t("COSMIC CLOUD - SETUP PENDING", "वैदिकी क्लाउड - तालिका सेटअप आवश्यक")
-                    : t("COSMIC CLOUD - UNREACHABLE", "वैदिकी क्लाउड - संपर्क विफल")
-                : t("LOCAL SANDBOX ENGINE", "स्थानीय डेटाबेस")
-              }
-            </span>
-          </div>
-          <span className="text-[8px] bg-slate-800/40 px-2 py-0.5 rounded text-slate-450 font-mono">
-            {storageConfig.mode}
-          </span>
-        </div>
 
         {/* Animated Marquee Ribbon: Free Services breaking */}
         <div className="w-full overflow-hidden bg-[#12142a] border text-white rounded-xl py-2.5 relative shadow-xl flex items-center select-none" style={{ borderColor: tObj.border }}>
