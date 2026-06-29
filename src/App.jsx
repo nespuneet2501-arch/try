@@ -2346,85 +2346,44 @@ function VedicKundliApp() {
               }
             }}
             className={`hidden md:flex items-center gap-2 px-3.5 py-1.5 text-[10px] rounded-full border-2 cursor-pointer transition uppercase tracking-wider font-extrabold shadow-md ${
-              storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
-                ? 'bg-emerald-950/85 border-emerald-500 text-emerald-300 hover:bg-emerald-900/80' 
-                : 'bg-red-950/85 border-red-500 text-red-300 hover:bg-red-900/80'
+              storageConfig.mode === 'SUPABASE'
+                ? dbHealth.status === 'healthy'
+                  ? 'bg-emerald-950/85 border-emerald-500 text-emerald-300 hover:bg-emerald-900/80' 
+                  : dbHealth.status === 'needs_setup'
+                    ? 'bg-amber-950/85 border-amber-500 text-amber-300 hover:bg-amber-900/80'
+                    : 'bg-red-950/85 border-red-500 text-red-300 hover:bg-red-900/80'
+                : 'bg-slate-900/85 border-slate-600 text-slate-300 hover:bg-slate-800'
             }`}
             title={
-              storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
-                ? "Supabase Database: Online & Healthy (Connected)" 
-                : "Database: Offline / Sandbox Local Storage Mode"
+              storageConfig.mode === 'SUPABASE'
+                ? dbHealth.status === 'healthy'
+                  ? "Supabase Database: Online & Healthy (Connected)" 
+                  : dbHealth.status === 'needs_setup'
+                    ? "Supabase Database: Connected but tables are not built yet! Click to run setup."
+                    : "Supabase Database: Offline or Unreachable. Verify configuration."
+                : "Database: Local Sandbox Browser Storage Mode"
             }
           >
             <span className={`w-2 h-2 rounded-full ${
-              storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
-                ? 'bg-emerald-400 animate-pulse ring-2 ring-emerald-400/50' 
-                : 'bg-red-400 animate-pulse ring-2 ring-red-400/50'
+              storageConfig.mode === 'SUPABASE'
+                ? dbHealth.status === 'healthy'
+                  ? 'bg-emerald-400 animate-pulse ring-2 ring-emerald-400/50' 
+                  : dbHealth.status === 'needs_setup'
+                    ? 'bg-amber-400 animate-pulse ring-2 ring-amber-400/50'
+                    : 'bg-red-400 animate-pulse ring-2 ring-red-400/50'
+                : 'bg-slate-400'
             }`}></span>
             <span>
-              {storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
-                ? t("COSMIC CLOUD SYNC - ONLINE", "वैदिकी क्लाउड सिंक - सक्रिय") 
-                : t("COSMIC CLOUD SYNC - LOCAL", "वैदिकी क्लाउड सिंक - स्थानीय")
+              {storageConfig.mode === 'SUPABASE'
+                ? dbHealth.status === 'healthy'
+                  ? t("COSMIC CLOUD SYNC - ONLINE", "वैदिकी क्लाउड सिंक - सक्रिय") 
+                  : dbHealth.status === 'needs_setup'
+                    ? t("COSMIC CLOUD - SETUP PENDING", "वैदिकी क्लाउड - तालिका सेटअप आवश्यक")
+                    : t("COSMIC CLOUD - UNREACHABLE", "वैदिकी क्लाउड - संपर्क विफल")
+                : t("LOCAL SANDBOX ENGINE", "स्थानीय डेटाबेस")
               }
             </span>
           </div>
-
-          {/* User profile / Google Authentication State State Container */}
-          {currentUser ? (
-            <div 
-              onClick={() => setCurrentScreen('USER_PROFILE')}
-              className="flex items-center gap-2 bg-[#12221b] border border-emerald-500/30 px-3 py-1.5 rounded-full shadow-lg cursor-pointer hover:bg-[#12221b]/80 transition duration-150"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <div className="flex flex-col text-left">
-                <span className="text-[9.5px] font-black font-mono text-emerald-300 truncate max-w-[130px]" title={currentUser}>
-                  {currentUser}
-                </span>
-                <span className="text-[7.5px] uppercase tracking-wider font-extrabold text-slate-400">
-                  {activeUserIsPremium ? t("💎 Premium Member", "💎 प्रीमियम सदस्य") : t("👤 Standard Free", "👤 सामान्य निःशुल्क")}
-                </span>
-              </div>
-              
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowGoogleSimPicker(true);
-                }}
-                className="text-[8.5px] uppercase tracking-wider font-extrabold bg-[#cca43b]/10 text-[#cca43b] px-1.5 py-0.5 rounded border border-[#cca43b]/20 hover:bg-[#cca43b]/20 transition ml-1"
-                title="Google login simulation profile toggle"
-              >
-                {t("Role Pick", "रोल")}
-              </button>
-
-              <button 
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  await authService.logout();
-                  setCurrentUser(null);
-                  setCurrentScreen('DASHBOARD');
-                }}
-                className="text-[8.5px] uppercase tracking-wider font-extrabold text-slate-400 hover:text-red-400 transition pl-1.5 border-l border-slate-700/60"
-              >
-                {t("Out", "लॉगआउट")}
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => {
-                setAuthActiveTab('signup');
-                setCurrentScreen('AUTH');
-              }}
-              className="px-4 py-1.5 bg-[#cca43b] hover:bg-[#ebd070] text-slate-950 font-black rounded-full text-xs transition flex items-center gap-1.5 shadow-md font-sans tracking-tight border border-black/15"
-              style={{
-                backgroundColor: tObj.primary,
-                color: currentTheme === 'CLASSIC_BW' ? '#FFFFFF' : '#000000',
-                borderColor: tObj.border
-              }}
-            >
-              <span>👤</span>
-              <span className="font-extrabold text-[10.5px]">{t("Login / Sign Up", "लॉगिन / पंजीकरण")}</span>
-            </button>
-          )}
 
           {/* Premium Selector Indicator */}
           <button 
@@ -4913,7 +4872,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                             ? 'bg-emerald-950/40 border border-emerald-500/30 text-emerald-400' 
                             : 'bg-amber-950/40 border border-amber-500/30 text-amber-400'
                         }`}>
-                          ● STATUS: ${dbHealth.status === 'healthy' ? 'ALL HEALTHY' : 'NEEDS TABLE SETUP'}
+                          ● STATUS: {dbHealth.status === 'healthy' ? 'ALL HEALTHY' : 'NEEDS TABLE SETUP'}
                         </span>
                         <button 
                           onClick={queryDatabaseStatus}
@@ -4945,11 +4904,11 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                             }`}
                           >
                             <div className="truncate pr-2">
-                              <p className="text-[10px] font-mono font-bold leading-none truncate">${tbl.key}</p>
-                              <p className="text-[8px] text-slate-405 mt-0.5 leading-none">${tbl.label}</p>
+                              <p className="text-[10px] font-mono font-bold leading-none truncate">{tbl.key}</p>
+                              <p className="text-[8px] text-slate-400 mt-0.5 leading-none">{tbl.label}</p>
                             </div>
                             <span className="text-[10px] shrink-0 font-extrabold flex items-center gap-1">
-                              ${isOk ? <span className="text-emerald-400">● Ready</span> : <span className="text-amber-405">○ Missing</span>}
+                              {isOk ? <span className="text-emerald-400">● Ready</span> : <span className="text-amber-500">○ Missing</span>}
                             </span>
                           </div>
                         );
@@ -6481,21 +6440,33 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
             }
           }}
           className={`flex items-center justify-between p-3.5 rounded-xl border-2 cursor-pointer transition uppercase tracking-wider font-extrabold shadow-md ${
-            storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
-              ? 'bg-[#091510] border-emerald-500/50 text-emerald-300 hover:bg-[#0c241a]' 
-              : 'bg-red-950/40 border-red-500/50 text-red-300 hover:bg-red-900/45'
+            storageConfig.mode === 'SUPABASE'
+              ? dbHealth.status === 'healthy'
+                ? 'bg-[#091510] border-emerald-500/50 text-emerald-300 hover:bg-[#0c241a]' 
+                : dbHealth.status === 'needs_setup'
+                  ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 hover:bg-amber-900/45'
+                  : 'bg-red-950/40 border-red-500/50 text-red-300 hover:bg-red-900/45'
+              : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850'
           }`}
         >
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${
-              storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
-                ? 'bg-emerald-400 animate-pulse ring-2 ring-emerald-400/50' 
-                : 'bg-red-400 animate-pulse ring-2 ring-red-400/50'
+              storageConfig.mode === 'SUPABASE'
+                ? dbHealth.status === 'healthy'
+                  ? 'bg-emerald-400 animate-pulse ring-2 ring-emerald-400/50' 
+                  : dbHealth.status === 'needs_setup'
+                    ? 'bg-amber-400 animate-pulse ring-2 ring-amber-400/50'
+                    : 'bg-red-400 animate-pulse ring-2 ring-red-400/50'
+                : 'bg-slate-400'
             }`}></span>
             <span className="text-[10px] font-bold">
-              {storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
-                ? t("COSMIC CLOUD SYNC - ONLINE", "वैदिकी क्लाउड सिंक - सक्रिय") 
-                : t("COSMIC CLOUD SYNC - LOCAL", "वैदिकी क्लाउड सिंक - स्थानीय")
+              {storageConfig.mode === 'SUPABASE'
+                ? dbHealth.status === 'healthy'
+                  ? t("COSMIC CLOUD SYNC - ONLINE", "वैदिकी क्लाउड सिंक - सक्रिय") 
+                  : dbHealth.status === 'needs_setup'
+                    ? t("COSMIC CLOUD - SETUP PENDING", "वैदिकी क्लाउड - तालिका सेटअप आवश्यक")
+                    : t("COSMIC CLOUD - UNREACHABLE", "वैदिकी क्लाउड - संपर्क विफल")
+                : t("LOCAL SANDBOX ENGINE", "स्थानीय डेटाबेस")
               }
             </span>
           </div>
