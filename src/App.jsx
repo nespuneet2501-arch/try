@@ -826,7 +826,7 @@ function VedicKundliApp() {
 
 
 
-  const [currentScreen, setCurrentScreen] = useState('DASHBOARD'); // WELCOME, AUTH, DASHBOARD, ADD_KUNDLI, KUNDLI_REPORT, PANCHANG, MATCHMAKING, PREMIUM
+  const [currentScreen, setCurrentScreen] = useState('ADD_KUNDLI'); // WELCOME, AUTH, DASHBOARD, ADD_KUNDLI, KUNDLI_REPORT, PANCHANG, MATCHMAKING, PREMIUM
   const [aiChatTab, setAiChatTab] = useState('chat');
   
   const [splashConfig, setSplashConfig] = useState(() => {
@@ -841,10 +841,10 @@ function VedicKundliApp() {
   const [showSplash, setShowSplash] = useState(() => {
     try {
       const saved = localStorage.getItem('pva_splash_config');
-      const parsed = saved ? JSON.parse(saved) : { enabled: true };
-      return parsed.enabled !== false;
+      const parsed = saved ? JSON.parse(saved) : { enabled: false }; // Disable splash by default for instant launch
+      return parsed.enabled === true;
     } catch (e) {
-      return true;
+      return false;
     }
   });
 
@@ -2168,17 +2168,17 @@ function VedicKundliApp() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#090a15] text-slate-200">
+    <div className="min-h-screen flex flex-col theme-bg-page theme-text-main">
       {/* Dynamic Theme Paint Processor */}
       <style>{themeStyles}</style>
 
       {/* Top Luxury Dynamic Header */}
-      <header className="sticky top-0 z-50 bg-[#0f1123]/95 backdrop-blur-md border-b border-[#cca43b]/20 px-3 sm:px-4 py-3 flex flex-row items-center justify-between gap-2 sm:gap-3 shadow-lg">
-        <div className="flex items-center gap-2 sm:gap-3 cursor-pointer" onClick={() => setCurrentScreen('DASHBOARD')}>
-          <PVAstroLogo className="w-10 h-10 sm:w-13 sm:h-13 transition duration-300 hover:scale-105" />
+      <header className="sticky top-0 z-50 theme-bg-card backdrop-blur-md border-b theme-border px-3 sm:px-4 py-2.5 sm:py-3 flex flex-row items-center justify-between gap-2 sm:gap-3 shadow-lg">
+        <div className="flex items-center gap-1.5 sm:gap-3 cursor-pointer" onClick={() => setCurrentScreen('DASHBOARD')}>
+          <PVAstroLogo className="w-8 h-8 sm:w-11 sm:h-11 transition duration-300 hover:scale-105" />
           <div>
-            <h1 className="text-sm sm:text-xl font-bold tracking-widest font-cinzel leading-tight animate-pvastro-logo">PVASTRO</h1>
-            <p className="text-[7.5px] sm:text-[10px] uppercase tracking-wider text-slate-400 font-semibold">{t("Vedic Cosmic Insights", "वैदिक ब्रह्मांडीय अंतर्दृष्टि")}</p>
+            <h1 className="text-sm sm:text-lg font-black tracking-widest font-cinzel leading-tight animate-pvastro-logo">PVASTRO</h1>
+            <p className="hidden sm:block text-[8px] sm:text-[9.5px] uppercase tracking-wider text-slate-400 font-semibold">{t("Vedic Cosmic Insights", "वैदिक ब्रह्मांडीय अंतर्दृष्टि")}</p>
           </div>
         </div>
 
@@ -2204,60 +2204,72 @@ function VedicKundliApp() {
             <button
               onClick={() => setFontScale('SMALL')}
               className={`px-2 py-0.5 text-[10px] font-black rounded transition-all ${fontScale === 'SMALL' ? 'bg-[#cca43b] text-slate-950 font-black' : 'text-slate-400 hover:text-white'}`}
-              title={t("Small Fonts", "छोटे अक्षर")}
-            >
-              A-
-            </button>
-            <button
-              onClick={() => setFontScale('NORMAL')}
-              className={`px-2 py-0.5 text-[10px] font-black rounded transition-all ${fontScale === 'NORMAL' ? 'bg-[#cca43b] text-slate-950 font-black' : 'text-slate-400 hover:text-white'}`}
-              title={t("Normal Fonts", "सामान्य अक्षर")}
-            >
-              A
-            </button>
-            <button
-              onClick={() => setFontScale('LARGE')}
-              className={`px-2 py-0.5 text-[10px] font-black rounded transition-all ${fontScale === 'LARGE' ? 'bg-[#cca43b] text-slate-950 font-black' : 'text-slate-400 hover:text-white'}`}
-              title={t("Large Fonts", "बड़े अक्षर")}
-            >
-              A+
-            </button>
-            <button
-              onClick={() => setFontScale('XLARGE')}
-              className={`px-2 py-0.5 text-[10px] font-black rounded transition-all ${fontScale === 'XLARGE' ? 'bg-[#cca43b] text-slate-950 font-black' : 'text-slate-400 hover:text-white'}`}
-              title={t("Extra Large Fonts", "अति बड़े अक्षर")}
-            >
-              A++
-            </button>
+              title={t("Small Fonts", "छोटे अक्षर")} />
           </div>
 
-          {/* AI Guru Chat Top Header Icon */}
-          <button 
-            onClick={() => setCurrentScreen('AI_CHAT')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full border transition duration-200 uppercase font-black tracking-wider shadow-sm cursor-pointer ${
-              currentScreen === 'AI_CHAT'
-                ? 'bg-amber-500 border-amber-500 text-slate-950 font-black scale-105'
-                : 'border-amber-500/30 bg-[#161a35] hover:bg-[#202750] text-[#cca43b] hover:text-amber-300'
-            }`}
-            title={t("Ask AI Guru & Contact Help", "एआई गुरु से पूछें")}
-          >
-            <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-400" />
-            <span className="hidden sm:inline">{t("Ask AI Guru", "एआई गुरु")}</span>
-          </button>
+          {/* User profile / Google Authentication State State Container */}
+          {currentUser ? (
+            <div 
+              onClick={() => setCurrentScreen('USER_PROFILE')}
+              className="flex items-center gap-1.5 bg-[#12221b] border border-emerald-500/30 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-full shadow-lg cursor-pointer hover:bg-[#12221b]/80 transition duration-150 shrink-0 select-none"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+              <div className="flex flex-col text-left shrink-0 max-w-[70px] sm:max-w-[130px]">
+                <span className="text-[9px] font-black font-mono text-emerald-300 truncate" title={currentUser}>
+                  {currentUser}
+                </span>
+                <span className="text-[7px] uppercase tracking-wider font-extrabold text-[#cca43b] leading-none">
+                  {activeUserIsPremium ? t("💎 Premium", "💎 प्रीमियम") : t("👤 Free", "👤 निःशुल्क")}
+                </span>
+              </div>
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowGoogleSimPicker(true);
+                }}
+                className="hidden sm:inline-block text-[8px] uppercase tracking-wider font-extrabold bg-[#cca43b]/10 text-[#cca43b] px-1 py-0.5 rounded border border-[#cca43b]/20 hover:bg-[#cca43b]/20 transition"
+                title="Google login simulation profile toggle"
+              >
+                {t("Role", "रोल")}
+              </button>
 
-          {/* Language Toggle Button */}
-          <button 
-            onClick={() => setCurrentLanguage(l => l === 'English' ? 'Hindi' : 'English')}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full border border-[#cca43b]/30 bg-[#161a35] hover:bg-[#202750] text-[#cca43b] transition duration-200"
-          >
-            <Languages className="w-3.5 h-3.5" />
-            <span className="font-semibold">{currentLanguage === 'English' ? 'हिंदी' : 'English'}</span>
-          </button>
+              <button 
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await authService.logout();
+                  setCurrentUser(null);
+                  setCurrentScreen('DASHBOARD');
+                }}
+                className="text-[8px] uppercase tracking-wider font-extrabold text-slate-400 hover:text-red-400 transition pl-1 sm:pl-1.5 border-l border-slate-700/60 shrink-0"
+              >
+                {t("Out", "लॉगआउट")}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setAuthActiveTab('signup');
+                setCurrentScreen('AUTH');
+              }}
+              className="px-3.5 py-3 sm:px-4 sm:py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-full text-xs transition flex items-center justify-center gap-1 sm:gap-1.5 shadow-md font-sans tracking-tight border border-black/10 shrink-0 min-h-[44px] sm:min-h-[38px] cursor-pointer"
+              style={{
+                backgroundColor: tObj.primary,
+                color: currentTheme === 'CLASSIC_BW' ? '#FFFFFF' : '#000000',
+                borderColor: tObj.border
+              }}
+            >
+              <span className="text-[14px]">👤</span>
+              <span className="font-extrabold text-[11px] sm:text-[11px] uppercase tracking-wider block min-w-[34px] text-center">
+                <span className="sm:hidden">{t("Login", "लॉगिन")}</span>
+                <span className="hidden sm:inline">{t("Login / Sign Up", "लॉगिन / पंजीकरण")}</span>
+              </span>
+            </button>
+          )}
 
-          {/* Database Live Connected Badge */}
-          <div 
+          <div
             onClick={() => {
-              if (isUserAdmin) {
+              if (isCurrentUserAdmin) {
                 setCurrentScreen('INTEGRATIONS');
               } else {
                 triggerNotification(
@@ -3580,20 +3592,20 @@ function VedicKundliApp() {
           <div className="max-w-3xl mx-auto col-span-full">
             <button 
               onClick={() => setCurrentScreen('DASHBOARD')}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-300 flex items-center gap-1.5 mb-6 transition"
+              className="px-3 py-1.5 bg-[#12142d] hover:bg-[#1c2045] border border-slate-700/50 text-xs font-semibold rounded-lg text-slate-200 flex items-center gap-1.5 mb-6 transition"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>{t("Back to Home", "मुख्य पृष्ठ पर लौटें")}</span>
             </button>
 
-            <div className="bg-[#0f1123] border border-slate-800 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#cca43b] via-[#e5c060] to-[#cca43b]"></div>
+            <div className="theme-bg-card theme-border rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-amber-300 to-amber-500"></div>
               
               <div className="flex items-center gap-3 mb-6">
-                <PlusCircle className="w-7 h-7 text-[#cca43b]" />
+                <Compass className="w-8 h-8 text-amber-500 animate-spin-slow" />
                 <div>
-                  <h2 className="text-2xl font-bold text-white font-cinzel">{t("Vedic Birth Particulars", "वैदिक जन्म पैमाना दर्ज करें")}</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">{t("Create or load a custom detailed birth report instantly.", "त्वरित रूप से एक विस्तृत कस्टम कुंडली रिपोर्ट जनरेट करें।")}</p>
+                  <h2 className="text-2xl sm:text-3xl font-black theme-text-main font-cinzel tracking-wider uppercase">{t("Kundali Making", "कुण्डली निर्माण (Kundali Making)")}</h2>
+                  <p className="text-xs text-amber-500 font-bold mt-0.5">{t("Vedic Horoscope Generation & Calculation Workspace", "सटीक वैदिक कुंडली गणना एवं कुंडली चक्र विशेषांक")}</p>
                 </div>
               </div>
 
@@ -3602,26 +3614,26 @@ function VedicKundliApp() {
                 
                 {/* Full name */}
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">{t("Full Name", "पूरा नाम")}</label>
+                  <label className="block text-xs uppercase tracking-wider theme-text-muted font-black mb-2">{t("Full Name", "पूरा नाम")}</label>
                   <input 
                     type="text" 
                     value={nameInput} 
                     onChange={(e) => setNameInput(e.target.value)}
-                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] text-sm text-slate-100 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#cca43b]/40 placeholder-slate-700 font-cinzel"
+                    className="w-full theme-bg-page theme-border focus:border-[#cca43b] text-sm theme-text-main rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#cca43b]/40 placeholder-slate-400 font-cinzel font-semibold"
                     placeholder="Enter name"
                   />
                 </div>
 
                 {/* Gender */}
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">{t("Gender", "लिंग")}</label>
+                  <label className="block text-xs uppercase tracking-wider theme-text-muted font-black mb-2">{t("Gender", "लिंग")}</label>
                   <div className="grid grid-cols-3 gap-2">
                     {['Male', 'Female', 'Other'].map((g) => (
                       <button
                         key={g}
                         type="button"
                         onClick={() => setGenderInput(g)}
-                        className={`py-2 text-xs font-semibold rounded-lg border transition ${genderInput === g ? 'bg-[#cca43b]/10 border-[#cca43b] text-[#cca43b]' : 'bg-[#090a15] border-slate-800 hover:border-slate-700 text-slate-300'}`}
+                        className={`py-2 text-xs font-black rounded-lg border transition ${genderInput === g ? 'bg-amber-500/10 border-amber-500 text-amber-500 font-black' : 'theme-bg-page theme-border hover:border-slate-400 theme-text-muted'}`}
                       >
                         {t(g, g === 'Male' ? 'पुरुष' : g === 'Female' ? 'महिला' : 'अन्य')}
                       </button>
@@ -3631,54 +3643,54 @@ function VedicKundliApp() {
 
                 {/* DOB & TOB Spaced */}
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">{t("Date of Birth", "जन्म तिथि")}</label>
+                  <label className="block text-xs uppercase tracking-wider theme-text-muted font-black mb-2">{t("Date of Birth", "जन्म तिथि")}</label>
                   <input 
                     type="date" 
                     value={dobInput} 
                     onChange={(e) => setDobInput(e.target.value)}
-                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] text-sm text-slate-100 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#cca43b]/40 font-mono"
+                    className="w-full theme-bg-page theme-border focus:border-[#cca43b] text-sm theme-text-main rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#cca43b]/40 font-mono font-bold"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">{t("Time of Birth (Local)", "जन्म समय")}</label>
+                  <label className="block text-xs uppercase tracking-wider theme-text-muted font-black mb-2">{t("Time of Birth (Local)", "जन्म समय")}</label>
                   <input 
                     type="time" 
                     value={tobInput} 
                     onChange={(e) => setTobInput(e.target.value)}
-                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] text-sm text-slate-100 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#cca43b]/40 font-mono"
+                    className="w-full theme-bg-page theme-border focus:border-[#cca43b] text-sm theme-text-main rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#cca43b]/40 font-mono font-bold"
                   />
                 </div>
 
                 {/* Birth Place */}
                 <div className="sm:col-span-2 relative">
-                  <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">{t("Birth Place", "जन्म स्थान")}</label>
+                  <label className="block text-xs uppercase tracking-wider theme-text-muted font-black mb-2">{t("Birth Place", "जन्म स्थान")}</label>
                   <input 
                     type="text" 
                     value={birthPlaceInput} 
                     onChange={(e) => setBirthPlaceInput(e.target.value)}
                     onFocus={() => setCitySearchFocused(true)}
                     onBlur={() => setTimeout(() => setCitySearchFocused(false), 200)}
-                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] text-sm text-slate-100 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#cca43b]/40 placeholder-slate-600"
+                    className="w-full theme-bg-page theme-border focus:border-[#cca43b] text-sm theme-text-main rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#cca43b]/40 placeholder-slate-400 font-bold"
                     placeholder="e.g. Muzaffarnagar, UP, India"
                   />
                   
                   {/* Auto-suggestions Dropdown */}
                   {citySearchFocused && citySuggestions.length > 0 && (
-                    <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-[#0f1123] border border-slate-700 rounded-lg shadow-2xl divide-y divide-slate-800 font-sans text-xs">
+                    <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto theme-bg-card theme-border rounded-lg shadow-2xl divide-y divide-slate-200/20 font-sans text-xs">
                       {citySuggestions.map((city, idx) => (
                         <div 
-                          key={idx}
-                          onMouseDown={() => {
-                            setBirthPlaceInput(t(city.name, city.hindi));
-                            setLatitudeInput(city.lat);
-                            setLongitudeInput(city.lon);
-                            setTimezoneInput(city.timezone);
-                          }}
-                          className="px-4 py-2.5 hover:bg-[#cca43b]/10 text-slate-200 hover:text-white cursor-pointer transition flex items-center justify-between"
+                           key={idx}
+                           onMouseDown={() => {
+                             setBirthPlaceInput(t(city.name, city.hindi));
+                             setLatitudeInput(city.lat);
+                             setLongitudeInput(city.lon);
+                             setTimezoneInput(city.timezone);
+                           }}
+                           className="px-4 py-2.5 hover:bg-amber-500/10 theme-text-main cursor-pointer transition flex items-center justify-between"
                         >
-                          <span className="font-medium text-slate-100">{t(city.name, city.hindi)}</span>
-                          <span className="text-[10px] text-[#cca43b] font-mono font-normal">Lat: {city.lat}, Lon: {city.lon}</span>
+                          <span className="font-bold">{t(city.name, city.hindi)}</span>
+                          <span className="text-[10px] text-amber-600 font-mono font-black">Lat: {city.lat}, Lon: {city.lon}</span>
                         </div>
                       ))}
                     </div>
@@ -3687,48 +3699,62 @@ function VedicKundliApp() {
 
                 {/* Geo Coordinates */}
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">{t("Latitude", "अक्षांश")}</label>
+                  <label className="block text-xs uppercase tracking-wider theme-text-muted font-black mb-2">{t("Latitude", "अक्षांश")}</label>
                   <input 
                     type="number" 
                     step="any"
                     value={latitudeInput} 
                     onChange={(e) => setLatitudeInput(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] text-sm text-slate-100 rounded-lg px-4 py-2.5 focus:outline-none font-mono"
+                    className="w-full theme-bg-page theme-border focus:border-[#cca43b] text-sm theme-text-main rounded-lg px-4 py-2.5 focus:outline-none font-mono font-bold"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">{t("Longitude", "रेखांश")}</label>
+                  <label className="block text-xs uppercase tracking-wider theme-text-muted font-black mb-2">{t("Longitude", "रेखांश")}</label>
                   <input 
                     type="number" 
                     step="any"
                     value={longitudeInput} 
                     onChange={(e) => setLongitudeInput(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-[#090a15] border border-slate-800 focus:border-[#cca43b] text-sm text-slate-100 rounded-lg px-4 py-2.5 focus:outline-none font-mono"
+                    className="w-full theme-bg-page theme-border focus:border-[#cca43b] text-sm theme-text-main rounded-lg px-4 py-2.5 focus:outline-none font-mono font-bold"
                   />
                 </div>
 
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-center gap-4 border-t border-slate-800/80 pt-6">
-                <button
-                  type="button"
-                  onClick={handleGenerateChart}
-                  className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-[#cca43b] to-[#f3d47d] text-[#090a15] font-extrabold text-base rounded-xl hover:brightness-110 shadow-lg flex items-center justify-center gap-2 transition"
-                >
-                  <Compass className="w-5 h-5" />
-                  <span>{t("Generate Vedic Chart", "वैदिक कुण्डली जनरेट करें")}</span>
-                </button>
+              <div className="border-t theme-border pt-6 space-y-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={handleGenerateChart}
+                    className="flex-1 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-white font-extrabold text-base rounded-xl shadow-lg flex items-center justify-center gap-2.5 transition transform active:scale-95 cursor-pointer"
+                    title={t("Calculate and View Kundli instantly without registering", "बिना पंजीकरण किए तुरंत कुंडली देखें")}
+                  >
+                    <Compass className="w-6 h-6 animate-spin-slow text-white shrink-0" />
+                    <div className="text-left">
+                      <span className="block text-base font-black uppercase text-white leading-tight">{t("Calculate & View Instantly", "तुरंत कुण्डली देखें (बिना लॉगिन)")}</span>
+                      <span className="block text-[10px] text-amber-100 font-medium">{t("No login required, fast calculation", "बिना अकाउंट बनाए त्वरित गणना प्राप्त करें")}</span>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={handleSaveProfile}
+                    className="flex-1 px-6 py-4 bg-[#12142d] hover:bg-[#1c2045] text-white border border-amber-500/50 font-extrabold rounded-xl flex items-center justify-center gap-2.5 transition transform active:scale-95 cursor-pointer"
+                    title={t("Register or login to save this Kundli to secure cloud database", "इस कुंडली को सुरक्षित रूप से सहेज कर रखने के लिए लॉगिन करें")}
+                  >
+                    <ShieldCheck className="w-6 h-6 text-amber-500 shrink-0" />
+                    <div className="text-left">
+                      <span className="block text-sm font-black uppercase text-amber-500 leading-tight">{t("Save Kundli to Account", "खाते में सुरक्षित सहेजें")}</span>
+                      <span className="block text-[10px] text-slate-300 font-medium">{t("Sign-in to access from any device", "क्लाउड डेटाबेस से जोड़ें तांकि कभी खोए नहीं")}</span>
+                    </div>
+                  </button>
+                </div>
                 
-                <button
-                  type="button"
-                  onClick={handleSaveProfile}
-                  className="w-full sm:w-auto px-6 py-3.5 bg-[#12142d] hover:bg-[#1c2045] text-slate-200 border border-[#cca43b]/30 font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition"
-                >
-                  <ShieldCheck className="w-4.5 h-4.5 text-[#cca43b]" />
-                  <span>{t("Save for Future Analysis", "भविष्य के लिए सुरक्षित करें")}</span>
-                </button>
+                <p className="text-center text-[11px] theme-text-muted italic select-none">
+                  {t("🛡️ Guest mode calculates instantly in local browser cache. Registering keeps your charts safe from deletion.", "🛡️ अतिथि मोड स्थानीय रूप से तुरंत गणना पूर्ण करता है। अकाउंट बनाने से आपकी कुंडलियां स्थायी रूप से सुरक्षित रहती हैं।")}
+                </p>
               </div>
 
             </div>
@@ -5063,7 +5089,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                         </div>
                         {storageConfig.supabaseUrl && storageConfig.supabaseAnonKey && !storageConfig.supabaseUrl.includes('your-proj-id') && !storageConfig.supabaseUrl.includes('put-your-org') && (
                           <div className="p-2.5 bg-[#090b16] border border-slate-900 rounded font-mono text-[9px] text-emerald-400 select-all truncate break-all">
-                            {window.location.origin + window.location.pathname}?sUrl={encodeURIComponent(storageConfig.supabaseUrl)}&sKey={encodeURIComponent(storageConfig.supabaseAnonKey).substring(0, 24)}...
+                            {window.location.origin + window.location.pathname}?sUrl={encodeURIComponent(storageConfig.supabaseUrl)}&sKey={encodeURIComponent(storageConfig.supabaseAnonKey)}
                           </div>
                         )}
                       </div>

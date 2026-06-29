@@ -415,8 +415,8 @@ export function calculateAstrology(name, dob, tob, latitude, longitude, timezone
     
     // Mathematically rigorous Ascendant formula (fixing swap/sign errors)
     let tropicalLagnaRad = Math.atan2(
-      Math.cos(lstRad),
-      -Math.sin(lstRad) * Math.cos(obliquity) - Math.tan(latRad) * Math.sin(obliquity)
+      Math.sin(lstRad),
+      Math.cos(lstRad) * Math.cos(obliquity) - Math.tan(latRad) * Math.sin(obliquity)
     );
     let tropicalLagna = (tropicalLagnaRad * 180.0 / Math.PI + 360.0) % 360.0;
     let siderealLagna = (tropicalLagna - ayanGlobal + 360.0) % 360.0;
