@@ -20,16 +20,15 @@ export const getDefaultStorageConfig = () => {
   }
 
   const local = localStorage.getItem(CONFIG_KEY);
-  let mode = 'LOCAL';
+  let mode = 'SUPABASE'; // Default to active online Supabase
   let sUrl = envUrl;
   let sAnonKey = envKey;
 
   if (local) {
     try {
       const parsed = JSON.parse(local);
-      sUrl = (parsed.supabaseUrl || envUrl || '').trim();
-      sAnonKey = (parsed.supabaseAnonKey || envKey || '').trim();
-      mode = parsed.mode || 'LOCAL';
+      sUrl = (parsed.supabaseUrl || '').trim();
+      sAnonKey = (parsed.supabaseAnonKey || '').trim();
     } catch (e) {
       console.error("Failed to parse local storage config", e);
     }
@@ -44,14 +43,25 @@ export const getDefaultStorageConfig = () => {
     !sAnonKey.includes('paste_your_key') &&
     sAnonKey.length > 20;
 
-  // Crucial: Auto-activate SUPABASE mode if valid credentials exist.
-  // This prevents user data from slipping into sandbox mode during validation testing!
-  if (hasValidCreds) {
-    mode = 'SUPABASE';
+  // Auto-heal to production defaults if storage credentials got broken or localized
+  if (!hasValidCreds) {
+    sUrl = envUrl;
+    sAnonKey = envKey;
+    
+    // Auto-persist the healthy credentials
+    try {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify({
+        mode: 'SUPABASE',
+        supabaseUrl: sUrl,
+        supabaseAnonKey: sAnonKey
+      }));
+    } catch (err) {
+      console.warn("Failsafe saving auto-healed credentials failed:", err);
+    }
   }
 
   return {
-    mode,
+    mode: 'SUPABASE', // ALWAYS force connection to Supabase automatically
     supabaseUrl: sUrl,
     supabaseAnonKey: sAnonKey
   };
@@ -195,6 +205,19 @@ export const checkDatabaseHealth = async () => {
                           errorMsg.includes('fetch') || 
                           errorMsg.includes('typeerror') ||
                           errorMsg.includes('failed to connect');
+            
+            // 42501 is PostgreSQL permission denied (RLS policy active but no select policy is set)
+            const isPermissionOrRLS = error.code === '42501' || 
+                                      errorMsg.includes('permission') || 
+                                      errorMsg.includes('policy') || 
+                                      errorMsg.includes('violates row-level security') || 
+                                      errorMsg.includes('row-level security') ||
+                                      errorMsg.includes('insufficient privilege');
+            
+            if (isPermissionOrRLS) {
+              return { t, ok: true }; // The table definitely exists in the schema!
+            }
+
             const isNotExist = error.code === '42P01' || errorMsg.includes('does not exist') || errorMsg.includes('relation');
             return { t, ok: false, isNetworkFail: isNet, isNotExist };
           }
