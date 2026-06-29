@@ -1132,8 +1132,9 @@ export const kundliDbService = {
           });
 
           // Sync cloudList back to localList
+          let mergedList = [];
           if (cloudList && cloudList.length > 0) {
-            let mergedList = [...localList];
+            mergedList = [...localList];
             cloudList.forEach(cloudItem => {
               const idx = mergedList.findIndex(item => item.id === cloudItem.id);
               if (idx > -1) {
@@ -1142,34 +1143,49 @@ export const kundliDbService = {
                 mergedList.push({ ...cloudItem, user_id: emailOrId });
               }
             });
-
-            // Save merged list back to local storage
-            let allLocal = [];
-            if (rawLocal) {
-              try { allLocal = JSON.parse(rawLocal); } catch(e){}
-            }
-            allLocal = allLocal.filter(item => item.user_id !== emailOrId);
-            allLocal = [...allLocal, ...mergedList];
-            localStorage.setItem(LOCAL_KUNDLIS_KEY, JSON.stringify(allLocal));
-
-            return mergedList;
           }
-          return localList;
+
+          // Save merged list back to local storage (even if empty, keeping it in sync with database)
+          let allLocal = [];
+          if (rawLocal) {
+            try { allLocal = JSON.parse(rawLocal); } catch(e){}
+          }
+          allLocal = allLocal.filter(item => item.user_id !== emailOrId);
+          allLocal = [...allLocal, ...mergedList];
+          localStorage.setItem(LOCAL_KUNDLIS_KEY, JSON.stringify(allLocal));
+
+          // Dispatch custom event to notify UI that database sync completed with the updated list!
+          window.dispatchEvent(new CustomEvent('pva_db_synced', { 
+            detail: { email: emailOrId, records: mergedList } 
+          }));
+
+          return mergedList;
         })();
 
-        // Race the fetch with a short 1500ms timeout so the app is always ultra-fast
-        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1500));
+        // Adaptive timeout: 10 seconds for cold start/no cache, 2 seconds if local cache already exists
+        const timeoutLimit = localList.length > 0 ? 2000 : 10000;
+        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), timeoutLimit));
         const fastestResult = await Promise.race([fetchPromise, timeoutPromise]);
 
         if (fastestResult) {
           return fastestResult;
         } else {
-          console.log("Supabase fetch exceeded 1.5s timeout. Loading from local cache first; sync is running in background.");
+          console.log(`Supabase fetch exceeded ${timeoutLimit}ms timeout. Loading from local cache; background sync is running.`);
           // Run the rest of the sync in background
-          fetchPromise.catch(err => console.warn("Background sync error:", err));
+          fetchPromise.catch(err => {
+            console.warn("Background sync error:", err);
+            const errStr = String(err.message || err);
+            if (!errStr.includes('failed to fetch') && !errStr.includes('TypeError')) {
+              triggerNotification("Cloud Sync Error ❌", enrichSupabaseError(err), "error");
+            }
+          });
         }
       } catch (err) {
         console.warn("Could not load charts from Supabase, returning local store:", err);
+        const errStr = String(err.message || err);
+        if (!errStr.includes('failed to fetch') && !errStr.includes('TypeError')) {
+          triggerNotification("Cloud Fetch Error ❌", enrichSupabaseError(err), "error");
+        }
       }
     }
 

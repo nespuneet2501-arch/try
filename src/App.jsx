@@ -1853,11 +1853,25 @@ function VedicKundliApp() {
     const syncDb = async () => {
       const email = currentUser || 'guest@vedicastrology.org';
       const loaded = await kundliDbService.fetchSavedKundlis(email);
-      if (loaded && loaded.length > 0) {
+      if (loaded) {
         setSavedKundlis(loaded);
       }
     };
     syncDb();
+
+    // Listen to real-time background database sync completions
+    const handleDbSynced = (e) => {
+      const email = currentUser || 'guest@vedicastrology.org';
+      if (e.detail && e.detail.email === email && e.detail.records) {
+        console.log("Real-time DB synchronization event received, updating UI records list.");
+        setSavedKundlis(e.detail.records);
+      }
+    };
+
+    window.addEventListener('pva_db_synced', handleDbSynced);
+    return () => {
+      window.removeEventListener('pva_db_synced', handleDbSynced);
+    };
   }, [currentUser, storageConfig.mode]);
 
   const navigateToReport = (profile) => {
