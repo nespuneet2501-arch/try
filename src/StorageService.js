@@ -13,7 +13,7 @@ export const getDefaultStorageConfig = () => {
 
   // If no environment variables are defined or contain placeholders, use Puneet's production credentials
   if (!envUrl || envUrl.includes('your-proj-id') || envUrl.includes('placeholder') || envUrl.length < 15) {
-    envUrl = 'https://elktujqnqhvvsxcnstcw.supabase.co';
+    envUrl = 'https://elktujqnqhvxsxcnstcw.supabase.co';
   }
   if (!envKey || envKey.includes('paste_your_key') || envKey.includes('placeholder') || envKey.length < 25) {
     envKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsa3R1anFucWh2dnN4Y25zdGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTMyODYsImV4cCI6MjA5NTg2OTI4Nn0.lFYK3ePkFRLR97ot00E-Q_x17CE54JKTkcXZTGrj8Cc';
@@ -29,6 +29,9 @@ export const getDefaultStorageConfig = () => {
       const parsed = JSON.parse(local);
       sUrl = (parsed.supabaseUrl || '').trim();
       sAnonKey = (parsed.supabaseAnonKey || '').trim();
+      if (sUrl.includes('elktujqnqhvvsxcnstcw')) {
+        sUrl = sUrl.replace('elktujqnqhvvsxcnstcw', 'elktujqnqhvxsxcnstcw');
+      }
     } catch (e) {
       console.error("Failed to parse local storage config", e);
     }
