@@ -961,89 +961,124 @@ export const kundliDbService = {
     const config = getDefaultStorageConfig();
     const isAdmin = typeof emailOrId === 'string' && emailOrId.toLowerCase().trim() === 'nespuneet2501@gmail.com';
 
+    // 1. Load local copy first (instant!)
+    let localList = [];
+    const rawLocal = localStorage.getItem(LOCAL_KUNDLIS_KEY);
+    if (rawLocal) {
+      try {
+        const parsed = JSON.parse(rawLocal);
+        localList = isAdmin ? parsed : parsed.filter(item => item.user_id === emailOrId);
+      } catch (e) {
+        console.error("Local lists error:", e);
+      }
+    }
+
+    // 2. If Supabase is configured, fetch in background with a fast timeout race
     if (isSupabaseConfigured() && config.mode === 'SUPABASE') {
       const supabase = getSupabaseClient();
       try {
-        let query = supabase.from('kundlis').select('*');
+        const fetchPromise = (async () => {
+          let query = supabase.from('kundlis').select('*');
 
-        if (!isAdmin) {
-          // Find our mapped uuid if email was passed
-          let targetId = emailOrId;
-          if (emailOrId.includes('@')) {
-            const { data: userProfile } = await supabase
-              .from('users')
-              .select('id')
-              .eq('email', emailOrId)
-              .maybeSingle();
-            if (userProfile?.id) {
-              targetId = userProfile.id;
+          if (!isAdmin) {
+            let targetId = emailOrId;
+            if (emailOrId.includes('@')) {
+              const { data: userProfile } = await supabase
+                .from('users')
+                .select('id')
+                .eq('email', emailOrId)
+                .maybeSingle();
+              if (userProfile?.id) {
+                targetId = userProfile.id;
+              }
             }
+            query = query.eq('user_id', targetId);
           }
-          query = query.eq('user_id', targetId);
+
+          const { data, error } = await query.order('created_at', { ascending: false });
+
+          if (error) throw error;
+
+          const cloudList = (data || []).map(row => {
+            try {
+              const parsed = JSON.parse(row.kundli_json);
+              return {
+                ...parsed,
+                id: row.id,
+                name: row.full_name,
+                gender: row.gender,
+                dob: row.birth_date,
+                tob: row.birth_time,
+                place: row.birth_place,
+                latitude: row.latitude,
+                longitude: row.longitude,
+                lat: row.latitude,
+                lon: row.longitude,
+                timezone: row.timezone,
+                created_at: row.created_at,
+                updated_at: row.updated_at
+              };
+            } catch (e) {
+              return {
+                id: row.id,
+                name: row.full_name,
+                gender: row.gender,
+                dob: row.birth_date,
+                tob: row.birth_time,
+                place: row.birth_place,
+                latitude: row.latitude,
+                longitude: row.longitude,
+                lat: row.latitude,
+                lon: row.longitude,
+                timezone: row.timezone,
+                created_at: row.created_at
+              };
+            }
+          });
+
+          // Sync cloudList back to localList
+          if (cloudList && cloudList.length > 0) {
+            let mergedList = [...localList];
+            cloudList.forEach(cloudItem => {
+              const idx = mergedList.findIndex(item => item.id === cloudItem.id);
+              if (idx > -1) {
+                mergedList[idx] = { ...mergedList[idx], ...cloudItem };
+              } else {
+                mergedList.push({ ...cloudItem, user_id: emailOrId });
+              }
+            });
+
+            // Save merged list back to local storage
+            let allLocal = [];
+            if (rawLocal) {
+              try { allLocal = JSON.parse(rawLocal); } catch(e){}
+            }
+            allLocal = allLocal.filter(item => item.user_id !== emailOrId);
+            allLocal = [...allLocal, ...mergedList];
+            localStorage.setItem(LOCAL_KUNDLIS_KEY, JSON.stringify(allLocal));
+
+            return mergedList;
+          }
+          return localList;
+        })();
+
+        // Race the fetch with a short 1500ms timeout so the app is always ultra-fast
+        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1500));
+        const fastestResult = await Promise.race([fetchPromise, timeoutPromise]);
+
+        if (fastestResult) {
+          return fastestResult;
+        } else {
+          console.log("Supabase fetch exceeded 1.5s timeout. Loading from local cache first; sync is running in background.");
+          // Run the rest of the sync in background
+          fetchPromise.catch(err => console.warn("Background sync error:", err));
         }
-
-        const { data, error } = await query.order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        // Parse JSON or return array
-        return (data || []).map(row => {
-          try {
-            const parsed = JSON.parse(row.kundli_json);
-            return {
-              ...parsed,
-              id: row.id,
-              name: row.full_name,
-              gender: row.gender,
-              dob: row.birth_date,
-              tob: row.birth_time,
-              place: row.birth_place,
-              latitude: row.latitude,
-              longitude: row.longitude,
-              lat: row.latitude,
-              lon: row.longitude,
-              timezone: row.timezone,
-              created_at: row.created_at,
-              updated_at: row.updated_at
-            };
-          } catch (e) {
-            // Fallback object reconstruction
-            return {
-              id: row.id,
-              name: row.full_name,
-              gender: row.gender,
-              dob: row.birth_date,
-              tob: row.birth_time,
-              place: row.birth_place,
-              latitude: row.latitude,
-              longitude: row.longitude,
-              lat: row.latitude,
-              lon: row.longitude,
-              timezone: row.timezone,
-              created_at: row.created_at
-            };
-          }
-        });
       } catch (err) {
         console.warn("Could not load charts from Supabase, returning local store:", err);
       }
     }
 
-    // Fallback to local storage lists
-    const rawLocal = localStorage.getItem(LOCAL_KUNDLIS_KEY);
-    if (rawLocal) {
-      try {
-        const parsed = JSON.parse(rawLocal);
-        if (isAdmin) {
-          return parsed; // Admin sees ALL locally saved charts
-        }
-        // Filter elements belonging to this active sandbox target
-        return parsed.filter(item => item.user_id === emailOrId);
-      } catch (e) {
-        console.error("Local lists error:", e);
-      }
-    }
-    return [];
+    return localList;
   },
 
   // Save (Create or Update) Kundli Database sheet
@@ -1065,6 +1100,28 @@ export const kundliDbService = {
       updated_at: nowISO,
     };
 
+    // 1. ALWAYS write to local list first (instant, guaranteed persistence)
+    const rawLocal = localStorage.getItem(LOCAL_KUNDLIS_KEY);
+    let localList = [];
+    if (rawLocal) {
+      try {
+        localList = JSON.parse(rawLocal);
+      } catch (e) {}
+    }
+
+    localList = localList.filter(item => item.id !== kundliId);
+    localList.push({
+      ...completePayload,
+      user_id: emailOrId
+    });
+
+    try {
+      localStorage.setItem(LOCAL_KUNDLIS_KEY, JSON.stringify(localList));
+    } catch (e) {
+      console.warn("localStorage write failed:", e);
+    }
+
+    // 2. If Supabase is configured & active, sync to cloud
     if (isSupabaseConfigured() && config.mode === 'SUPABASE') {
       const supabase = getSupabaseClient();
       try {
@@ -1076,8 +1133,7 @@ export const kundliDbService = {
           if (profile?.id) {
             finalUserId = profile.id;
           } else {
-            // Self-heal: the user profile row doesn't exist for this email yet!
-            // Create a user profile row first to satisfy the public.kundlis user_id foreign key constraint.
+            // Self-heal: user profile row doesn't exist for this email yet
             const generatedId = `u_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
             const { error: profileError } = await supabase.from('users').insert({
               id: generatedId,
@@ -1123,26 +1179,10 @@ export const kundliDbService = {
       } catch (err) {
         console.error("Supabase Save Error:", err);
         triggerNotification("Save Retrying Offline", "Saved locally pending network active.", "warning");
+        return completePayload; // Return completePayload as we saved to localStorage successfully
       }
     }
 
-    // Save strictly to local list fallback
-    const rawLocal = localStorage.getItem(LOCAL_KUNDLIS_KEY);
-    let localList = [];
-    if (rawLocal) {
-      try {
-        localList = JSON.parse(rawLocal);
-      } catch (e) {}
-    }
-
-    localList = localList.filter(item => item.id !== kundliId);
-    localList.push({
-      ...completePayload,
-      user_id: emailOrId
-    });
-
-    localStorage.setItem(LOCAL_KUNDLIS_KEY, JSON.stringify(localList));
-    const word = kundli.created_at ? "Updated" : "Created";
     triggerNotification(`Sandbox Save Success`, `Saved "${completePayload.name}" inside secure browser client caching successfully. Config Supabase for secure cloud!`, "success");
     return completePayload;
   },
@@ -1515,7 +1555,7 @@ export const feedbackService = {
         if (error) {
           console.error("Supabase fetch feedbacks error:", error);
           const friendlyError = enrichSupabaseError(error);
-          triggerNotification("DB Fetch Error 🔌", friendlyError, "warning");
+          console.warn("Background fetch feedbacks connection issue:", friendlyError);
           // Read fallbacks from localStorage
           const localKeys = Object.keys(localStorage).filter(k => k.startsWith('fallback_enq_'));
           const localItems = localKeys.map(k => {

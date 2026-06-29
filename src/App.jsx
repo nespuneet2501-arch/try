@@ -1862,6 +1862,72 @@ function VedicKundliApp() {
     setCurrentScreen('ADD_KUNDLI');
   };
 
+  const handleQuickFillCurrent = () => {
+    const now = new Date();
+    
+    // Format Date to YYYY-MM-DD
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    setDobInput(`${year}-${month}-${day}`);
+    
+    // Format Time to HH:MM
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    setTobInput(`${hours}:${minutes}`);
+    
+    if (!nameInput) {
+      setNameInput("Prashna Seeker");
+    }
+    
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const latVal = parseFloat(position.coords.latitude.toFixed(4));
+          const lonVal = parseFloat(position.coords.longitude.toFixed(4));
+          setLatitudeInput(latVal);
+          setLongitudeInput(lonVal);
+          setBirthPlaceInput(`Current Location (${latVal}, ${lonVal})`);
+          
+          // Estimate timezone based on longitude
+          const estTz = Math.round((lonVal / 15) * 2) / 2;
+          setTimezoneInput(String(estTz));
+          
+          const event = new CustomEvent('pva_notification', {
+            detail: { 
+              title: "Location Synced 🛰️", 
+              message: "Successfully fetched high-precision coordinates using GPS!", 
+              type: "success", 
+              id: Date.now() 
+            }
+          });
+          window.dispatchEvent(event);
+        },
+        (err) => {
+          setBirthPlaceInput("New Delhi, Delhi, India");
+          setLatitudeInput(28.6139);
+          setLongitudeInput(77.2090);
+          setTimezoneInput("Asia/Kolkata");
+          
+          const event = new CustomEvent('pva_notification', {
+            detail: { 
+              title: "Location Defaulted 📍", 
+              message: "GPS denied or unavailable. Defaulted birth city to New Delhi.", 
+              type: "info", 
+              id: Date.now() 
+            }
+          });
+          window.dispatchEvent(event);
+        }
+      );
+    } else {
+      setBirthPlaceInput("New Delhi, Delhi, India");
+      setLatitudeInput(28.6139);
+      setLongitudeInput(77.2090);
+      setTimezoneInput("Asia/Kolkata");
+    }
+  };
+
   const handleGenerateChart = () => {
     const newProfile = {
       id: Date.now(),
@@ -3215,6 +3281,15 @@ function VedicKundliApp() {
                         <p className="text-[10px] text-slate-400 mt-1">{t("Calculate detailed traditional horoscopes instantly", "विवरण भरकर पारंपरिक वैदिक कुण्डली प्राप्त करें")}</p>
                       </div>
                     </div>
+                    
+                    <button
+                      type="button"
+                      onClick={handleQuickFillCurrent}
+                      className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-[#cca43b] hover:text-[#936a18] text-xs font-black rounded-lg flex items-center gap-1.5 transition select-none cursor-pointer border border-[#cca43b]/30"
+                      title={t("Fill with current time and estimated location instantly", "तुरंत वर्तमान समय और स्थान से भरें")}
+                    >
+                      <span>⚡ {t("Quick Current Time", "वर्तमान समय भरें")}</span>
+                    </button>
                   </div>
 
                   {/* Form fields */}
@@ -3601,12 +3676,23 @@ function VedicKundliApp() {
             <div className="theme-bg-card theme-border rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-amber-300 to-amber-500"></div>
               
-              <div className="flex items-center gap-3 mb-6">
-                <Compass className="w-8 h-8 text-amber-500 animate-spin-slow" />
-                <div>
-                  <h2 className="text-2xl sm:text-3xl font-black theme-text-main font-cinzel tracking-wider uppercase">{t("Kundali Making", "कुण्डली निर्माण (Kundali Making)")}</h2>
-                  <p className="text-xs text-amber-500 font-bold mt-0.5">{t("Vedic Horoscope Generation & Calculation Workspace", "सटीक वैदिक कुंडली गणना एवं कुंडली चक्र विशेषांक")}</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b theme-border pb-4">
+                <div className="flex items-center gap-3">
+                  <Compass className="w-8 h-8 text-amber-500 animate-spin-slow" />
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-black theme-text-main font-cinzel tracking-wider uppercase">{t("Kundali Making", "कुण्डली निर्माण (Kundali Making)")}</h2>
+                    <p className="text-xs text-amber-500 font-bold mt-0.5">{t("Vedic Horoscope Generation & Calculation Workspace", "सटीक वैदिक कुंडली गणना एवं कुंडली चक्र विशेषांक")}</p>
+                  </div>
                 </div>
+                
+                <button
+                  type="button"
+                  onClick={handleQuickFillCurrent}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:brightness-110 text-xs font-black rounded-lg flex items-center justify-center gap-1.5 transition select-none cursor-pointer shadow-sm"
+                  title={t("Fill with current date, time, and location instantly", "तुरंत वर्तमान समय और स्थान से भरें")}
+                >
+                  <span>⚡ {t("Quick Current Time & Location", "तुरंत वर्तमान समय और स्थान भरें")}</span>
+                </button>
               </div>
 
               {/* Form Input Layout */}
@@ -3697,27 +3783,45 @@ function VedicKundliApp() {
                   )}
                 </div>
 
-                {/* Geo Coordinates */}
-                <div>
-                  <label className="block text-xs uppercase tracking-wider theme-text-muted font-black mb-2">{t("Latitude", "अक्षांश")}</label>
-                  <input 
-                    type="number" 
-                    step="any"
-                    value={latitudeInput} 
-                    onChange={(e) => setLatitudeInput(parseFloat(e.target.value) || 0)}
-                    className="w-full theme-bg-page theme-border focus:border-[#cca43b] text-sm theme-text-main rounded-lg px-4 py-2.5 focus:outline-none font-mono font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs uppercase tracking-wider theme-text-muted font-black mb-2">{t("Longitude", "रेखांश")}</label>
-                  <input 
-                    type="number" 
-                    step="any"
-                    value={longitudeInput} 
-                    onChange={(e) => setLongitudeInput(parseFloat(e.target.value) || 0)}
-                    className="w-full theme-bg-page theme-border focus:border-[#cca43b] text-sm theme-text-main rounded-lg px-4 py-2.5 focus:outline-none font-mono font-bold"
-                  />
+                {/* Collapsible Advanced settings panel */}
+                <div className="sm:col-span-2 border-t theme-border pt-4 mt-2">
+                  <details className="group">
+                    <summary className="list-none flex items-center gap-1.5 text-xs text-[#936a18] font-bold cursor-pointer select-none">
+                      <Settings className="w-3.5 h-3.5 group-open:rotate-90 transition-transform" />
+                      <span>{t("Professional Geocentric Parameters", "पेशेवर भूगोलीय निर्देशांक प्रणाली")}</span>
+                    </summary>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+                      <div>
+                        <label className="block text-xs uppercase tracking-wider theme-text-muted font-bold mb-2">{t("Latitude", "अक्षांश")}</label>
+                        <input 
+                          type="number" 
+                          step="any"
+                          value={latitudeInput} 
+                          onChange={(e) => setLatitudeInput(parseFloat(e.target.value) || 0)}
+                          className="w-full theme-bg-page theme-border focus:border-[#cca43b] text-sm theme-text-main rounded-lg px-4 py-2.5 focus:outline-none font-mono font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs uppercase tracking-wider theme-text-muted font-bold mb-2">{t("Longitude", "रेखांश")}</label>
+                        <input 
+                          type="number" 
+                          step="any"
+                          value={longitudeInput} 
+                          onChange={(e) => setLongitudeInput(parseFloat(e.target.value) || 0)}
+                          className="w-full theme-bg-page theme-border focus:border-[#cca43b] text-sm theme-text-main rounded-lg px-4 py-2.5 focus:outline-none font-mono font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs uppercase tracking-wider theme-text-muted font-bold mb-2">{t("Timezone", "समय मंडल")}</label>
+                        <input 
+                          type="text" 
+                          value={timezoneInput} 
+                          onChange={(e) => setTimezoneInput(e.target.value)}
+                          className="w-full theme-bg-page theme-border focus:border-[#cca43b] text-sm theme-text-main rounded-lg px-4 py-2.5 focus:outline-none font-mono font-bold"
+                        />
+                      </div>
+                    </div>
+                  </details>
                 </div>
 
               </div>
