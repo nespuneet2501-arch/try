@@ -219,21 +219,25 @@ export const checkDatabaseHealth = async () => {
             }
 
             const isNotExist = error.code === '42P01' || errorMsg.includes('does not exist') || errorMsg.includes('relation');
-            return { t, ok: false, isNetworkFail: isNet, isNotExist };
+            return { t, ok: false, isNetworkFail: isNet, isNotExist, errorMessage: error.message };
           }
           return { t, ok: true };
         } catch (e) {
           const exMsg = String(e).toLowerCase();
           const isNet = exMsg.includes('fetch') || exMsg.includes('network') || exMsg.includes('typeerror') || exMsg.includes('connect');
-          return { t, ok: false, isNetworkFail: isNet };
+          return { t, ok: false, isNetworkFail: isNet, errorMessage: String(e) };
         }
       })
     );
 
+    let lastErrorMsg = null;
     for (const r of results) {
       status[r.t] = r.ok;
       if (!r.ok) {
         allOk = false;
+        if (r.errorMessage) {
+          lastErrorMsg = r.errorMessage;
+        }
         if (r.isNetworkFail) {
           isNetworkFail = true;
         }
@@ -258,7 +262,8 @@ export const checkDatabaseHealth = async () => {
   return {
     configured: true,
     status: finalStatus,
-    tables: status
+    tables: status,
+    errorMessage: lastErrorMsg
   };
 };
 
@@ -351,6 +356,73 @@ export const seedTestData = async (supabase) => {
   } catch (err) {
     console.warn("[Seeder] Background seeder handled exception:", err);
   }
+};
+
+// Explicit client-triggered manual seeding test for Puneet or testers
+export const manuallySeedTestData = async () => {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    throw new Error("No active Supabase connection. Please verify your Endpoint URL and Anon Key configurations.");
+  }
+  
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  const testEmail = `seeker_${rand}@vedicastrology.org`;
+  const testUserUuid = `u_test_${rand}`;
+
+  // 1. Insert mock seeker user
+  const { error: userErr } = await supabase.from('users').insert({
+    id: testUserUuid,
+    email: testEmail,
+    name: `Vedic Seeker #${rand}`,
+    role: "User",
+    status: "Active",
+    created_at: new Date().toISOString()
+  });
+
+  if (userErr) {
+    throw new Error(`Failed to write to users table: ${userErr.message}`);
+  }
+
+  // 2. Insert mock kundli chart
+  const demoId = `k_test_${rand}`;
+  const { error: kundliErr } = await supabase.from('kundlis').insert({
+    id: demoId,
+    user_id: testUserUuid,
+    full_name: `Test Seeker Chart #${rand}`,
+    gender: "Female",
+    birth_date: "1996-11-12",
+    birth_time: "18:30:00",
+    birth_place: "Varanasi, Uttar Pradesh, India",
+    latitude: 25.3176,
+    longitude: 82.9739,
+    timezone: 5.5,
+    kundli_json: JSON.stringify({
+      id: demoId,
+      name: `Test Seeker Chart #${rand}`,
+      gender: "Female",
+      dob: "1996-11-12",
+      tob: "18:30:00",
+      place: "Varanasi, Uttar Pradesh, India",
+      lat: 25.3176,
+      lon: 82.9739,
+      timezone: "Asia/Kolkata",
+      favorite: true,
+      collection: "Seekers",
+      trash: false,
+      planet_positions: [
+        { planet: 'Sun', sign: 'Scorpio', degree: '26°12\'', house: 7 },
+        { planet: 'Moon', sign: 'Sagittarius', degree: '04°45\'', house: 8 }
+      ]
+    }),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  });
+
+  if (kundliErr) {
+    throw new Error(`User row created but Kundli table insert failed: ${kundliErr.message}`);
+  }
+
+  return { email: testEmail, name: `Vedic Seeker #${rand}`, kundliId: demoId };
 };
 
 // Notification system integration triggers custom event for UI feedback

@@ -16,7 +16,7 @@ import {
 import SocietyUpdatesHub, { AstroPaywallLock, AdminControlWorkstation } from './SocietyCMS';
 import CosmicAIChat from './CosmicAIChat';
 import PVAstroLogo from './PVAstroLogo';
-import { authService, kundliDbService, feedbackService, adminAnalyticsService, getDefaultStorageConfig, saveStorageConfig, isSupabaseConfigured, checkDatabaseHealth } from './StorageService';
+import { authService, kundliDbService, feedbackService, adminAnalyticsService, getDefaultStorageConfig, saveStorageConfig, isSupabaseConfigured, checkDatabaseHealth, manuallySeedTestData } from './StorageService';
 
 const THEMES = {
   ASTROSAGE: {
@@ -1143,6 +1143,7 @@ function VedicKundliApp() {
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [pendingKundliToSave, setPendingKundliToSave] = useState(null);
   const [storageConfig, setStorageConfig] = useState(() => getDefaultStorageConfig());
+  const [isSeedingDb, setIsSeedingDb] = useState(false);
 
   const [dbHealth, setDbHealth] = useState({ 
     configured: true, 
@@ -1163,6 +1164,28 @@ function VedicKundliApp() {
       setDbHealth(res);
     } catch (e) {
       console.warn("Database health probe error:", e);
+    }
+  };
+
+  const handleManualSeed = async () => {
+    if (isSeedingDb) return;
+    setIsSeedingDb(true);
+    try {
+      const res = await manuallySeedTestData();
+      triggerNotification(
+        "Dummy Entry Created Successfully! ⚡", 
+        `Successfully wrote profile row for user ${res.email} and saved a complete custom Kundli chart! DB connection is verified and fully functional.`, 
+        "success"
+      );
+      await queryDatabaseStatus();
+    } catch (err) {
+      triggerNotification(
+        "Failed to Create Dummy Entry ❌", 
+        err.message || String(err), 
+        "error"
+      );
+    } finally {
+      setIsSeedingDb(false);
     }
   };
 
@@ -2335,15 +2358,7 @@ function VedicKundliApp() {
 
           <div
             onClick={() => {
-              if (isCurrentUserAdmin) {
-                setCurrentScreen('INTEGRATIONS');
-              } else {
-                triggerNotification(
-                  "Database Workspace Status", 
-                  `Currently connected in ${storageConfig.mode === 'SUPABASE' ? 'Supabase cloud' : 'Sandbox (local)'} mode. Credentials can be adjusted in the admin panel.`, 
-                  "info"
-                );
-              }
+              setCurrentScreen('INTEGRATIONS');
             }}
             className={`hidden md:flex items-center gap-2 px-3.5 py-1.5 text-[10px] rounded-full border-2 cursor-pointer transition uppercase tracking-wider font-extrabold shadow-md ${
               storageConfig.mode === 'SUPABASE'
@@ -4880,6 +4895,20 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                         >
                           🔄 Refresh Check
                         </button>
+
+                        {storageConfig.mode === 'SUPABASE' && (
+                          <button 
+                            onClick={handleManualSeed}
+                            disabled={isSeedingDb}
+                            className={`p-1 px-2.5 rounded text-[9.5px] font-mono transition flex items-center gap-1 cursor-pointer ${
+                              isSeedingDb 
+                                ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                                : 'bg-emerald-950 border border-emerald-500/50 hover:bg-emerald-900/80 text-emerald-300 font-bold'
+                            }`}
+                          >
+                            {isSeedingDb ? '⚡ Seeding...' : '⚡ Create Dummy Seeker Entry'}
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -4916,15 +4945,73 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                     </div>
 
                     {/* Auto Setup Guide & SQL Block */}
-                    {dbHealth.status !== 'healthy' && (
+                    {dbHealth.status === 'unreachable' && (
+                      <div className="border border-red-500/30 bg-red-500/5 p-4 rounded-xl space-y-3 mt-2">
+                        <div className="flex items-start gap-2 text-left">
+                          <span className="text-sm shrink-0">🚨</span>
+                          <div className="space-y-1 w-full">
+                            <p className="text-[11px] text-red-400 font-black leading-none uppercase tracking-wider">
+                              {t("CONNECTION TO SUPABASE CLOUD FAILED (UNREACHABLE)", "सुपाबेस क्लाउड कनेक्शन विफल")}
+                            </p>
+                            <p className="text-[10px] text-slate-300 leading-normal font-sans">
+                              {t("The application failed to communicate with your cloud PostgreSQL endpoint. Here are the most common causes and quick remedies:",
+                                 "अनुप्रयोग आपके क्लाउड डेटाबेस से कनेक्ट नहीं हो सका। कृपया निम्नलिखित बिंदुओं की जांच करें:")}
+                            </p>
+                            <ul className="text-[9.5px] text-slate-400 list-disc pl-4 space-y-1 font-sans">
+                              <li>
+                                <strong className="text-amber-400">{t("Project Paused:", "परियोजना रुकी हुई है:")}</strong> {t("If your Supabase project is on the Free Tier and hasn't been used for 7+ days, Supabase automatically pauses the database container. Please go to your Supabase Dashboard, click 'Restore' or 'Resume', and it will be back online in 15 seconds!", "यदि आपका सुपाबेस प्रोजेक्ट 7+ दिनों से निष्क्रिय है, तो यह रुक जाता है। कृपया अपने सुपाबेस कंसोल पर जाकर इसे फिर से सक्रिय करें!")}
+                              </li>
+                              <li>
+                                <strong className="text-amber-400">{t("Invalid API Credentials:", "अमान्य क्रेडेंशियल्स:")}</strong> {t("Verify that the Endpoint URL starts with https:// and the Anon Key has no missing characters or trailing spaces.", "सुनिश्चित करें कि एंडपॉइंट URL https:// से शुरू हो और एनन की सही हो।")}
+                              </li>
+                              <li>
+                                <strong className="text-amber-400">{t("CORS or Network Block:", "नेटवर्क ब्लॉक:")}</strong> {t("Ensure your active network doesn't block Supabase domains or WebSocket fetch requests.", "सुनिश्चित करें कि आपका इंटरनेट नेटवर्क सुपाबेस को ब्लॉक नहीं कर रहा है।")}
+                              </li>
+                            </ul>
+                            
+                            {dbHealth.errorMessage && (
+                              <div className="mt-3 p-3 bg-red-950/40 border border-red-500/20 rounded-lg text-left">
+                                <span className="text-[8.5px] uppercase font-black tracking-widest text-red-300 block mb-1">🔍 Raw Error Details:</span>
+                                <code className="text-[9.5px] font-mono text-red-200 select-all leading-normal break-all block">
+                                  {dbHealth.errorMessage}
+                                </code>
+                              </div>
+                            )}
+
+                            {/* Easy Reset Button to heal and restore to Puneet's default live active Supabase URL & Key */}
+                            <div className="pt-2">
+                              <button
+                                onClick={() => {
+                                  localStorage.removeItem('pva_cloud_storage_config_supabase');
+                                  const def = getDefaultStorageConfig();
+                                  setStorageConfig(def);
+                                  saveStorageConfig(def);
+                                  queryDatabaseStatus();
+                                  triggerNotification(
+                                    "Restored Active Production Defaults!", 
+                                    "Database configuration successfully reset to active live production parameters.", 
+                                    "success"
+                                  );
+                                }}
+                                className="px-3 py-1.5 bg-[#cca43b] hover:bg-amber-500 text-slate-950 font-black rounded-lg text-[10px] uppercase tracking-wider transition-all duration-150 inline-flex items-center gap-1 cursor-pointer border border-black/20"
+                              >
+                                🪐 {t("RESTORE LATEST HEALTHY PRODUCTION DEFAULT DB", "सक्रिय डिफ़ॉल्ट डेटाबेस पुनर्स्थापित करें")}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {dbHealth.status === 'needs_setup' && (
                       <div className="border border-amber-500/20 bg-amber-500/5 p-4 rounded-xl space-y-3 mt-2">
                         <div className="flex items-start gap-1.5 text-left">
                           <span className="text-sm shrink-0">⚠️</span>
                           <div>
-                            <p className="text-[10.5px] text-amber-205 font-bold leading-normal">
+                            <p className="text-[10.5px] text-amber-200 font-bold leading-normal">
                               {t("First Time Setup: Required tables are not created yet!", "प्रारंभिक सेटअप: आवश्यक तालिकाएं अभी तक नहीं बनाई गई हैं!")}
                             </p>
-                            <p className="text-[10px] text-slate-350 mt-1 leading-normal font-sans">
+                            <p className="text-[10px] text-slate-300 mt-1 leading-normal font-sans">
                               {t("To configure your Supabase cluster automatically with all required schemas, relations, and Row-Level Security policies copy the script below and paste it inside your Supabase project dashboard's SQL Editor.",
                                  "अपने सुपाबेस डेटाबेस क्लस्टर को स्वतः कॉन्फ़िगर करने के लिए नीचे दिए गए सेटअप स्क्रिप्ट को कॉपी करें और सुपाबेस कंसोल पर चलाएं।")}
                             </p>
@@ -6429,15 +6516,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
         {/* Database Live Connected Status */}
         <div 
           onClick={() => {
-            if (isUserAdmin) {
-              setCurrentScreen('INTEGRATIONS');
-            } else {
-              triggerNotification(
-                "Database Workspace Status", 
-                `Currently connected in ${storageConfig.mode === 'SUPABASE' ? 'Supabase cloud' : 'Sandbox (local)'} mode. Credentials can be adjusted in the admin panel.`, 
-                "info"
-              );
-            }
+            setCurrentScreen('INTEGRATIONS');
           }}
           className={`flex items-center justify-between p-3.5 rounded-xl border-2 cursor-pointer transition uppercase tracking-wider font-extrabold shadow-md ${
             storageConfig.mode === 'SUPABASE'
