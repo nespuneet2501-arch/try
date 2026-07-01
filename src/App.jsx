@@ -635,7 +635,7 @@ function VedicKundliApp() {
   // Application State - Ensure first screen is AUTH for new or logged-out users, showing signup
   const [currentUser, setCurrentUser] = useState(() => {
     const session = authService.getCurrentUser();
-    return session ? session.email : '';
+    return session || '';
   });
 
   // State Variables for Pandit Booking Finder Directory system
@@ -1188,6 +1188,71 @@ function VedicKundliApp() {
     } finally {
       setIsSeedingDb(false);
     }
+  };
+
+  const handleExportBackup = async () => {
+    try {
+      const email = currentUser || 'guest@vedicastrology.org';
+      const list = await kundliDbService.fetchSavedKundlis(email);
+      if (!list || list.length === 0) {
+        triggerNotification("No Data to Export", "You don't have any saved Kundli profiles in this session yet.", "warning");
+        return;
+      }
+      
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(list, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `pvastro_backup_${new Date().toISOString().substring(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      
+      triggerNotification("Backup Exported!", `Successfully downloaded ${list.length} profiles to your local device.`, "success");
+    } catch (e) {
+      console.error(e);
+      triggerNotification("Export Failed", "Could not compile backup file.", "error");
+    }
+  };
+
+  const handleImportBackup = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        if (!Array.isArray(imported)) {
+          throw new Error("Invalid backup format. Must be a JSON array of profiles.");
+        }
+        
+        const email = currentUser || 'guest@vedicastrology.org';
+        let successCount = 0;
+        
+        for (const item of imported) {
+          if (item && (item.name || item.dob)) {
+            const cleanedItem = {
+              ...item,
+              user_id: email,
+              id: item.id || `k_${Date.now()}_${Math.random().toString(36).substring(2,5)}`
+            };
+            await kundliDbService.saveKundli(email, cleanedItem);
+            successCount++;
+          }
+        }
+        
+        const refreshed = await kundliDbService.fetchSavedKundlis(email);
+        setSavedKundlis(refreshed);
+        
+        triggerNotification("Backup Restored!", `Successfully imported and synced ${successCount} Kundli profiles.`, "success");
+      } catch (err) {
+        console.error(err);
+        triggerNotification("Import Failed", "Please ensure you selected a valid PV-Astro backup JSON file.", "error");
+      }
+    };
+    reader.readAsText(file);
+    // Clear input value to allow uploading same file again
+    e.target.value = '';
   };
 
   // Synchronize Supabase configurations from URL parameters if provided
@@ -1873,6 +1938,20 @@ function VedicKundliApp() {
       window.removeEventListener('pva_db_synced', handleDbSynced);
     };
   }, [currentUser, storageConfig.mode]);
+
+  // Background auth session verification listener
+  useEffect(() => {
+    const handleAuthRestored = (e) => {
+      if (e.detail && e.detail.email) {
+        console.log("Background session verified: restoring user state", e.detail.email);
+        setCurrentUser(e.detail.email);
+      }
+    };
+    window.addEventListener('pva_auth_restored', handleAuthRestored);
+    return () => {
+      window.removeEventListener('pva_auth_restored', handleAuthRestored);
+    };
+  }, []);
 
   const navigateToReport = (profile) => {
     if (!profile) return;
@@ -4842,18 +4921,59 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
                     >
                       <div>
                         <div className="flex justify-between items-start">
-                          <span className="text-lg">${item.icon}</span>
-                          <span className="text-[8px] font-bold px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded uppercase font-mono tracking-wide text-slate-400">${item.badge}</span>
+                          <span className="text-lg">{item.icon}</span>
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded uppercase font-mono tracking-wide text-slate-400">{item.badge}</span>
                         </div>
-                        <h4 className="font-bold text-sm text-white mt-1.5 leading-none">${item.title}</h4>
-                        <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">${item.desc}</p>
+                        <h4 className="font-bold text-sm text-white mt-1.5 leading-none">{item.title}</h4>
+                        <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">{item.desc}</p>
                       </div>
                       <span className={`text-[10px] font-extrabold font-mono uppercase ${isSelected ? 'text-amber-400' : 'text-slate-600'}`}>
-                        ${isSelected ? '● ACTIVE CONFIG' : '○ SELECT TARGET'}
+                        {isSelected ? '● ACTIVE CONFIG' : '○ SELECT TARGET'}
                       </span>
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Local Offline JSON Backup & Restore Utility */}
+              <div className="mt-6 border-t border-slate-850 pt-6 space-y-4 text-left">
+                <div className="flex items-center gap-1.5 border-b border-slate-800 pb-2 mb-1 text-emerald-400">
+                  <span className="text-sm">📥</span>
+                  <h4 className="text-xs uppercase font-black tracking-widest">{t("LOCAL JSON BACKUP & RESTORE UTILITY", "स्थानीय बैकअप और पुनर्स्थापना")}</h4>
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-500/20 rounded uppercase font-mono tracking-wide">NO LOGIN REQUIRED</span>
+                </div>
+                
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  {t("Perfect for offline-first seekers. Download your entire collection of saved kundlis as a single, portable JSON file, or restore a backup from another browser with zero accounts or logins.",
+                     "ऑफ़लाइन उपयोगकर्ताओं के लिए सर्वोत्तम उपाय। अपने सहेजे गए कुण्डली प्रोफाइल को सीधे JSON फ़ाइल के रूप में डाउनलोड करें, या किसी अन्य ब्राउज़र से बिना किसी लॉगिन के अपना बैकअप रीस्टोर करें।")}
+                </p>
+
+                <div className="flex flex-wrap items-center gap-4 bg-[#090b16] p-4 rounded-2xl border border-slate-850">
+                  <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={handleExportBackup}
+                      className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 text-slate-950 font-black uppercase tracking-wider rounded-xl transition text-[10px] flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                    >
+                      <span>📤</span>
+                      <span>{t("Export Saved Profiles (.json)", "सहेजे गए प्रोफाइल एक्सपोर्ट करें")}</span>
+                    </button>
+
+                    <label className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-200 font-bold uppercase tracking-wider rounded-xl transition text-[10px] flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                      <span>📥</span>
+                      <span>{t("Import/Restore Backup", "बैकअप आयात करें")}</span>
+                      <input 
+                        type="file" 
+                        accept=".json" 
+                        onChange={handleImportBackup} 
+                        className="hidden" 
+                      />
+                    </label>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-medium sm:ml-auto">
+                    👉 {t("Files are stored 100% on your device for absolute privacy.", "गोपनीयता के लिए फाइलें 100% आपके डिवाइस पर स्थानीय रूप से सुरक्षित रहती हैं।")}
+                  </div>
+                </div>
               </div>
 
               {/* Config fields for Supabase */}

@@ -13,7 +13,7 @@ export const getDefaultStorageConfig = () => {
 
   // If no environment variables are defined or contain placeholders, use Puneet's production credentials
   if (!envUrl || envUrl.includes('your-proj-id') || envUrl.includes('placeholder') || envUrl.length < 15) {
-    envUrl = 'https://elktujqnqhvxsxcnstcw.supabase.co';
+    envUrl = 'https://elktujqnqhvvsxcnstcw.supabase.co';
   }
   if (!envKey || envKey.includes('paste_your_key') || envKey.includes('placeholder') || envKey.length < 25) {
     envKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsa3R1anFucWh2dnN4Y25zdGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTMyODYsImV4cCI6MjA5NTg2OTI4Nn0.lFYK3ePkFRLR97ot00E-Q_x17CE54JKTkcXZTGrj8Cc';
@@ -29,8 +29,8 @@ export const getDefaultStorageConfig = () => {
       const parsed = JSON.parse(local);
       sUrl = (parsed.supabaseUrl || '').trim();
       sAnonKey = (parsed.supabaseAnonKey || '').trim();
-      if (sUrl.includes('elktujqnqhvvsxcnstcw')) {
-        sUrl = sUrl.replace('elktujqnqhvvsxcnstcw', 'elktujqnqhvxsxcnstcw');
+      if (sUrl.includes('elktujqnqhvxsxcnstcw')) {
+        sUrl = sUrl.replace('elktujqnqhvxsxcnstcw', 'elktujqnqhvvsxcnstcw');
       }
     } catch (e) {
       console.error("Failed to parse local storage config", e);
@@ -134,7 +134,7 @@ export const getSupabaseClient = () => {
   try {
     let cleanUrl = config.supabaseUrl.trim().replace(/\s+/g, '');
     
-    // Auto-heal Dashboard URL to API URL (e.g., https://supabase.com/dashboard/project/elktujqnqhvxsxcnstcw)
+    // Auto-heal Dashboard URL to API URL (e.g., https://supabase.com/dashboard/project/elktujqnqhvvsxcnstcw)
     if (cleanUrl.toLowerCase().includes('supabase.com/dashboard/project/')) {
       const match = cleanUrl.match(/\/dashboard\/project\/([a-zA-Z0-9\-_]+)/i);
       if (match && match[1]) {
@@ -439,7 +439,70 @@ export const triggerNotification = (title, message, type = 'success') => {
 // ==========================================
 // 1. AUTHENTICATION SERVICE IN SUPABASE & FALLBACK
 // ==========================================
-let activeUserSession = null;
+let activeUserSession = (() => {
+  try {
+    const saved = localStorage.getItem('pva_active_user_session');
+    return saved ? JSON.parse(saved) : null;
+  } catch (e) {
+    return null;
+  }
+})();
+
+const updateSession = (session) => {
+  activeUserSession = session;
+  try {
+    if (session) {
+      localStorage.setItem('pva_active_user_session', JSON.stringify(session));
+    } else {
+      localStorage.removeItem('pva_active_user_session');
+    }
+  } catch (e) {
+    console.warn("Session cache writing failed:", e);
+  }
+};
+
+// Background validation and restoration of active Supabase Auth sessions on startup
+if (typeof window !== 'undefined') {
+  setTimeout(async () => {
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && session.user) {
+          const email = session.user.email;
+          const userUuid = session.user.id;
+          
+          const { data: profile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userUuid)
+            .maybeSingle();
+            
+          if (profile) {
+            const isPremiumUser = email === 'nespuneet2501@gmail.com' || profile.role === 'Admin' || profile.email.toLowerCase() === 'nespuneet2501@gmail.com';
+            const activeUser = {
+              id: userUuid,
+              email: email.toLowerCase().trim(),
+              name: profile.name || email.split('@')[0],
+              mobile: profile.mobile || '',
+              isPremium: isPremiumUser,
+              method: 'Supabase Auth (Auto-Verified)',
+              role: profile.role || 'User',
+              registeredAt: profile.created_at?.substring(0, 10) || new Date().toISOString().substring(0,10),
+              lastLogin: profile.last_login || new Date().toISOString(),
+              status: profile.status || 'Active'
+            };
+            
+            updateSession(activeUser);
+            window.dispatchEvent(new CustomEvent('pva_auth_restored', { detail: activeUser }));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Autopilot session checker error handled:", e);
+    }
+  }, 800);
+}
 
 // Sandbox fallback registered users roster
 export let inMemoryRegisteredUsers = [
@@ -563,7 +626,7 @@ export const authService = {
         }
       }
       
-      activeUserSession = adminObj;
+      updateSession(adminObj);
       triggerNotification("Principal Admin Signed In", "Welcome back Puneet! Database control center authorized.", "success");
       return { success: true, user: adminObj };
     }
@@ -607,7 +670,7 @@ export const authService = {
                 status: profileRow.status || 'Active'
               };
               
-              activeUserSession = activeUser;
+              updateSession(activeUser);
               triggerNotification(
                 "Login Successful (Bypass Active)", 
                 "⚠️ Email confirmation bypassed! Logged in using your public profile row to prevent lockout.", 
@@ -670,7 +733,7 @@ export const authService = {
           status: profile?.status || 'Active'
         };
 
-        activeUserSession = activeUser;
+        updateSession(activeUser);
         triggerNotification("Login Successful", "Secure session established via enterprise Supabase Authentication!", "success");
         return { success: true, user: activeUser };
       } catch (err) {
@@ -696,7 +759,7 @@ export const authService = {
         lastLogin: new Date().toISOString(),
         status: match.status
       };
-      activeUserSession = sandboxUser;
+      updateSession(sandboxUser);
       triggerNotification("Sandbox Session Initialized", "Logged in via Browser Sandbox. Setup Supabase in settings to sync live!", "warning");
       return { success: true, user: sandboxUser };
     }
@@ -765,7 +828,7 @@ export const authService = {
           status: 'Active'
         };
 
-        activeUserSession = activeUser;
+        updateSession(activeUser);
         triggerNotification("Cloud Account Provisioned", "Welcome to the celestial library! Synchronized securely via Supabase Auth.", "success");
         return { success: true, user: activeUser };
       } catch (err) {
@@ -806,7 +869,7 @@ export const authService = {
       status: 'Active'
     });
 
-    activeUserSession = sandboxUser;
+    updateSession(sandboxUser);
     triggerNotification("Sandbox Profile Created", "User account generated inside local cache memory. Sync with Supabase for absolute backup!", "warning");
     return { success: true, user: sandboxUser };
   },
@@ -846,7 +909,7 @@ export const authService = {
           status: 'Active'
         };
 
-        activeUserSession = activeUser;
+        updateSession(activeUser);
         triggerNotification("Google Sign-in Synced", "OAuth authenticated successfully through Supabase!", "success");
         return { success: true, user: activeUser };
       } catch (err) {
@@ -868,7 +931,7 @@ export const authService = {
       status: 'Active'
     };
 
-    activeUserSession = mockUser;
+    updateSession(mockUser);
     triggerNotification("Google simulation online", "Welcome! Authenticated via active local sandbox session.", "success");
     return { success: true, user: mockUser };
   },
@@ -932,7 +995,7 @@ export const authService = {
     }
 
     inMemoryRegisteredUsers = inMemoryRegisteredUsers.filter(u => u.email.toLowerCase() !== email.toLowerCase());
-    activeUserSession = null;
+    updateSession(null);
     triggerNotification("Account Cleared", "All saved data and profiles permanently expunged.", "info");
     return true;
   },
@@ -1044,7 +1107,7 @@ export const authService = {
         console.warn("Auth signout completed.", e);
       }
     }
-    activeUserSession = null;
+    updateSession(null);
     triggerNotification("User Signed Out", "Celestial secure session closed in Vedic Workstation.", "info");
   }
 };
@@ -1297,7 +1360,7 @@ export const kundliDbService = {
       }
     }
 
-    triggerNotification(`Sandbox Save Success`, `Saved "${completePayload.name}" inside secure browser client caching successfully. Config Supabase for secure cloud!`, "success");
+    triggerNotification(`Data Saved Locally Only`, `"${completePayload.name}" has been saved inside your browser's local sandbox memory successfully. Configure Supabase in Database Settings to sync live!`, "success");
     return completePayload;
   },
 
