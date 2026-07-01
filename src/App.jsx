@@ -3212,27 +3212,6 @@ function VedicKundliApp() {
               </div>
             </div>
 
-            {/* 🌌 DISPERSAL-STYLE TRANSLUCENT WELCOME WORKSPACE CARD */}
-            <div className="max-w-3xl mx-auto bg-[#0f1123]/80 theme-bg-card border-2 theme-border rounded-2xl p-5 text-center shadow-lg relative overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(#cca43b_0.5px,transparent_0.5px)] [background-size:16px_16px] opacity-[0.03] pointer-events-none"></div>
-              <div className="relative z-10">
-                <h2 className="text-xs sm:text-sm font-black text-white uppercase tracking-widest font-cinzel flex items-center justify-center gap-1.5">
-                  <span>🌌</span> {t("PVASTRO CORE COSMIC HUB", "पंचांग व कुण्डली दिव्य नियंत्रण केंद्र")} <span>🌌</span>
-                </h2>
-                <p className="text-[10.5px] sm:text-[11.5px] text-slate-300 mt-2 leading-relaxed max-w-xl mx-auto">
-                  {t("Welcome to the secure astronomical calculations hub. Tap any of the high-contrast professional application nodes below to construct charts, perform matches, read transits, or consult the Cosmic AI.",
-                     "परम शुद्ध गणितीय सूत्रों पर आधारित वैदिक ज्योतिष कंसोल में आपका स्वागत है। कुण्डली निर्माण, मिलान, दैनिक शुभ-अशुभ गोचर समय और कृत्रिम बुद्धिमत्ता संवाद के लिए नीचे दिए गए मुख्य नोड्स का चयन करें।")}
-                </p>
-                <div className="mt-3.5 flex items-center justify-center gap-2 text-[9.5px] font-mono text-slate-400">
-                  <span className="px-2 py-0.5 bg-[#cca43b]/10 border border-[#cca43b]/30 rounded text-[#cca43b] font-bold">
-                    {activeUserIsPremium ? t("PREMIUM WORKSTATION", "प्रीमियम वर्कस्टेशन") : t("STANDARD MEMBER", "मानक सदस्य")}
-                  </span>
-                  <span>|</span>
-                  <span>UTC: 2026-05-27</span>
-                </div>
-              </div>
-            </div>
-
             {/* 🚀 HIGH-CONTRAST APP LAUNCHER NODES (Vedic Dispersal Hub Grid) */}
             <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3.5 pt-2">
               
@@ -6939,7 +6918,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
       {/* 🌟 SCROLLING SCHOLARS SIDEBAR SYSTEM (Displays on screen margins for all active states) */}
       {currentScreen !== 'WELCOME' && currentScreen !== 'AUTH' && (
         showScholarsSidebar ? (
-          <div className={`fixed right-2.5 top-[24%] sm:top-[30%] z-[140] flex flex-col items-center gap-2 bg-[#0c0d1c]/95 border-2 border-amber-500/40 p-2.5 rounded-2xl shadow-[0_0_25px_rgba(245,158,11,0.35)] max-w-[80px] transition-all duration-500 transform ${
+          <div className={`fixed right-2.5 top-[52%] sm:top-[30%] z-[140] flex flex-col items-center gap-2 bg-[#0c0d1c]/95 border-2 border-amber-500/40 p-2.5 rounded-2xl shadow-[0_0_25px_rgba(245,158,11,0.35)] max-w-[80px] transition-all duration-500 transform ${
             isPageScrolled ? 'opacity-0 pointer-events-none translate-x-16 scale-75' : 'opacity-100 scale-100 translate-x-0'
           }`}>
             <div className="w-full flex items-center justify-between border-b border-amber-500/20 pb-1.5 select-none gap-4">
@@ -7000,7 +6979,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
           /* Small sticky button to bring it back when closed */
           <button
             onClick={() => setShowScholarsSidebar(true)}
-            className={`fixed right-0 top-[40%] z-[140] w-7 py-3 bg-[#0c0d1c]/95 border-l-2 border-y-2 border-amber-500/40 rounded-l-xl text-amber-400 text-[10px] font-black flex flex-col items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95 whitespace-pre-wrap select-none leading-none border-r-0 transition-all duration-500 transform ${
+            className={`fixed right-0 top-[60%] z-[140] w-7 py-3 bg-[#0c0d1c]/95 border-l-2 border-y-2 border-amber-500/40 rounded-l-xl text-amber-400 text-[10px] font-black flex flex-col items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95 whitespace-pre-wrap select-none leading-none border-r-0 transition-all duration-500 transform ${
               isPageScrolled ? 'opacity-0 pointer-events-none translate-x-12 scale-75' : 'opacity-100 scale-100 translate-x-0'
             }`}
             title={t("Show Scholar List", "गुरुदेव सूची दिखाएं")}
