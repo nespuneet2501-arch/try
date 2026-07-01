@@ -23,90 +23,90 @@ const THEMES = {
     id: 'ASTROSAGE',
     name: 'AstroSage Divine Saffron',
     hindiName: 'एस्ट्रोसेज केसरिया',
-    bgPage: '#FFFDF9', // Warm sacred cream background
-    bgCard: '#FFFFFF', // Clean pristine white cards
-    bgInput: '#FFFFFF',
-    bgBadge: '#FFF3E0', // Very light marigold yellow indicator
-    border: '#FFE0B2', // Soft glowing golden marigold border
-    primary: '#FF6500', // Auspicious Astrosage deep saffron
-    primaryHover: '#E65100', // Saffron depth
-    textMain: '#2E1505', // Deep readable terracotta/chocolate text
-    textMuted: '#6D4C41', // Saffron shadow muted tone
-    accent: '#FF3D00' // Crimson spark accent
+    bgPage: '#1c0a02', // Deep spiritual saffron dark canvas
+    bgCard: '#2d1105', // Rich warm clay card
+    bgInput: '#2d1105',
+    bgBadge: '#421807',
+    border: '#ff6500', // Saffron border
+    primary: '#ff6500', // Saffron primary
+    primaryHover: '#e65100',
+    textMain: '#ffffff', // Clean white readable text
+    textMuted: '#ffbca0', // Beautiful warm sand
+    accent: '#ff3d00'
   },
   BRIGHT: {
     id: 'BRIGHT',
     name: 'Vibrant Holiday',
     hindiName: 'चमकदार रंगीन',
-    bgPage: '#FFF9F3', // Warm sunny cream
-    bgCard: '#FFFFFF', // Clean white card
-    bgInput: '#FFFFFF',
-    bgBadge: '#FFF0F5', // Vibrant soft rose highlights
-    border: '#FFD5C6', // Tender coral border
-    primary: '#E64A19', // Full radiant saffron-red
-    primaryHover: '#D84315',
-    textMain: '#2E1505', // Deep chocolate/aubergine text
-    textMuted: '#795548', // Elegant warm earth
-    accent: '#E91E63' // Festively bright pink
+    bgPage: '#1a0410', // Rich radiant magenta black
+    bgCard: '#2b0b1e', // Dark berry card
+    bgInput: '#2b0b1e',
+    bgBadge: '#3d122b',
+    border: '#e91e63', // Vibrant pink border
+    primary: '#e64a19',
+    primaryHover: '#d84315',
+    textMain: '#ffffff',
+    textMuted: '#fbc2eb',
+    accent: '#e91e63'
   },
   GOLD: {
     id: 'GOLD',
     name: 'Imperial Gold',
     hindiName: 'शाही स्वर्ण',
-    bgPage: '#FAF7F2',
-    bgCard: '#FFFFFF',
-    bgInput: '#FFFFFF',
-    bgBadge: '#FCF6E8',
-    border: '#E5DEC3',
-    primary: '#936a18',
-    primaryHover: '#af7f21',
-    textMain: '#2D2A26',
-    textMuted: '#5D5A54',
+    bgPage: '#13110a', // Deep royal brass black
+    bgCard: '#242013', // Warm golden sand card
+    bgInput: '#242013',
+    bgBadge: '#36301d',
+    border: '#cca43b', // Gilded gold border
+    primary: '#cca43b',
+    primaryHover: '#b38f32',
+    textMain: '#ffffff',
+    textMuted: '#e3d6b1',
     accent: '#cca43b'
   },
   EMERALD: {
     id: 'EMERALD',
     name: 'Vedic Emerald',
     hindiName: 'वैदिक पन्ना',
-    bgPage: '#FAF9F5',
-    bgCard: '#FFFFFF',
-    bgInput: '#FFFFFF',
-    bgBadge: '#EBF5EE',
-    border: '#D2DBCF',
-    primary: '#1B5E3A',
-    primaryHover: '#2A7F50',
-    textMain: '#1E2B22',
-    textMuted: '#505E54',
+    bgPage: '#041209', // Deep sacred jade black
+    bgCard: '#092414', // Forest emerald card
+    bgInput: '#092414',
+    bgBadge: '#123821',
+    border: '#238551', // Healing emerald green border
+    primary: '#238551',
+    primaryHover: '#1c6d41',
+    textMain: '#ffffff',
+    textMuted: '#bcf2d4',
     accent: '#238551'
   },
   SAFFRON: {
     id: 'SAFFRON',
     name: 'Sacred Saffron',
     hindiName: 'केसरिया दिव्य',
-    bgPage: '#FCF9F5',
-    bgCard: '#FFFFFF',
-    bgInput: '#FFFFFF',
-    bgBadge: '#FAF0E6',
-    border: '#ECCCA2',
+    bgPage: '#1c0f04', // Rich warm marigold background
+    bgCard: '#2f1b0a', // Sunset clay card
+    bgInput: '#2f1b0a',
+    bgBadge: '#452912',
+    border: '#D35400', // Saffron primary border
     primary: '#D35400',
-    primaryHover: '#E67E22',
-    textMain: '#3E2723',
-    textMuted: '#6D4C41',
-    accent: '#E67E22'
+    primaryHover: '#b84900',
+    textMain: '#ffffff',
+    textMuted: '#ffd8be',
+    accent: '#e67e22'
   },
   SAPPHIRE: {
     id: 'SAPPHIRE',
     name: 'Celestial Sapphire',
     hindiName: 'दिव्य नीलम',
-    bgPage: '#F3F6FA',
-    bgCard: '#FFFFFF',
-    bgInput: '#FFFFFF',
-    bgBadge: '#E8F0FE',
-    border: '#C9D4E2',
-    primary: '#1F51C6',
-    primaryHover: '#3366FF',
-    textMain: '#1A2332',
-    textMuted: '#56657F',
+    bgPage: '#03081a', // Celestial deep cosmic navy
+    bgCard: '#0a1433', // Deep sapphire blue card
+    bgInput: '#0a1433',
+    bgBadge: '#12204c',
+    border: '#2962FF', // Radiant sapphire border
+    primary: '#2962FF',
+    primaryHover: '#1f51c6',
+    textMain: '#ffffff',
+    textMuted: '#b8cbff',
     accent: '#2962FF'
   },
   CLASSIC_BW: {
@@ -709,6 +709,25 @@ function VedicKundliApp() {
   };
 
   const [showScholarsSidebar, setShowScholarsSidebar] = useState(true);
+  const [currentRealTime, setCurrentRealTime] = useState(new Date());
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentRealTime(new Date());
+    }, 1000);
+    
+    const handleScroll = () => {
+      setIsPageScrolled(window.scrollY > 120);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   const [panditSearchText, setPanditSearchText] = useState('');
   const [panditSpecializationFilter, setPanditSpecializationFilter] = useState('all');
   const [panditPriceFilter, setPanditPriceFilter] = useState(15000);
@@ -1739,6 +1758,8 @@ function VedicKundliApp() {
       .bg-\\[\\#161a35\\] { background-color: ${t.bgBadge} !important; }
       .bg-\\[\\#0b0c16\\] { background-color: ${t.bgCard} !important; border-color: ${t.border} !important; border-width: ${borderWidthVal} !important; }
       .bg-\\[\\#0b0c16\\/50\\] { background-color: ${t.bgCard}80 !important; border-color: ${t.border} !important; }
+      .bg-\\[\\#0f1124\\] { background-color: ${t.bgCard} !important; border-color: ${t.border} !important; }
+      .bg-\\[\\#11132a\\] { background-color: ${t.bgCard} !important; border-color: ${t.border} !important; }
       
       /* Colors to ensure perfect contrast on light themes */
       .text-slate-100 { color: ${t.textMain} !important; }
@@ -1751,6 +1772,7 @@ function VedicKundliApp() {
       .text-white { color: ${t.textMain} !important; }
       .text-amber-500 { color: ${t.primary} !important; }
       .text-\\[\\#cca43b\\] { color: ${t.primary} !important; }
+      .text-amber-300 { color: ${t.textMuted} !important; }
       
       /* Prevent low-contrast yellow/amber texts in light mode */
       .text-amber-400 { color: ${isHC ? t.textMain : t.primary} !important; }
@@ -1762,7 +1784,13 @@ function VedicKundliApp() {
       .border-slate-850 { border-color: ${t.border} !important; border-width: ${borderWidthVal} !important; }
       .border-slate-700 { border-color: ${t.border} !important; border-width: ${borderWidthVal} !important; }
       .border-slate-900 { border-color: ${t.border} !important; border-width: ${borderWidthVal} !important; }
+      .border-\\[\\#cca43b\\/40\\] { border-color: ${t.border}66 !important; }
       .divide-slate-800 > :not([hidden]) ~ :not([hidden]) { border-color: ${t.border} !important; }
+      
+      /* SVG & Kundli Charts dynamic color overrides */
+      svg rect[stroke="#cca43b"], svg line[stroke="#cca43b"], svg path[stroke="#cca43b"] { stroke: ${t.primary} !important; }
+      svg text[fill="#cca43b"], svg circle[stroke="#cca43b"], svg rect[fill="#cca43b"] { fill: ${t.primary} !important; }
+      svg rect[fill="#cca43b"][fill-opacity="0.08"] { fill: ${t.primary} !important; fill-opacity: 0.08 !important; }
       
       /* Primary Dynamic Button and Gradients */
       .bg-\\[\\#cca43b\\] { background-color: ${t.primary} !important; color: ${isHC ? (currentTheme === 'CLASSIC_BW' ? '#FFFFFF' : '#000000') : '#FFFFFF'} !important; }
@@ -2406,10 +2434,14 @@ function VedicKundliApp() {
                     : 'bg-red-400 animate-pulse ring-1 ring-red-400/50'
                 : 'bg-slate-400'
             }`}></span>
-            <span>
+            <span className={
+              storageConfig.mode === 'SUPABASE' && dbHealth.status === 'healthy'
+                ? 'text-[#00e676] font-bold text-xs uppercase tracking-wider'
+                : ''
+            }>
               {storageConfig.mode === 'SUPABASE'
                 ? dbHealth.status === 'healthy'
-                  ? t("COSMIC CLOUD SYNC - ONLINE", "वैदिकी क्लाउड सिंक - सक्रिय") 
+                  ? t("ONLINE", "सक्रिय") 
                   : dbHealth.status === 'needs_setup'
                     ? t("COSMIC CLOUD - SETUP PENDING", "वैदिकी क्लाउड - तालिका सेटअप आवश्यक")
                     : t("COSMIC CLOUD - UNREACHABLE", "वैदिकी क्लाउड - संपर्क विफल")
@@ -3164,181 +3196,161 @@ function VedicKundliApp() {
         )}
 
         {/* -- SCREEN: DASHBOARD MAIN -- */}
-        {/* -- SCREEN: DASHBOARD MAIN -- */}
         {currentScreen === 'DASHBOARD' && (
-          <div className="space-y-6">
-            {/* Greeting Hero & Fast Preferences Row */}
-            <div className="hidden lg:block relative rounded-2xl bg-gradient-to-r from-[#FAF0E6] to-[#FFFFFF] theme-bg-card border theme-border p-6 md:p-8 overflow-hidden shadow-md">
-              <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-[#cca43b]/10 blur-3xl -mr-24 -mt-24"></div>
-              <div className="relative flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="px-2 py-0.5 bg-[#cca43b]/20 border border-[#cca43b]/40 rounded text-[10px] text-[#936a18] uppercase font-bold tracking-wider">
-                      {activeUserIsPremium ? t("Certified Premium Astro Workstation", "प्रमाणित प्रीमियम वैदिक वर्कस्टेशन") : t("Standard Member", "मानक सदस्य")}
-                    </span>
-                    <span className="text-slate-400 text-xs font-mono">UTC: 2026-05-27</span>
-                  </div>
-                  <h2 className="text-2xl md:text-3.5xl font-extrabold text-slate-800 mb-2 font-cinzel tracking-tight">
-                    {t(`Namaste, Astrologer`, `नमस्ते, ज्योतिषी`)}
-                  </h2>
-                  <p className="text-slate-500 text-sm max-w-xl leading-relaxed">
-                    {t("Welcome to the enterprise-grade Vedic Astrology workspace. Access high-precision charts, dashas, and traditional calculations instantly.",
-                       "उच्च-सटीक कुंडली विश्लेषण, विंशोत्तरी महादशा और अष्टकूट मिलान के लिए अधिकृत व्यावसायिक ज्योतिष केंद्र।")}
-                  </p>
+          <div className="space-y-6 animate-fade-in font-sans">
+            
+            {/* 🕒 PRECISION DIGITAL CLOCK & CALENDAR HEADER PANEL */}
+            <div className="text-center py-4 select-none relative">
+              <div className="text-4xl sm:text-5.5xl font-black tracking-tight text-white font-mono drop-shadow-[0_0_15px_rgba(255,255,255,0.25)] flex items-center justify-center gap-2">
+                <span className="text-[#00e676] animate-pulse">●</span>
+                <span>
+                  {currentRealTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+              </div>
+              <div className="text-[10px] sm:text-xs font-black tracking-widest text-amber-400 font-cinzel mt-1 uppercase">
+                {currentRealTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </div>
+            </div>
+
+            {/* 🌌 DISPERSAL-STYLE TRANSLUCENT WELCOME WORKSPACE CARD */}
+            <div className="max-w-3xl mx-auto bg-[#0f1123]/80 theme-bg-card border-2 theme-border rounded-2xl p-5 text-center shadow-lg relative overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(#cca43b_0.5px,transparent_0.5px)] [background-size:16px_16px] opacity-[0.03] pointer-events-none"></div>
+              <div className="relative z-10">
+                <h2 className="text-xs sm:text-sm font-black text-white uppercase tracking-widest font-cinzel flex items-center justify-center gap-1.5">
+                  <span>🌌</span> {t("PVASTRO CORE COSMIC HUB", "पंचांग व कुण्डली दिव्य नियंत्रण केंद्र")} <span>🌌</span>
+                </h2>
+                <p className="text-[10.5px] sm:text-[11.5px] text-slate-300 mt-2 leading-relaxed max-w-xl mx-auto">
+                  {t("Welcome to the secure astronomical calculations hub. Tap any of the high-contrast professional application nodes below to construct charts, perform matches, read transits, or consult the Cosmic AI.",
+                     "परम शुद्ध गणितीय सूत्रों पर आधारित वैदिक ज्योतिष कंसोल में आपका स्वागत है। कुण्डली निर्माण, मिलान, दैनिक शुभ-अशुभ गोचर समय और कृत्रिम बुद्धिमत्ता संवाद के लिए नीचे दिए गए मुख्य नोड्स का चयन करें।")}
+                </p>
+                <div className="mt-3.5 flex items-center justify-center gap-2 text-[9.5px] font-mono text-slate-400">
+                  <span className="px-2 py-0.5 bg-[#cca43b]/10 border border-[#cca43b]/30 rounded text-[#cca43b] font-bold">
+                    {activeUserIsPremium ? t("PREMIUM WORKSTATION", "प्रीमियम वर्कस्टेशन") : t("STANDARD MEMBER", "मानक सदस्य")}
+                  </span>
+                  <span>|</span>
+                  <span>UTC: 2026-05-27</span>
                 </div>
               </div>
             </div>
 
-            {/* AstroSage-inspired Divine Services Grid */}
-            <div className="bg-white theme-bg-card border-2 theme-border rounded-xl p-5 shadow-sm relative overflow-hidden font-sans">
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-500 via-orange-500 to-red-500"></div>
-              <div className="flex items-center gap-3 mb-4.5">
-                <span className="text-xl">🕉️</span>
+            {/* 🚀 HIGH-CONTRAST APP LAUNCHER NODES (Vedic Dispersal Hub Grid) */}
+            <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3.5 pt-2">
+              
+              {/* 1. Janma Kundli Node */}
+              <button
+                onClick={() => {
+                  const formEl = document.getElementById('birth-particulars-form');
+                  if (formEl) {
+                    formEl.scrollIntoView({ behavior: 'smooth' });
+                  } else {
+                    setCurrentScreen('ADD_KUNDLI');
+                  }
+                }}
+                className="p-4 rounded-2xl bg-gradient-to-b from-[#1565c0] to-[#0d47a1] border-2 border-blue-400/30 text-white flex flex-col items-center justify-between text-center gap-3.5 shadow-md hover:scale-103 active:scale-97 transition duration-200 select-none group min-h-[145px]"
+              >
+                <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] transform group-hover:scale-110 transition duration-200">卐</span>
                 <div>
-                  <h3 className="text-sm sm:text-base font-extrabold text-slate-800 font-cinzel leading-none uppercase tracking-wide">
-                    {t("AstroSage Divine Services", "एस्ट्रोसेज मुख्य ज्योतिषीय सेवाएं")}
-                  </h3>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    {t("Traditional Vedic astrology, Panchang table, matchmaking, and reports calibrated with authentic parameters", 
-                       "सटीक पंचांग गणना, अष्टकूट वर-वधू कुंडली मिलान तथा विस्तृत फलादेश विवरण")}
-                  </p>
+                  <h4 className="text-xs font-black tracking-wide leading-tight uppercase font-cinzel">{t("Kundli Maker", "कुण्डली रेखांकन")}</h4>
+                  <p className="text-[8.5px] text-blue-200 font-bold mt-0.5 uppercase tracking-wider">{t("Create New", "नई बनाएं")}</p>
                 </div>
-              </div>
+                <span className="text-[7.5px] font-mono font-black px-2 py-0.5 bg-black/35 rounded-full border border-blue-400/20 text-blue-100 uppercase tracking-widest">{t("Active Node", "सक्रिय नोड")}</span>
+              </button>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 pt-1">
-                {/* 1. Kundli Creator */}
-                <button
-                  onClick={() => {
-                    const formEl = document.getElementById('birth-particulars-form');
-                    if (formEl) {
-                      formEl.scrollIntoView({ behavior: 'smooth' });
-                    } else {
-                      setCurrentScreen('ADD_KUNDLI');
-                    }
-                  }}
-                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans"
-                  style={getServiceCardStyle(currentScreen === 'ADD_KUNDLI')}
-                >
-                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">卐</span>
-                  <div>
-                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("Janma Kundli", "जन्म कुण्डली")}</h4>
-                    <p className="text-[9px] text-slate-500 mt-0.5">{t("Create Horoscope", "नई कुंडली बनाए")}</p>
-                  </div>
-                </button>
+              {/* 2. Open Library Node */}
+              <button
+                onClick={() => setCurrentScreen('KUNDLI_LIBRARY')}
+                className="p-4 rounded-2xl bg-gradient-to-b from-[#37474f] to-[#212121] border-2 border-slate-400/30 text-white flex flex-col items-center justify-between text-center gap-3.5 shadow-md hover:scale-103 active:scale-97 transition duration-200 select-none group min-h-[145px]"
+              >
+                <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] transform group-hover:scale-110 transition duration-200">🔮</span>
+                <div>
+                  <h4 className="text-xs font-black tracking-wide leading-tight uppercase font-cinzel">{t("Open Kundli", "कुण्डली संग्रह")}</h4>
+                  <p className="text-[8.5px] text-slate-300 font-bold mt-0.5 uppercase tracking-wider">{t("Saved Profiles", "सुरक्षित कुंडली")}</p>
+                </div>
+                <span className="text-[7.5px] font-mono font-black px-2 py-0.5 bg-black/35 rounded-full border border-slate-400/20 text-slate-200 uppercase tracking-widest">{t("Secure Vault", "डेटा सुरक्षित")}</span>
+              </button>
 
-                {/* 2. Saved / Open Kundli */}
-                <button
-                  onClick={() => setCurrentScreen('KUNDLI_LIBRARY')}
-                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans"
-                  style={getServiceCardStyle(currentScreen === 'KUNDLI_LIBRARY')}
-                >
-                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">🔮</span>
-                  <div>
-                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("Open Kundli", "ओपन कुण्डली")}</h4>
-                    <p className="text-[9px] text-slate-500 mt-0.5">{t("Access Library", "संग्रह देखें")}</p>
-                  </div>
-                </button>
+              {/* 3. Matchmaking Node */}
+              <button
+                onClick={() => setCurrentScreen('MATCHMAKING')}
+                className="p-4 rounded-2xl bg-gradient-to-b from-[#ad1457] to-[#880e4f] border-2 border-pink-400/30 text-white flex flex-col items-center justify-between text-center gap-3.5 shadow-md hover:scale-103 active:scale-97 transition duration-200 select-none group min-h-[145px]"
+              >
+                <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] transform group-hover:scale-110 transition duration-200">💑</span>
+                <div>
+                  <h4 className="text-xs font-black tracking-wide leading-tight uppercase font-cinzel">{t("Matching App", "कुण्डली मिलान")}</h4>
+                  <p className="text-[8.5px] text-pink-200 font-bold mt-0.5 uppercase tracking-wider">{t("Ashtakoota", "अष्टकूट मिलान")}</p>
+                </div>
+                <span className="text-[7.5px] font-mono font-black px-2 py-0.5 bg-black/35 rounded-full border border-pink-400/20 text-pink-100 uppercase tracking-widest">{t("Aura Match", "परस्पर मिलन")}</span>
+              </button>
 
-                {/* 3. Matchmaking */}
-                <button
-                  onClick={() => setCurrentScreen('MATCHMAKING')}
-                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans"
-                  style={getServiceCardStyle(currentScreen === 'MATCHMAKING')}
-                >
-                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">💑</span>
-                  <div>
-                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("Kundli Matching", "कुण्डली मिलान")}</h4>
-                    <p className="text-[9px] text-slate-500 mt-0.5">{t("Aštakūta Match", "वर-वधू मिलान")}</p>
-                  </div>
-                </button>
+              {/* 4. Panchang Node */}
+              <button
+                onClick={() => setCurrentScreen('PANCHANG')}
+                className="p-4 rounded-2xl bg-gradient-to-b from-[#2e7d32] to-[#1b5e20] border-2 border-emerald-400/30 text-white flex flex-col items-center justify-between text-center gap-3.5 shadow-md hover:scale-103 active:scale-97 transition duration-200 select-none group min-h-[145px]"
+              >
+                <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] transform group-hover:scale-110 transition duration-200">📅</span>
+                <div>
+                  <h4 className="text-xs font-black tracking-wide leading-tight uppercase font-cinzel">{t("Daily Panchang", "दैनिक पंचांग")}</h4>
+                  <p className="text-[8.5px] text-emerald-200 font-bold mt-0.5 uppercase tracking-wider">{t("Muhurata", "शुभ चौघड़िया")}</p>
+                </div>
+                <span className="text-[7.5px] font-mono font-black px-2 py-0.5 bg-black/35 rounded-full border border-emerald-400/20 text-emerald-100 uppercase tracking-widest">{t("Vedic Time", "सूर्य सिद्धांत")}</span>
+              </button>
 
-                {/* 4. Panchang */}
-                <button
-                  onClick={() => setCurrentScreen('PANCHANG')}
-                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans"
-                  style={getServiceCardStyle(currentScreen === 'PANCHANG')}
-                >
-                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">📅</span>
-                  <div>
-                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("Daily Panchang", "दैनिक पंचांग")}</h4>
-                    <p className="text-[9px] text-slate-500 mt-0.5">{t("Today's Horas", "शुभ-अशुभ समय")}</p>
-                  </div>
-                </button>
-
-                {/* 5. Shodashvarga */}
-                <button
-                  onClick={() => {
-                    if (activeProfileMemory) {
-                      setCurrentScreen('KUNDLI_REPORT');
-                      setReportTab('chart');
-                    } else {
-                      document.getElementById('birth-particulars-form')?.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }}
-                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans"
-                  style={getServiceCardStyle(currentScreen === 'KUNDLI_REPORT' && reportTab === 'chart')}
-                >
-                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">🪐</span>
-                  <div>
-                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("Planetary Transit", "ग्रहों की स्थिति")}</h4>
-                    <p className="text-[9px] text-slate-500 mt-0.5">{t("Lagna & Gochar", "लग्न व गोचर फल")}</p>
-                  </div>
-                </button>
-
-                {/* 6. Astro Academy */}
-                <button
-                  onClick={() => {
+              {/* 5. Transit Node */}
+              <button
+                onClick={() => {
+                  if (activeProfileMemory) {
                     setCurrentScreen('KUNDLI_REPORT');
-                    setReportTab('academy');
-                  }}
-                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans"
-                  style={getServiceCardStyle(currentScreen === 'KUNDLI_REPORT' && reportTab === 'academy')}
-                >
-                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">📖</span>
-                  <div>
-                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("Astro Academy", "ज्योतिष विद्यापीठ")}</h4>
-                    <p className="text-[9px] text-slate-500 mt-0.5">{t("Vedic Guidance", "ज्योतिष सीखें")}</p>
-                  </div>
-                </button>
+                    setReportTab('chart');
+                  } else {
+                    document.getElementById('birth-particulars-form')?.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className="p-4 rounded-2xl bg-gradient-to-b from-[#311b92] to-[#1a237e] border-2 border-indigo-400/30 text-white flex flex-col items-center justify-between text-center gap-3.5 shadow-md hover:scale-103 active:scale-97 transition duration-200 select-none group min-h-[145px]"
+              >
+                <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] transform group-hover:scale-110 transition duration-200">🪐</span>
+                <div>
+                  <h4 className="text-xs font-black tracking-wide leading-tight uppercase font-cinzel">{t("Transits", "ग्रह गोचर")}</h4>
+                  <p className="text-[8.5px] text-indigo-200 font-bold mt-0.5 uppercase tracking-wider">{t("Gochar", "लग्न चक्र")}</p>
+                </div>
+                <span className="text-[7.5px] font-mono font-black px-2 py-0.5 bg-black/35 rounded-full border border-indigo-400/20 text-indigo-100 uppercase tracking-widest">{t("Vrihat Jataka", "ग्रह फल")}</span>
+              </button>
 
-                {/* 7. AI Astro Guru & Help */}
-                <button
-                  onClick={() => {
-                    setAiChatTab('chat');
-                    setCurrentScreen('AI_CHAT');
-                  }}
-                  className="pva-service-card p-3.5 rounded-xl flex flex-col items-center text-center gap-1.5 group font-sans border-2 border-dashed border-amber-500/40 bg-amber-500/5 hover:border-amber-500 hover:bg-amber-500/10"
-                  style={getServiceCardStyle(currentScreen === 'AI_CHAT' && aiChatTab === 'chat')}
-                >
-                  <span className="text-2xl transform group-hover:scale-110 transition duration-200">🕉️</span>
-                  <div>
-                    <h4 className="text-xs font-black text-slate-850 tracking-tight leading-tight">{t("AI Astro Guru", "एआई दिव्य गुरु")}</h4>
-                    <p className="text-[9px] text-[#936a18] font-bold mt-0.5">{t("AI Chat & Help", "संवाद एवं संपर्क")}</p>
-                  </div>
-                </button>
+              {/* 6. AI Astro Guru (Glowing Indigo-Purple Aura) */}
+              <button
+                onClick={() => {
+                  setAiChatTab('chat');
+                  setCurrentScreen('AI_CHAT');
+                }}
+                className="p-4 rounded-2xl bg-gradient-to-b from-[#4a148c] to-[#311b92] border-2 border-purple-400/50 text-white flex flex-col items-center justify-between text-center gap-3.5 shadow-lg hover:scale-103 active:scale-97 transition duration-200 select-none group min-h-[145px] relative overflow-hidden"
+              >
+                <span className="absolute inset-0 bg-purple-500/10 animate-pulse pointer-events-none"></span>
+                <span className="text-3xl filter drop-shadow-[0_0_12px_rgba(168,85,247,0.8)] transform group-hover:scale-110 transition duration-200">🕉️</span>
+                <div>
+                  <h4 className="text-xs font-black tracking-wide leading-tight uppercase font-cinzel text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-amber-300">{t("Cosmic AI", "एआई दिव्य गुरु")}</h4>
+                  <p className="text-[8.5px] text-purple-200 font-bold mt-0.5 uppercase tracking-wider">{t("Gemini Chat", "संवाद गुरु")}</p>
+                </div>
+                <span className="text-[7.5px] font-mono font-black px-2 py-0.5 bg-purple-900/50 rounded-full border border-purple-400/30 text-purple-200 uppercase tracking-widest animate-pulse">{t("AI Aura", "सिद्ध एआई")}</span>
+              </button>
 
-                {/* 8. KP Prashna Kundli */}
-                <button
-                  onClick={() => {
-                    setAiChatTab('prashna');
-                    setCurrentScreen('AI_CHAT');
-                  }}
-                  className="pva-service-card p-4 rounded-2xl flex flex-col items-center text-center gap-2 group font-sans border-2 border-solid border-[#ff3d00] bg-gradient-to-br from-[#ff3d00] to-[#ff6d00] text-white hover:brightness-115 transition duration-300 shadow-[0_0_15px_rgba(255,61,0,0.5)] animate-kp-glow cursor-pointer relative"
-                >
-                  <span className="absolute -top-2.5 -right-1.5 bg-yellow-400 border border-white text-slate-900 text-[8px] font-black tracking-widest px-2 py-0.5 rounded-full uppercase animate-pulse shadow-md">
-                    {t("POWERFUL", "सिद्ध चक्र")}
-                  </span>
-                  <span className="text-3xl transform group-hover:scale-115 transition duration-300">⏱️</span>
-                  <div>
-                    <h4 className="text-xs font-black text-white tracking-wider leading-tight uppercase font-cinzel select-all drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
-                      {t("KP Prashna", "केपी प्रश्न कुण्डली")}
-                    </h4>
-                    <p className="text-[9px] text-[#ffea00] font-black mt-0.5 tracking-wider uppercase select-all drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
-                      {t("Instant Horary", "प्रश्न फलसिद्धि")}
-                    </p>
-                  </div>
-                </button>
-              </div>
+              {/* 7. KP Prashna Node (Glowing Hot Orange) */}
+              <button
+                onClick={() => {
+                  setAiChatTab('prashna');
+                  setCurrentScreen('AI_CHAT');
+                }}
+                className="p-4 rounded-2xl bg-gradient-to-b from-[#e65100] to-[#bf360c] border-2 border-orange-400/50 text-white flex flex-col items-center justify-between text-center gap-3.5 shadow-lg hover:scale-103 active:scale-97 transition duration-200 select-none group min-h-[145px] relative"
+              >
+                <span className="absolute -top-1.5 -right-1 bg-yellow-400 border border-white text-slate-900 text-[7px] font-black tracking-widest px-1.5 py-0.5 rounded-full uppercase animate-pulse shadow-md">
+                  {t("POWER", "शक्ति")}
+                </span>
+                <span className="text-3xl filter drop-shadow-[0_0_12px_rgba(249,115,22,0.8)] transform group-hover:scale-110 transition duration-200">⏱️</span>
+                <div>
+                  <h4 className="text-xs font-black tracking-wide leading-tight uppercase font-cinzel">{t("KP Prashna", "केपी प्रश्न")}</h4>
+                  <p className="text-[8.5px] text-orange-200 font-bold mt-0.5 uppercase tracking-wider">{t("Instant", "प्रश्न फलसिद्धि")}</p>
+                </div>
+                <span className="text-[7.5px] font-mono font-black px-2 py-0.5 bg-black/35 rounded-full border border-orange-400/20 text-orange-100 uppercase tracking-widest">{t("KP System", "कृष्णमूर्ति")}</span>
+              </button>
+
             </div>
 
             {/* Quick Action Container: Form & Right Widgets */}
@@ -6754,6 +6766,60 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
         )}
       </div>
 
+      {/* 🕉️ SCROLL-DRIVEN BOTTOM SCHOLARS BOARD */}
+      {currentScreen !== 'WELCOME' && currentScreen !== 'AUTH' && (
+        <div className="mx-auto max-w-5xl w-full px-4 mt-8 mb-4 animate-fade-in font-sans">
+          <div className="bg-[#0f1123] border-2 border-dashed border-amber-500/30 rounded-2xl p-4 sm:p-5 text-center relative overflow-hidden theme-bg-card theme-border shadow-lg">
+            <div className="absolute inset-0 bg-[radial-gradient(#cca43b_0.5px,transparent_0.5px)] [background-size:20px_20px] opacity-[0.02] pointer-events-none"></div>
+            <h3 className="text-xs sm:text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-[#ffea00] leading-none uppercase tracking-widest flex items-center justify-center gap-1.5 font-cinzel">
+              <span>🕉️</span> {t("Verified Vedic Purohits & Scholars", "पंजीकृत एवं सत्यापित वैदिक पुरोहित आचार्य सूची")}
+            </h3>
+            <p className="text-[10px] text-slate-400 mt-1 max-w-xl mx-auto">
+              {t("Connect with verified local priests, spiritual guides and ritual pandits instantly. Reach out to coordinate pujas, or register a new priest below.",
+                 "समीपस्थ आचार्य का चयन करके पूजा या अनुष्ठान बुक करें। नया पुरोहित पंजीकरण करने के लिए नीचे बटन दबाएं।")}
+            </p>
+
+            {/* Horizontal Row of Pandits */}
+            <div className="flex flex-wrap items-center justify-center gap-4 mt-5">
+              {PANDITS_STRICT_LIST.map((p) => (
+                <div 
+                  key={p.id}
+                  onClick={() => {
+                    setActiveBookingPandit(p);
+                    setShowPanditDirectory(true);
+                  }}
+                  className="bg-[#11132a] hover:bg-[#161a35] theme-bg-page border theme-border p-3 rounded-2xl flex items-center gap-3 cursor-pointer hover:border-amber-500/50 hover:scale-102 transition-all duration-200 max-w-[240px] w-full shadow-md"
+                >
+                  <img src={p.profile_photo_url} alt={p.name} className="w-11 h-11 rounded-full object-cover border-2 border-emerald-500 shadow-md" />
+                  <div className="text-left min-w-0 flex-1">
+                    <p className="text-xs font-bold text-white truncate leading-tight font-cinzel">{p.name}</p>
+                    <p className="text-[9.5px] text-slate-400 mt-0.5">{p.experience_years}y Exp | ★ {p.rating}</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                      <span className="text-[9px] text-emerald-400 uppercase tracking-tight font-bold">{t("Contact / Book", "संपर्क करें")}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Registration Call To Action */}
+            <div className="mt-5 pt-4 border-t border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
+              <div>
+                <p className="text-xs font-black text-amber-300 font-sans">{t("Are you a professional Pandit, Priest or Astrologer?", "क्या आप एक वैदिक पुरोहित या ज्योतिषी आचार्य हैं?")}</p>
+                <p className="text-[10px] text-slate-400">{t("Get listed in our verified network to receive auspicious puja and consultation requests from devotees.", "सत्यापित पुरोहित नेटवर्क से जुड़कर यजमानों के धार्मिक अनुष्ठान आर्डर सीधे प्राप्त करें।")}</p>
+              </div>
+              <button 
+                onClick={() => setShowPriestRegisterForm(true)}
+                className="px-4.5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition shadow-md whitespace-nowrap cursor-pointer hover:scale-105 active:scale-95"
+              >
+                📜 {t("Register Pandit Ji Now", "अभी पुरोहित पंजीकरण करें 📜")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Luxury Footer with tech indicators */}
       <footer className="mt-12 py-6 bg-[#0a0c1a] border-t border-slate-800/80 px-4 text-center">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-slate-500 font-mono">
@@ -6873,7 +6939,9 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
       {/* 🌟 SCROLLING SCHOLARS SIDEBAR SYSTEM (Displays on screen margins for all active states) */}
       {currentScreen !== 'WELCOME' && currentScreen !== 'AUTH' && (
         showScholarsSidebar ? (
-          <div className="fixed right-2.5 top-[24%] sm:top-[30%] z-[140] flex flex-col items-center gap-2 bg-[#0c0d1c]/95 border-2 border-amber-500/40 p-2.5 rounded-2xl shadow-[0_0_25px_rgba(245,158,11,0.35)] animate-fade-in max-w-[80px]">
+          <div className={`fixed right-2.5 top-[24%] sm:top-[30%] z-[140] flex flex-col items-center gap-2 bg-[#0c0d1c]/95 border-2 border-amber-500/40 p-2.5 rounded-2xl shadow-[0_0_25px_rgba(245,158,11,0.35)] max-w-[80px] transition-all duration-500 transform ${
+            isPageScrolled ? 'opacity-0 pointer-events-none translate-x-16 scale-75' : 'opacity-100 scale-100 translate-x-0'
+          }`}>
             <div className="w-full flex items-center justify-between border-b border-amber-500/20 pb-1.5 select-none gap-4">
               <span className="text-[8px] font-black tracking-widest text-[#ffea00] uppercase leading-none truncate pl-1">
                 {t("ACHARYA", "गुरुजन")}
@@ -6932,7 +7000,9 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
           /* Small sticky button to bring it back when closed */
           <button
             onClick={() => setShowScholarsSidebar(true)}
-            className="fixed right-0 top-[40%] z-[140] w-7 py-3 bg-[#0c0d1c]/95 border-l-2 border-y-2 border-amber-500/40 rounded-l-xl text-amber-400 text-[10px] font-black flex flex-col items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95 transition whitespace-pre-wrap select-none leading-none border-r-0"
+            className={`fixed right-0 top-[40%] z-[140] w-7 py-3 bg-[#0c0d1c]/95 border-l-2 border-y-2 border-amber-500/40 rounded-l-xl text-amber-400 text-[10px] font-black flex flex-col items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95 whitespace-pre-wrap select-none leading-none border-r-0 transition-all duration-500 transform ${
+              isPageScrolled ? 'opacity-0 pointer-events-none translate-x-12 scale-75' : 'opacity-100 scale-100 translate-x-0'
+            }`}
             title={t("Show Scholar List", "गुरुदेव सूची दिखाएं")}
           >
             <span>🕉️</span>

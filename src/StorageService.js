@@ -1121,6 +1121,62 @@ export const authService = {
   }
 };
 
+// Pure helper to deduplicate a list of saved kundli records for a specific user.
+// Group active records by lowercase name, dob, and tob.
+// Keep the latest one and collect the duplicate IDs to delete from Supabase if any.
+const deduplicateList = (list, emailOrId) => {
+  if (!emailOrId) return { cleanedList: list, userCleanedList: list, deletedIds: [] };
+  
+  const otherUsersItems = list.filter(item => item.user_id !== emailOrId);
+  const userItems = list.filter(item => item.user_id === emailOrId);
+
+  const activeUserItems = userItems.filter(item => !item.is_trash);
+  const trashUserItems = userItems.filter(item => item.is_trash);
+
+  // Group active items by name + dob + tob
+  const groups = {};
+  activeUserItems.forEach(item => {
+    const nameKey = (item.name || item.full_name || '').trim().toLowerCase();
+    const dobKey = (item.dob || item.birth_date || '').trim();
+    const tobKey = (item.tob || item.birth_time || '').trim();
+    const groupKey = `${nameKey}_${dobKey}_${tobKey}`;
+    if (!groups[groupKey]) {
+      groups[groupKey] = [];
+    }
+    groups[groupKey].push(item);
+  });
+
+  const keptActiveItems = [];
+  const deletedIds = [];
+
+  Object.keys(groups).forEach(key => {
+    const groupList = groups[key];
+    if (groupList.length > 1) {
+      // Sort by updated_at or created_at descending, fallback to numeric id
+      groupList.sort((a, b) => {
+        const dateA = new Date(a.updated_at || a.created_at || a.id || 0).getTime();
+        const dateB = new Date(b.updated_at || b.created_at || b.id || 0).getTime();
+        return dateB - dateA; // latest first
+      });
+      keptActiveItems.push(groupList[0]);
+      groupList.slice(1).forEach(dup => {
+        deletedIds.push(dup.id);
+      });
+    } else if (groupList.length === 1) {
+      keptActiveItems.push(groupList[0]);
+    }
+  });
+
+  const cleanedUserList = [...keptActiveItems, ...trashUserItems];
+  const fullCleanedList = [...otherUsersItems, ...cleanedUserList];
+
+  return {
+    cleanedList: fullCleanedList,
+    userCleanedList: cleanedUserList,
+    deletedIds
+  };
+};
+
 // ==========================================
 // 2. KUNDLI DATABASE OPERATIONS (CRUD)
 // ==========================================
@@ -1140,6 +1196,28 @@ export const kundliDbService = {
         localList = isAdmin ? parsed : parsed.filter(item => item.user_id === emailOrId);
       } catch (e) {
         console.error("Local lists error:", e);
+      }
+    }
+
+    // Deduplicate localList initially to ensure clean local state instantly
+    const { cleanedList: localCleanedList, deletedIds: localDeletedIds, userCleanedList: localUserCleanedList } = deduplicateList(localList, emailOrId);
+    if (localDeletedIds.length > 0) {
+      localList = isAdmin ? localCleanedList : localUserCleanedList;
+      // Save cleaned list back to local storage
+      let allLocal = [];
+      if (rawLocal) {
+        try { allLocal = JSON.parse(rawLocal); } catch(e){}
+      }
+      allLocal = allLocal.filter(item => item.user_id !== emailOrId);
+      allLocal = [...allLocal, ...localCleanedList.filter(item => item.user_id === emailOrId)];
+      localStorage.setItem(LOCAL_KUNDLIS_KEY, JSON.stringify(allLocal));
+
+      // If Supabase is configured and in Supabase mode, trigger background delete for these IDs
+      if (isSupabaseConfigured() && config.mode === 'SUPABASE') {
+        const supabase = getSupabaseClient();
+        supabase.from('kundlis').delete().in('id', localDeletedIds).catch(err => {
+          console.warn("Background deduplication delete failed:", err);
+        });
       }
     }
 
@@ -1218,6 +1296,19 @@ export const kundliDbService = {
                 mergedList.push({ ...cloudItem, user_id: emailOrId });
               }
             });
+          } else {
+            mergedList = [...localList];
+          }
+
+          // Run deduplication on merged list
+          const { cleanedList: cloudCleanedList, deletedIds: cloudDeletedIds, userCleanedList: cloudUserCleanedList } = deduplicateList(mergedList, emailOrId);
+          mergedList = cloudUserCleanedList;
+
+          if (cloudDeletedIds.length > 0) {
+            console.log(`Deduplicated ${cloudDeletedIds.length} records for ${emailOrId}. Deleted IDs:`, cloudDeletedIds);
+            supabase.from('kundlis').delete().in('id', cloudDeletedIds).then(({ error }) => {
+              if (error) console.warn("Supabase deduplication error:", error);
+            });
           }
 
           // Save merged list back to local storage (even if empty, keeping it in sync with database)
@@ -1226,7 +1317,7 @@ export const kundliDbService = {
             try { allLocal = JSON.parse(rawLocal); } catch(e){}
           }
           allLocal = allLocal.filter(item => item.user_id !== emailOrId);
-          allLocal = [...allLocal, ...mergedList];
+          allLocal = [...allLocal, ...cloudCleanedList.filter(item => item.user_id === emailOrId)];
           localStorage.setItem(LOCAL_KUNDLIS_KEY, JSON.stringify(allLocal));
 
           // Dispatch custom event to notify UI that database sync completed with the updated list!
@@ -1272,7 +1363,36 @@ export const kundliDbService = {
     if (!emailOrId) return false;
     const config = getDefaultStorageConfig();
     const nowISO = new Date().toISOString();
-    const kundliId = kundli.id || `k_${Date.now()}`;
+
+    // 1. ALWAYS load local list first to search for matches
+    const rawLocal = localStorage.getItem(LOCAL_KUNDLIS_KEY);
+    let localList = [];
+    if (rawLocal) {
+      try {
+        localList = JSON.parse(rawLocal);
+      } catch (e) {}
+    }
+
+    // Try to find if an active (non-trash) record already exists for the same name, dob, and tob
+    const searchName = (kundli.name || kundli.full_name || '').trim().toLowerCase();
+    const searchDob = (kundli.dob || kundli.birth_date || '').trim();
+    const searchTob = (kundli.tob || kundli.birth_time || '').trim();
+
+    const existingMatch = localList.find(item => 
+      item.user_id === emailOrId &&
+      !item.is_trash &&
+      (item.name || item.full_name || '').trim().toLowerCase() === searchName &&
+      (item.dob || item.birth_date || '').trim() === searchDob &&
+      (item.tob || item.birth_time || '').trim() === searchTob &&
+      String(item.id) !== String(kundli.id)
+    );
+
+    let kundliId = kundli.id;
+    if (existingMatch) {
+      kundliId = existingMatch.id;
+    } else if (!kundliId) {
+      kundliId = `k_${Date.now()}`;
+    }
 
     const completePayload = {
       ...kundli,
@@ -1282,29 +1402,32 @@ export const kundliDbService = {
       notes: kundli.notes || '',
       favorite: kundli.favorite ?? false,
       is_trash: kundli.is_trash ?? false,
-      created_at: kundli.created_at || nowISO,
+      created_at: kundli.created_at || (existingMatch ? existingMatch.created_at : nowISO),
       updated_at: nowISO,
     };
 
-    // 1. ALWAYS write to local list first (instant, guaranteed persistence)
-    const rawLocal = localStorage.getItem(LOCAL_KUNDLIS_KEY);
-    let localList = [];
-    if (rawLocal) {
-      try {
-        localList = JSON.parse(rawLocal);
-      } catch (e) {}
-    }
-
-    localList = localList.filter(item => item.id !== kundliId);
+    localList = localList.filter(item => String(item.id) !== String(kundliId));
     localList.push({
       ...completePayload,
       user_id: emailOrId
     });
 
+    // Run deduplication to clean up any other duplicates
+    const { cleanedList, deletedIds } = deduplicateList(localList, emailOrId);
+    localList = cleanedList;
+
     try {
       localStorage.setItem(LOCAL_KUNDLIS_KEY, JSON.stringify(localList));
     } catch (e) {
       console.warn("localStorage write failed:", e);
+    }
+
+    // If Supabase is configured & active, trigger background delete for deletedIds if any
+    if (isSupabaseConfigured() && config.mode === 'SUPABASE' && deletedIds.length > 0) {
+      const supabase = getSupabaseClient();
+      supabase.from('kundlis').delete().in('id', deletedIds).catch(err => {
+        console.warn("Background deduplication delete failed:", err);
+      });
     }
 
     // 2. If Supabase is configured & active, sync to cloud
