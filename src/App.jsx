@@ -845,7 +845,7 @@ function VedicKundliApp() {
 
 
 
-  const [currentScreen, setCurrentScreen] = useState('ADD_KUNDLI'); // WELCOME, AUTH, DASHBOARD, ADD_KUNDLI, KUNDLI_REPORT, PANCHANG, MATCHMAKING, PREMIUM
+  const [currentScreen, setCurrentScreen] = useState('DASHBOARD'); // WELCOME, AUTH, DASHBOARD, ADD_KUNDLI, KUNDLI_REPORT, PANCHANG, MATCHMAKING, PREMIUM
   const [aiChatTab, setAiChatTab] = useState('chat');
   
   const [splashConfig, setSplashConfig] = useState(() => {
@@ -1983,6 +1983,21 @@ function VedicKundliApp() {
 
   const navigateToReport = (profile) => {
     if (!profile) return;
+    
+    // Require login when opening a saved Kundli
+    if (!currentUser || currentUser.trim() === '' || currentUser.includes('guest')) {
+      setMemoryPendingSavePayload(profile);
+      setMemoryPendingGateActionType('load_saved_profile');
+      setAuthActiveTab('login');
+      setCurrentScreen('AUTH');
+      triggerNotification(
+        t("Authentication Required", "लॉगिन आवश्यक है"),
+        t("Please sign up or login with Email/Google to open and view saved Kundlis.", "कृपया सहेजी गई कुंडलियों को खोलने और देखने के लिए ईमेल/गूगल से लॉगइन करें।"),
+        "info"
+      );
+      return;
+    }
+
     setNameInput(profile.name || "Guest Profile");
     setGenderInput(profile.gender || 'Male');
     setDobInput(profile.dob || "1995-10-24");
@@ -3006,8 +3021,16 @@ function VedicKundliApp() {
                               await kundliDbService.saveKundli(loggedEmail, pendingPayload);
                               setMemoryPendingSavePayload(null);
                               setMemoryPendingGateActionType('');
-                              if (actionType === 'generate_chart') {
+                              if (actionType === 'generate_chart' || actionType === 'load_saved_profile') {
                                 setActiveProfileMemory(pendingPayload);
+                                setNameInput(pendingPayload.name || "Guest Profile");
+                                setGenderInput(pendingPayload.gender || 'Male');
+                                setDobInput(pendingPayload.dob || "1995-10-24");
+                                setTobInput(pendingPayload.tob || "12:00");
+                                setBirthPlaceInput(pendingPayload.place || "New Delhi, Delhi, India");
+                                setLatitudeInput(pendingPayload.lat || 28.6139);
+                                setLongitudeInput(pendingPayload.lon || 77.2090);
+                                setTimezoneInput(pendingPayload.timezone || 'Asia/Kolkata');
                                 const list = await kundliDbService.fetchSavedKundlis(loggedEmail);
                                 setSavedKundlis(list);
                                 setCurrentScreen('KUNDLI_REPORT');
@@ -3116,8 +3139,16 @@ function VedicKundliApp() {
                             await kundliDbService.saveKundli(userRegisterEmail, pendingPayload);
                             setMemoryPendingSavePayload(null);
                             setMemoryPendingGateActionType('');
-                            if (actionType === 'generate_chart') {
+                            if (actionType === 'generate_chart' || actionType === 'load_saved_profile') {
                               setActiveProfileMemory(pendingPayload);
+                              setNameInput(pendingPayload.name || "Guest Profile");
+                              setGenderInput(pendingPayload.gender || 'Male');
+                              setDobInput(pendingPayload.dob || "1995-10-24");
+                              setTobInput(pendingPayload.tob || "12:00");
+                              setBirthPlaceInput(pendingPayload.place || "New Delhi, Delhi, India");
+                              setLatitudeInput(pendingPayload.lat || 28.6139);
+                              setLongitudeInput(pendingPayload.lon || 77.2090);
+                              setTimezoneInput(pendingPayload.timezone || 'Asia/Kolkata');
                               const list = await kundliDbService.fetchSavedKundlis(userRegisterEmail);
                               setSavedKundlis(list);
                               setCurrentScreen('KUNDLI_REPORT');
@@ -3154,15 +3185,44 @@ function VedicKundliApp() {
                 onClick={async () => {
                   const res = await authService.loginWithGoogle();
                   if (res && res.success) {
-                    setCurrentUser(res.user.email);
+                    const loggedEmail = res.user.email;
+                    setCurrentUser(loggedEmail);
                     // Add to seeker register list
                     setUsersList(prev => {
-                      const exists = prev.find(u => u.email.toLowerCase() === res.user.email.toLowerCase());
+                      const exists = prev.find(u => u.email.toLowerCase() === loggedEmail.toLowerCase());
                       if (!exists) {
-                        return [...prev, { email: res.user.email, name: res.user.name, isPremium: res.user.email.toLowerCase() === 'nespuneet2501@gmail.com', method: 'Google OAuth', registeredAt: '2026-05-27' }];
+                        return [...prev, { email: loggedEmail, name: res.user.name, isPremium: loggedEmail.toLowerCase() === 'nespuneet2501@gmail.com', method: 'Google OAuth', registeredAt: '2026-05-27' }];
                       }
                       return prev;
                     });
+                    
+                    const pendingPayload = memoryPendingSavePayload;
+                    const actionType = memoryPendingGateActionType;
+                    if (pendingPayload) {
+                      try {
+                        await kundliDbService.saveKundli(loggedEmail, pendingPayload);
+                        setMemoryPendingSavePayload(null);
+                        setMemoryPendingGateActionType('');
+                        if (actionType === 'generate_chart' || actionType === 'load_saved_profile') {
+                          setActiveProfileMemory(pendingPayload);
+                          setNameInput(pendingPayload.name || "Guest Profile");
+                          setGenderInput(pendingPayload.gender || 'Male');
+                          setDobInput(pendingPayload.dob || "1995-10-24");
+                          setTobInput(pendingPayload.tob || "12:00");
+                          setBirthPlaceInput(pendingPayload.place || "New Delhi, Delhi, India");
+                          setLatitudeInput(pendingPayload.lat || 28.6139);
+                          setLongitudeInput(pendingPayload.lon || 77.2090);
+                          setTimezoneInput(pendingPayload.timezone || 'Asia/Kolkata');
+                          const list = await kundliDbService.fetchSavedKundlis(loggedEmail);
+                          setSavedKundlis(list);
+                          setCurrentScreen('KUNDLI_REPORT');
+                          return;
+                        }
+                      } catch (e) {}
+                    }
+
+                    const list = await kundliDbService.fetchSavedKundlis(loggedEmail);
+                    setSavedKundlis(list);
                     setCurrentScreen('DASHBOARD');
                   }
                 }}
@@ -6915,80 +6975,7 @@ Astrological calculations computed by Astro PV High-Precision Ephemeris Engine.
         </button>
       </div>
 
-      {/* 🌟 SCROLLING SCHOLARS SIDEBAR SYSTEM (Displays on screen margins for all active states) */}
-      {currentScreen !== 'WELCOME' && currentScreen !== 'AUTH' && (
-        showScholarsSidebar ? (
-          <div className={`fixed right-2.5 top-[52%] sm:top-[30%] z-[140] flex flex-col items-center gap-2 bg-[#0c0d1c]/95 border-2 border-amber-500/40 p-2.5 rounded-2xl shadow-[0_0_25px_rgba(245,158,11,0.35)] max-w-[80px] transition-all duration-500 transform ${
-            isPageScrolled ? 'opacity-0 pointer-events-none translate-x-16 scale-75' : 'opacity-100 scale-100 translate-x-0'
-          }`}>
-            <div className="w-full flex items-center justify-between border-b border-amber-500/20 pb-1.5 select-none gap-4">
-              <span className="text-[8px] font-black tracking-widest text-[#ffea00] uppercase leading-none truncate pl-1">
-                {t("ACHARYA", "गुरुजन")}
-              </span>
-              <button 
-                onClick={() => setShowScholarsSidebar(false)}
-                className="text-[9px] font-bold text-slate-400 hover:text-red-400 hover:scale-115 transition leading-none pr-1"
-                title={t("Hide Sidebar", "छिपाएं")}
-              >
-                ✕
-              </button>
-            </div>
-            
-            {/* Circular Scrolling Column with marquee-style vertical crawl - INCREASED PHOTO SIZE TO w-16 h-16 */}
-            <div className="flex flex-col gap-2.5 max-h-[250px] overflow-hidden py-1 relative">
-              <div className="flex flex-col gap-4 animate-vertical-scroll hover:[animation-play-state:paused]">
-                {PANDITS_STRICT_LIST.map((p) => (
-                  <div 
-                    key={p.id}
-                    onClick={() => {
-                      setActiveBookingPandit(p);
-                      setShowPanditDirectory(true);
-                    }}
-                    className="relative group cursor-pointer active:scale-95 transition duration-150"
-                    title={`${p.name} (Click to Book)`}
-                  >
-                    <img 
-                      src={p.profile_photo_url} 
-                      alt={p.name} 
-                      className="w-16 h-16 rounded-full border-2 border-emerald-500 hover:border-amber-400 object-cover shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition duration-200"
-                    />
-                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#0c0d1c] animate-pulse"></span>
-                    
-                    {/* Hover tooltip */}
-                    <span className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-[#0c0d1c] border border-amber-500/40 text-[9px] font-bold text-white px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap shadow-xl">
-                      {p.name} ({p.experience_years}y Exp)
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Quick-action directory reveal button - INCREASED SIZE */}
-            <button
-              onClick={() => {
-                setActiveBookingPandit(null);
-                setShowPanditDirectory(true);
-              }}
-              className="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 via-orange-600 to-[#ff3d00] text-white flex flex-col items-center justify-center text-[7.5px] font-black uppercase tracking-tighter leading-tight border border-amber-400/45 hover:scale-105 hover:brightness-110 active:scale-95 transition shadow-lg select-none mt-1"
-            >
-              <span>ALL</span>
-              <span className="text-sm mt-0.5 animate-pulse">🕉️</span>
-            </button>
-          </div>
-        ) : (
-          /* Small sticky button to bring it back when closed */
-          <button
-            onClick={() => setShowScholarsSidebar(true)}
-            className={`fixed right-0 top-[60%] z-[140] w-7 py-3 bg-[#0c0d1c]/95 border-l-2 border-y-2 border-amber-500/40 rounded-l-xl text-amber-400 text-[10px] font-black flex flex-col items-center gap-1.5 shadow-lg hover:scale-105 active:scale-95 whitespace-pre-wrap select-none leading-none border-r-0 transition-all duration-500 transform ${
-              isPageScrolled ? 'opacity-0 pointer-events-none translate-x-12 scale-75' : 'opacity-100 scale-100 translate-x-0'
-            }`}
-            title={t("Show Scholar List", "गुरुदेव सूची दिखाएं")}
-          >
-            <span>🕉️</span>
-            <span className="text-[7.5px] tracking-wider font-extrabold uppercase [writing-mode:vertical-lr]">GURU</span>
-          </button>
-        )
-      )}
+
 
       {/* 🕉️ FULL SCREEN PANDIT FINDER & LOCATION-BASED BOOKING SYSTEM MODAL */}
       {showPanditDirectory && (
