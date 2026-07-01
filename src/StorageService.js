@@ -15,6 +15,10 @@ export const getDefaultStorageConfig = () => {
   if (!envUrl || envUrl.includes('your-proj-id') || envUrl.includes('placeholder') || envUrl.length < 15) {
     envUrl = 'https://elktujqnqhvvsxcnstcw.supabase.co';
   }
+  if (envUrl.includes('elktujqnqhvxsxcnstcw')) {
+    envUrl = envUrl.replace('elktujqnqhvxsxcnstcw', 'elktujqnqhvvsxcnstcw');
+  }
+
   if (!envKey || envKey.includes('paste_your_key') || envKey.includes('placeholder') || envKey.length < 25) {
     envKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsa3R1anFucWh2dnN4Y25zdGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTMyODYsImV4cCI6MjA5NTg2OTI4Nn0.lFYK3ePkFRLR97ot00E-Q_x17CE54JKTkcXZTGrj8Cc';
   }
@@ -31,6 +35,7 @@ export const getDefaultStorageConfig = () => {
       sAnonKey = (parsed.supabaseAnonKey || '').trim();
       if (sUrl.includes('elktujqnqhvxsxcnstcw')) {
         sUrl = sUrl.replace('elktujqnqhvxsxcnstcw', 'elktujqnqhvvsxcnstcw');
+        sAnonKey = envKey; // Force restore correct key
       }
     } catch (e) {
       console.error("Failed to parse local storage config", e);
@@ -169,6 +174,10 @@ export const getSupabaseClient = () => {
       }
     }
 
+    if (cleanUrl.toLowerCase().includes('elktujqnqhvxsxcnstcw')) {
+      cleanUrl = cleanUrl.replace(/elktujqnqhvxsxcnstcw/gi, 'elktujqnqhvvsxcnstcw');
+    }
+
     supabaseInstance = createClient(cleanUrl, config.supabaseAnonKey.trim(), {
       auth: {
         persistSession: true,
@@ -206,7 +215,7 @@ export const checkDatabaseHealth = async () => {
             const isNet = errorMsg.includes('failed to fetch') || 
                           errorMsg.includes('networkerror') || 
                           errorMsg.includes('fetch') || 
-                          errorMsg.includes('typeerror') ||
+                          errorMsg.includes('load failed') ||
                           errorMsg.includes('failed to connect');
             
             // 42501 is PostgreSQL permission denied (RLS policy active but no select policy is set)
@@ -227,7 +236,7 @@ export const checkDatabaseHealth = async () => {
           return { t, ok: true };
         } catch (e) {
           const exMsg = String(e).toLowerCase();
-          const isNet = exMsg.includes('fetch') || exMsg.includes('network') || exMsg.includes('typeerror') || exMsg.includes('connect');
+          const isNet = exMsg.includes('fetch') || exMsg.includes('network') || exMsg.includes('load failed') || exMsg.includes('connect');
           return { t, ok: false, isNetworkFail: isNet, errorMessage: String(e) };
         }
       })
