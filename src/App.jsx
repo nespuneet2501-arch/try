@@ -1255,6 +1255,17 @@ function VedicKundliApp() {
   const [activeChartStyle, setActiveChartStyle] = useState('North Indian'); // North Indian, South Indian, East Indian
   const [highlightedPlanet, setHighlightedPlanet] = useState(null);
 
+  // Ganesha Chanting and AI Voice Speech Form states
+  const [ganeshChantMuted, setGaneshChantMuted] = useState(() => {
+    const val = localStorage.getItem('pva_ganesh_chant_muted');
+    return val === null ? false : val === 'true'; // Default to unmuted (play automatically)
+  });
+  const [showAiVoicePanel, setShowAiVoicePanel] = useState(false);
+  const [aiVoiceRecording, setAiVoiceRecording] = useState(false);
+  const [aiVoiceText, setAiVoiceText] = useState("");
+  const [aiVoiceParsing, setAiVoiceParsing] = useState(false);
+  const ganeshAudioRef = useRef(null);
+
   const [breakingNews, setBreakingNews] = useState(() => {
     return localStorage.getItem('pva_breaking_news') || "महा शिवरात्रि एवं हिंदू नववर्ष के उपलक्ष्य में सभी कुंडली सेवाएं पूर्णतः निःशुल्क की गई हैं। वैदिक आचार्यों द्वारा सिद्ध गोचर यंत्र सक्रिय है।";
   });
@@ -1283,6 +1294,60 @@ function VedicKundliApp() {
     window.addEventListener('pva_notification', handleAlert);
     return () => window.removeEventListener('pva_notification', handleAlert);
   }, []);
+
+  // Ganesha Chanting Autoplay Engine
+  useEffect(() => {
+    // Create audio element with authentic loopable Ganesha chanting mantra
+    const audio = new Audio("https://ia800201.us.archive.org/21/items/GaneshMantra108Times/Ganesh%20Mantra%20108%20times.mp3");
+    audio.loop = true;
+    audio.volume = ganeshChantMuted ? 0 : 0.28; // 28% background volume
+    ganeshAudioRef.current = audio;
+
+    const tryPlay = () => {
+      if (!ganeshChantMuted) {
+        audio.play().then(() => {
+          console.log("Auspicious Ganesha chanting autoplay started.");
+        }).catch(err => {
+          console.log("Autoplay blocked by browser. Listening for user interactions to start chanting.", err);
+        });
+      }
+    };
+
+    // Attempt immediately
+    tryPlay();
+
+    // Setup user interaction triggers to bypass browser autoplay security
+    const handleFirstInteraction = () => {
+      tryPlay();
+      ['click', 'touchstart', 'mousedown', 'keydown'].forEach(evt => {
+        window.removeEventListener(evt, handleFirstInteraction);
+      });
+    };
+
+    ['click', 'touchstart', 'mousedown', 'keydown'].forEach(evt => {
+      window.addEventListener(evt, handleFirstInteraction, { passive: true });
+    });
+
+    return () => {
+      audio.pause();
+      ['click', 'touchstart', 'mousedown', 'keydown'].forEach(evt => {
+        window.removeEventListener(evt, handleFirstInteraction);
+      });
+    };
+  }, []);
+
+  // Sync mute state and localStorage
+  useEffect(() => {
+    if (ganeshAudioRef.current) {
+      ganeshAudioRef.current.volume = ganeshChantMuted ? 0 : 0.28;
+      if (!ganeshChantMuted) {
+        ganeshAudioRef.current.play().catch(e => console.warn("Failed to play on unmute", e));
+      } else {
+        ganeshAudioRef.current.pause();
+      }
+    }
+    localStorage.setItem('pva_ganesh_chant_muted', ganeshChantMuted);
+  }, [ganeshChantMuted]);
 
   // Library State Filters & Search
   const [librarySearchQuery, setLibrarySearchQuery] = useState('');
@@ -1686,6 +1751,20 @@ function VedicKundliApp() {
       .text-amber-500 { color: ${t.primary} !important; }
       .text-\\[\\#cca43b\\] { color: ${t.primary} !important; }
       .text-amber-300 { color: ${t.textMuted} !important; }
+
+      /* Map slate text classes to theme text colors for 100% dark mode readability */
+      .text-slate-950 { color: ${t.textMain} !important; }
+      .text-slate-900 { color: ${t.textMain} !important; }
+      .text-slate-850 { color: ${t.textMain}f0 !important; }
+      .text-slate-800 { color: ${t.textMain}e6 !important; }
+      .text-slate-700 { color: ${t.textMain}d4 !important; }
+      .text-slate-600 { color: ${t.textMuted} !important; }
+      .text-slate-500 { color: ${t.textMuted}cc !important; }
+      
+      /* Map hardcoded light input backgrounds and placeholders to theme colors */
+      .bg-\\[\\#FAF9F5\\] { background-color: ${t.bgBadge} !important; color: ${t.textMain} !important; border-color: ${t.border}80 !important; }
+      input::placeholder, textarea::placeholder { color: ${t.textMuted}77 !important; }
+      input, textarea, select { color: ${t.textMain} !important; }
       
       /* Prevent low-contrast yellow/amber texts in light mode */
       .text-amber-400 { color: ${isHC ? t.textMain : t.primary} !important; }
@@ -2005,6 +2084,208 @@ function VedicKundliApp() {
       setLatitudeInput(28.6139);
       setLongitudeInput(77.2090);
       setTimezoneInput("Asia/Kolkata");
+    }
+  };
+
+  const getGeminiApiKey = () => {
+    const stored = localStorage.getItem('pva_user_custom_gemini_key');
+    if (stored && stored.trim()) return stored.trim();
+    const envVal1 = import.meta.env?.VITE_GEMINI_API_KEY;
+    const envVal2 = import.meta.env?.GEMINI_API_KEY;
+    return (envVal1 || envVal2 || '').trim();
+  };
+
+  const handleStartVoiceRecording = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert(currentLanguage === 'English' ? "Your browser does not support Web Speech API. Please type or paste your birth details." : "आपका ब्राउज़र स्पीच रिकग्निशन का समर्थन नहीं करता है। कृपया अपना विवरण टाइप करें।");
+      return;
+    }
+    
+    try {
+      const rec = new SpeechRecognition();
+      rec.lang = currentLanguage === 'English' ? 'en-IN' : 'hi-IN';
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+
+      rec.onstart = () => {
+        setAiVoiceRecording(true);
+      };
+
+      rec.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        setAiVoiceText(text);
+      };
+
+      rec.onerror = (e) => {
+        console.error("Speech recognition error", e);
+        setAiVoiceRecording(false);
+      };
+
+      rec.onend = () => {
+        setAiVoiceRecording(false);
+      };
+
+      rec.start();
+    } catch (err) {
+      console.error("Error starting speech recognition", err);
+      setAiVoiceRecording(false);
+    }
+  };
+
+  const performLocalHeuristicParsing = (text) => {
+    let name = "";
+    const nameMatch = text.match(/(?:my name is|मेरा नाम|नाम है|है नाम)\s+([a-zA-Z\u0900-\u097F]+)/i);
+    if (nameMatch) {
+      name = nameMatch[1];
+    } else {
+      const words = text.trim().split(/\s+/);
+      if (words[0] && words[0].length > 1) name = words[0];
+    }
+
+    let dob = "";
+    const dateMatch = text.match(/(\d{1,2})[-/\s](\d{1,2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-/\s](\d{4})/i);
+    if (dateMatch) {
+      const day = dateMatch[1].padStart(2, '0');
+      let month = dateMatch[2];
+      const year = dateMatch[3];
+      const months = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
+      if (isNaN(month)) {
+        month = months[month.toLowerCase().substring(0, 3)] || '01';
+      } else {
+        month = month.padStart(2, '0');
+      }
+      dob = `${year}-${month}-${day}`;
+    }
+
+    let tob = "";
+    const timeMatch = text.match(/(\d{1,2})[:\s](\d{2})\s*(AM|PM|am|pm)?/);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1]);
+      const minutes = timeMatch[2];
+      const ampm = timeMatch[3];
+      if (ampm) {
+        if (ampm.toLowerCase() === 'pm' && hours < 12) hours += 12;
+        if (ampm.toLowerCase() === 'am' && hours === 12) hours = 0;
+      }
+      tob = `${hours.toString().padStart(2, '0')}:${minutes}`;
+    }
+
+    let place = "";
+    const foundCity = CITIES_DATABASE.filter && CITIES_DATABASE.find(c => 
+      text.toLowerCase().includes(c.name.toLowerCase()) || 
+      text.toLowerCase().includes(c.hindi.toLowerCase())
+    );
+    if (foundCity) {
+      place = currentLanguage === 'English' ? foundCity.name : foundCity.hindi;
+      setBirthPlaceInput(place);
+      setLatitudeInput(foundCity.lat);
+      setLongitudeInput(foundCity.lon);
+      setTimezoneInput(foundCity.timezone);
+    }
+
+    if (name) setNameInput(name);
+    if (dob) setDobInput(dob);
+    if (tob) setTobInput(tob);
+
+    const event = new CustomEvent('pva_notification', {
+      detail: { 
+        title: currentLanguage === 'English' ? "Form Autofilled 📝" : "फ़ॉर्म स्वतः भरा गया 📝", 
+        message: currentLanguage === 'English' ? "Parsed using smart localized matching." : "स्मार्ट स्थानीय मिलान का उपयोग करके विवरण भरा गया।", 
+        type: "success", 
+        id: Date.now() 
+      }
+    });
+    window.dispatchEvent(event);
+    setShowAiVoicePanel(false);
+  };
+
+  const handleAiParseBirthDetails = async () => {
+    if (!aiVoiceText.trim()) {
+      alert(currentLanguage === 'English' ? "Please speak or type some details first!" : "कृपया पहले कुछ विवरण बोलें या लिखें!");
+      return;
+    }
+
+    setAiVoiceParsing(true);
+    try {
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        console.warn("No Gemini API key found, running local backup parser.");
+        performLocalHeuristicParsing(aiVoiceText);
+        setAiVoiceParsing(false);
+        return;
+      }
+
+      const prompt = `You are a professional Vedic Astrology Form Assistant. Parse the following spoken or typed birth details query and extract the fields into a valid raw JSON object. 
+If a field is missing, leave it as an empty string.
+DO NOT wrap the response in markdown tags. DO NOT include \`\`\`json or \`\`\`. Provide raw JSON string only.
+
+Date of Birth MUST be format YYYY-MM-DD.
+Time of Birth MUST be format HH:MM (24-hour clock).
+Gender MUST be "Male", "Female", or "Other".
+
+User text: "${aiVoiceText}"
+
+Response template:
+{
+  "name": "extracted name",
+  "gender": "Male" or "Female" or "Other",
+  "dob": "YYYY-MM-DD",
+  "tob": "HH:MM",
+  "place": "city name, state or country"
+}`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }]
+        })
+      });
+
+      const data = await response.json();
+      let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+      
+      const parsed = JSON.parse(rawText);
+      if (parsed.name) setNameInput(parsed.name);
+      if (parsed.gender) setGenderInput(parsed.gender);
+      if (parsed.dob) setDobInput(parsed.dob);
+      if (parsed.tob) setTobInput(parsed.tob);
+      if (parsed.place) {
+        setBirthPlaceInput(parsed.place);
+        const lowerPlace = parsed.place.toLowerCase();
+        const foundCity = CITIES_DATABASE.find(c => 
+          lowerPlace.includes(c.name.toLowerCase()) || 
+          lowerPlace.includes(c.hindi.toLowerCase())
+        );
+        if (foundCity) {
+          setBirthPlaceInput(currentLanguage === 'English' ? foundCity.name : foundCity.hindi);
+          setLatitudeInput(foundCity.lat);
+          setLongitudeInput(foundCity.lon);
+          setTimezoneInput(foundCity.timezone);
+        }
+      }
+
+      const event = new CustomEvent('pva_notification', {
+        detail: { 
+          title: currentLanguage === 'English' ? "AI Form Autofilled ✨" : "एआई फ़ॉर्म भरा गया ✨", 
+          message: currentLanguage === 'English' ? "Aura intelligence parsed speech details successfully." : "एआई द्वारा बोलकर विवरण सफलतापूर्वक फ़ॉर्म में भर दिया गया है।", 
+          type: "success", 
+          id: Date.now() 
+        }
+      });
+      window.dispatchEvent(event);
+      setShowAiVoicePanel(false);
+    } catch (err) {
+      console.error("AI parse error: ", err);
+      performLocalHeuristicParsing(aiVoiceText);
+    } finally {
+      setAiVoiceParsing(false);
     }
   };
 
@@ -2380,6 +2661,19 @@ function VedicKundliApp() {
         </div>
 
         <div className="flex items-center justify-end gap-1.5 sm:gap-3">
+          {/* Ganesh Chanting Mute/Unmute Button */}
+          <button
+            type="button"
+            onClick={() => setGaneshChantMuted(!ganeshChantMuted)}
+            className={`flex items-center gap-1.5 px-2 py-1 border rounded-lg text-[10px] sm:text-xs font-black transition cursor-pointer select-none active:scale-95 ${ganeshChantMuted ? 'bg-red-500/10 border-red-500/35 text-red-400' : 'bg-amber-500/10 border-amber-500/35 text-[#cca43b]'}`}
+            title={ganeshChantMuted ? t("Play Auspicious Ganesha Chanting", "मंगलमय गणेश मंत्र बजाएं") : t("Mute Ganesha Chanting", "गणेश मंत्र बंद करें")}
+          >
+            <span className={ganeshChantMuted ? "" : "inline-block animate-scale-heart"}>🕉️</span>
+            <span className="font-sans font-black tracking-wide hidden xs:inline">
+              {ganeshChantMuted ? t("Muted", "मौन") : t("Chanting Live", "मंत्र चालू")}
+            </span>
+          </button>
+
           {/* Convert to Hindi/English Button */}
           <button
             type="button"
@@ -3204,6 +3498,24 @@ function VedicKundliApp() {
               </div>
             </div>
 
+            {/* Mobile-Only Theme Selection Quickbar */}
+            <div className="sm:hidden max-w-sm mx-auto bg-[#12142d]/40 border border-slate-800/85 rounded-xl p-2.5 flex items-center justify-between gap-2.5 shadow-md">
+              <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">
+                🎨 {t("Select Theme", "रंग थीम बदलें")}:
+              </span>
+              <div className="flex items-center gap-3">
+                {Object.keys(THEMES).map(themeKey => (
+                  <button
+                    key={themeKey}
+                    onClick={() => setCurrentTheme(themeKey)}
+                    className={`w-5.5 h-5.5 rounded-full border-2 transition-all ${currentTheme === themeKey ? 'border-[#cca43b] scale-125 ring-2 ring-[#cca43b]/40' : 'border-slate-600'}`}
+                    style={{ backgroundColor: THEMES[themeKey].primary }}
+                    title={`${THEMES[themeKey].name} Theme`}
+                  />
+                ))}
+              </div>
+            </div>
+
             {/* 🚀 HIGH-CONTRAST APP LAUNCHER NODES (Vedic Dispersal Hub Grid) */}
             <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3.5 pt-2">
               
@@ -3341,15 +3653,103 @@ function VedicKundliApp() {
                       </div>
                     </div>
                     
-                    <button
-                      type="button"
-                      onClick={handleQuickFillCurrent}
-                      className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-[#cca43b] hover:text-[#936a18] text-xs font-black rounded-lg flex items-center gap-1.5 transition select-none cursor-pointer border border-[#cca43b]/30"
-                      title={t("Fill with current time and estimated location instantly", "तुरंत वर्तमान समय और स्थान से भरें")}
-                    >
-                      <span>⚡ {t("Quick Current Time", "वर्तमान समय भरें")}</span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowAiVoicePanel(!showAiVoicePanel)}
+                        className={`px-3 py-1.5 text-xs font-black rounded-lg flex items-center gap-1.5 transition select-none cursor-pointer border ${showAiVoicePanel ? 'bg-purple-600 border-purple-500 text-white' : 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border-purple-400/30'}`}
+                        title={t("State name, DOB, TOB, place to fill form automatically", "बोलकर फॉर्म स्वचालित रूप से भरने के लिए दबाएं")}
+                      >
+                        <span>🎙️ {t("AI Speech Fill", "एआई वॉयस")}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleQuickFillCurrent}
+                        className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-[#cca43b] hover:text-[#936a18] text-xs font-black rounded-lg flex items-center gap-1.5 transition select-none cursor-pointer border border-[#cca43b]/30"
+                        title={t("Fill with current time and estimated location instantly", "तुरंत वर्तमान समय और स्थान से भरें")}
+                      >
+                        <span>⚡ {t("Quick Current Time", "वर्तमान समय भरें")}</span>
+                      </button>
+                    </div>
                   </div>
+
+                  {/* AI Speech/Text Autofill Expandable Panel */}
+                  {showAiVoicePanel && (
+                    <div className="mb-5 p-4 bg-gradient-to-br from-purple-950/40 to-slate-900/40 border border-purple-500/40 rounded-xl space-y-3.5 relative overflow-hidden animate-fade-in">
+                      <div className="absolute inset-0 bg-purple-500/5 animate-pulse pointer-events-none" />
+                      <div className="flex items-center justify-between border-b border-purple-500/25 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-purple-400 text-lg">✨</span>
+                          <span className="text-xs font-extrabold text-purple-200 tracking-wider uppercase font-cinzel">
+                            {t("Speak or Type Birth Particulars", "जन्म विवरण बोलें या लिखें")}
+                          </span>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => setShowAiVoicePanel(false)}
+                          className="text-purple-400 hover:text-purple-200 text-xs font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <p className="text-[10px] text-purple-300/85 leading-relaxed">
+                        💡 {t('State your full name, birth date (e.g., 15th October 1994), birth time, and birth city. Example: "Rahul, born 12 December 1996 at 2:30 PM in Delhi"', 'अपना पूरा नाम, जन्म तिथि (जैसे 12 मार्च 1996), जन्म समय और शहर बोलें। उदाहरण: "अमित, जन्म 5 अक्टूबर 1990 दोपहर 3:15 दिल्ली"')}
+                      </p>
+
+                      <div className="relative">
+                        <textarea
+                          value={aiVoiceText}
+                          onChange={(e) => setAiVoiceText(e.target.value)}
+                          placeholder={t('Speak or type details here... (e.g. "My name is Rajesh, born 5 Jan 1995 10:30 AM in Mumbai")', 'यहाँ बोलें या लिखें...')}
+                          className="w-full bg-[#FAF9F5] theme-bg-page border border-purple-500/30 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 text-slate-100 min-h-[60px]"
+                        />
+                        {aiVoiceRecording && (
+                          <div className="absolute right-3.5 top-3 flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
+                            <span className="text-[9px] text-red-400 font-bold uppercase tracking-wider animate-pulse">
+                              {t("Listening...", "सुन रहा हूँ...")}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={handleStartVoiceRecording}
+                          className={`px-3 py-2 text-xs font-black rounded-lg flex items-center gap-1.5 transition ${aiVoiceRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-md active:scale-95'}`}
+                        >
+                          <span>🎙️</span>
+                          <span>
+                            {aiVoiceRecording ? t("Stop Capture", "रिकॉर्डिंग रोकें") : t("Start Voice Input", "बोलना शुरू करें")}
+                          </span>
+                        </button>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleAiParseBirthDetails}
+                            disabled={aiVoiceParsing || !aiVoiceText.trim()}
+                            className="px-4 py-2 bg-[#cca43b] text-slate-950 hover:bg-[#cca43b]/90 disabled:opacity-40 font-extrabold text-xs rounded-lg flex items-center gap-1.5 transition active:scale-95 shadow-md"
+                          >
+                            {aiVoiceParsing ? (
+                              <>
+                                <span className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                                <span>{t("AI Formatting...", "एआई प्रोसेसिंग...")}</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>🪄</span>
+                                <span>{t("AI Autofill Form", "एआई से स्वतः भरें")}</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Form fields */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
