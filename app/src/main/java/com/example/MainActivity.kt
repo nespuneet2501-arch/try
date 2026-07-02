@@ -4,6 +4,7 @@ import android.graphics.Paint
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -101,6 +102,11 @@ class MainActivity : ComponentActivity() {
                 
                 // Active Screen Navigation State
                 var currentScreen by remember { mutableStateOf("DASHBOARD") } // DASHBOARD, ADD_KUNDLI, REPORT, MATCHMAKING, PANCHANG
+
+                // Intercept back button if not on the main dashboard to navigate back to DASHBOARD home page
+                BackHandler(enabled = currentScreen != "DASHBOARD") {
+                    currentScreen = "DASHBOARD"
+                }
                 var currentLanguageIsEnglish by remember { mutableStateOf(true) }
                 
                 // Form States

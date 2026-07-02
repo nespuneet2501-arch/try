@@ -34,21 +34,6 @@ const THEMES = {
     textMuted: '#ffbca0', // Beautiful warm sand
     accent: '#ff3d00'
   },
-  BRIGHT: {
-    id: 'BRIGHT',
-    name: 'Vibrant Holiday',
-    hindiName: 'चमकदार रंगीन',
-    bgPage: '#1a0410', // Rich radiant magenta black
-    bgCard: '#2b0b1e', // Dark berry card
-    bgInput: '#2b0b1e',
-    bgBadge: '#3d122b',
-    border: '#e91e63', // Vibrant pink border
-    primary: '#e64a19',
-    primaryHover: '#d84315',
-    textMain: '#ffffff',
-    textMuted: '#fbc2eb',
-    accent: '#e91e63'
-  },
   GOLD: {
     id: 'GOLD',
     name: 'Imperial Gold',
@@ -63,36 +48,6 @@ const THEMES = {
     textMain: '#ffffff',
     textMuted: '#e3d6b1',
     accent: '#cca43b'
-  },
-  EMERALD: {
-    id: 'EMERALD',
-    name: 'Vedic Emerald',
-    hindiName: 'वैदिक पन्ना',
-    bgPage: '#041209', // Deep sacred jade black
-    bgCard: '#092414', // Forest emerald card
-    bgInput: '#092414',
-    bgBadge: '#123821',
-    border: '#238551', // Healing emerald green border
-    primary: '#238551',
-    primaryHover: '#1c6d41',
-    textMain: '#ffffff',
-    textMuted: '#bcf2d4',
-    accent: '#238551'
-  },
-  SAFFRON: {
-    id: 'SAFFRON',
-    name: 'Sacred Saffron',
-    hindiName: 'केसरिया दिव्य',
-    bgPage: '#1c0f04', // Rich warm marigold background
-    bgCard: '#2f1b0a', // Sunset clay card
-    bgInput: '#2f1b0a',
-    bgBadge: '#452912',
-    border: '#D35400', // Saffron primary border
-    primary: '#D35400',
-    primaryHover: '#b84900',
-    textMain: '#ffffff',
-    textMuted: '#ffd8be',
-    accent: '#e67e22'
   },
   SAPPHIRE: {
     id: 'SAPPHIRE',
@@ -109,66 +64,6 @@ const THEMES = {
     textMuted: '#b8cbff',
     accent: '#2962FF'
   },
-  CLASSIC_BW: {
-    id: 'CLASSIC_BW',
-    name: 'Black & White Classic',
-    hindiName: 'क्लासिक श्याम-श्वेत',
-    bgPage: '#FFFFFF', // Pure White
-    bgCard: '#FFFFFF', // Pure White
-    bgInput: '#FFFFFF',
-    bgBadge: '#F5F5F5', // Soft gray
-    border: '#000000', // Pure Black
-    primary: '#000000', // Pure Black
-    primaryHover: '#333333',
-    textMain: '#000000', // Pure Black
-    textMuted: '#333333', // Dark Slate
-    accent: '#000000'
-  },
-  CLASSIC_WB: {
-    id: 'CLASSIC_WB',
-    name: 'Classic White-on-Black',
-    hindiName: 'श्याम-श्वेत (उलटा)',
-    bgPage: '#000000', // Pure Black
-    bgCard: '#000000', // Pure Black
-    bgInput: '#000000',
-    bgBadge: '#1A1A1A', // Dark gray
-    border: '#FFFFFF', // Pure White
-    primary: '#FFFFFF', // Pure White
-    primaryHover: '#DDDDDD',
-    textMain: '#FFFFFF', // Pure White
-    textMuted: '#CCCCCC', // Light gray
-    accent: '#FFFFFF'
-  },
-  MATRIX_GREEN: {
-    id: 'MATRIX_GREEN',
-    name: 'Matrix Green Contrast',
-    hindiName: 'मैट्रिक्स हरा',
-    bgPage: '#000000', // Pure Black
-    bgCard: '#000000', // Pure Black
-    bgInput: '#000000',
-    bgBadge: '#0D2611',
-    border: '#00FF41', // Neon green
-    primary: '#00FF41',
-    primaryHover: '#00DD30',
-    textMain: '#00FF41', // Neon green
-    textMuted: '#00AA20', // Dim green
-    accent: '#00FF41'
-  },
-  CYBER_YELLOW: {
-    id: 'CYBER_YELLOW',
-    name: 'Cyber Yellow Contrast',
-    hindiName: 'साइबर पीला',
-    bgPage: '#000000', // Pure Black
-    bgCard: '#000000', // Pure Black
-    bgInput: '#000000',
-    bgBadge: '#262200',
-    border: '#FFEA00', // Neon yellow
-    primary: '#FFEA00',
-    primaryHover: '#D4C200',
-    textMain: '#FFEA00', // Neon yellow
-    textMuted: '#A89B00', // Dim yellow
-    accent: '#FFEA00'
-  },
   ROYAL_AMETHYST: {
     id: 'ROYAL_AMETHYST',
     name: 'Royal Amethyst Spirit',
@@ -183,36 +78,6 @@ const THEMES = {
     textMain: '#ffffff',
     textMuted: '#E0AAFF', // Soft lilac sand
     accent: '#C77DFF'
-  },
-  COSMIC_ROSE: {
-    id: 'COSMIC_ROSE',
-    name: 'Cosmic Rose Gold',
-    hindiName: 'ब्रह्मांडीय गुलाब स्वर्ण',
-    bgPage: '#1c050c', // Deep burgundy-black night
-    bgCard: '#2f0e19', // Rich velvet rose card
-    bgInput: '#2f0e19',
-    bgBadge: '#451828',
-    border: '#F72585', // Radiant rose border
-    primary: '#F72585',
-    primaryHover: '#B5179E',
-    textMain: '#ffffff',
-    textMuted: '#FBC4DB', // Blush pink aura
-    accent: '#FF007F'
-  },
-  OCEANIC_PEARL: {
-    id: 'OCEANIC_PEARL',
-    name: 'Vedic Oceanic Pearl',
-    hindiName: 'समुद्री मोती',
-    bgPage: '#01111a', // Abyssal teal ocean dark canvas
-    bgCard: '#052433', // Deep turquoise bay card
-    bgInput: '#052433',
-    bgBadge: '#09374d',
-    border: '#00B4D8', // Coastal sea border
-    primary: '#00B4D8',
-    primaryHover: '#0077B6',
-    textMain: '#ffffff',
-    textMuted: '#ADE8F4', // Pure clear water blue
-    accent: '#90E0EF'
   }
 };
 
@@ -1386,7 +1251,7 @@ function VedicKundliApp() {
   const [isResetSending, setIsResetSending] = useState(false);
   const [adminSecretCode, setAdminSecretCode] = useState(''); // Admin authorization key
   const [authActiveTab, setAuthActiveTab] = useState('login'); // Default to login page first with default Admin prefilled
-  const [currentLanguage, setCurrentLanguage] = useState('English'); // English / Hindi
+  const [currentLanguage, setCurrentLanguage] = useState(() => localStorage.getItem('pva_current_language') || 'Hindi'); // English / Hindi
   const [activeChartStyle, setActiveChartStyle] = useState('North Indian'); // North Indian, South Indian, East Indian
   const [highlightedPlanet, setHighlightedPlanet] = useState(null);
 
@@ -1581,7 +1446,10 @@ function VedicKundliApp() {
   const [showGoogleSimPicker, setShowGoogleSimPicker] = useState(false);
   
   // Custom Dynamic Themes Support
-  const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('pva_current_theme') || 'ASTROSAGE'); // 'ASTROSAGE', 'GOLD', 'EMERALD', 'SAFFRON', 'SAPPHIRE'
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    const stored = localStorage.getItem('pva_current_theme');
+    return (stored && THEMES[stored]) ? stored : 'ASTROSAGE';
+  });
   const [fontScale, setFontScale] = useState(() => localStorage.getItem('pva_font_scale') || 'NORMAL');
 
   useEffect(() => {
@@ -2187,7 +2055,7 @@ function VedicKundliApp() {
 
     setCurrentScreen('KUNDLI_REPORT');
     setPendingKundliToSave(newProfile);
-    setShowSavePrompt(true);
+    setShowSavePrompt(false);
   };
 
   const handleSaveProfile = () => {
@@ -2511,17 +2379,33 @@ function VedicKundliApp() {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 sm:gap-3">
+        <div className="flex items-center justify-end gap-1.5 sm:gap-3">
+          {/* Convert to Hindi/English Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const nextLang = currentLanguage === 'English' ? 'Hindi' : 'English';
+              setCurrentLanguage(nextLang);
+              localStorage.setItem('pva_current_language', nextLang);
+            }}
+            className="flex items-center gap-1 px-2 py-1 bg-[#cca43b]/10 hover:bg-[#cca43b]/20 text-[#cca43b] border border-[#cca43b]/35 rounded-lg text-[10px] sm:text-xs font-black transition cursor-pointer select-none active:scale-95"
+            title={currentLanguage === 'English' ? 'हिन्दी में बदलें' : 'Switch to English'}
+          >
+            <span>🌐</span>
+            <span className="font-sans font-black tracking-wide">
+              {currentLanguage === 'English' ? 'हिन्दी' : 'English'}
+            </span>
+          </button>
+
           {/* Theme Selector Palette */}
-          <div className="hidden md:flex items-center gap-1.5 bg-[#12142d]/30 border border-slate-800 rounded-full p-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5 bg-[#12142d]/30 border border-slate-800/80 rounded-full p-1 sm:p-1.5">
             {Object.keys(THEMES).map(themeKey => (
               <button
                 key={themeKey}
                 onClick={() => {
                   setCurrentTheme(themeKey);
-                  // Quick flash notification
                 }}
-                className={`w-4 h-4 rounded-full border-2 transition ${currentTheme === themeKey ? 'border-[#cca43b] scale-125 ring-2 ring-[#cca43b]/30' : 'border-slate-600 hover:scale-110'}`}
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 transition ${currentTheme === themeKey ? 'border-[#cca43b] scale-125 ring-2 ring-[#cca43b]/30' : 'border-slate-600 hover:scale-110'}`}
                 style={{ backgroundColor: THEMES[themeKey].primary }}
                 title={`${THEMES[themeKey].name} Theme`}
               />
@@ -2529,11 +2413,14 @@ function VedicKundliApp() {
           </div>
 
           {/* Font Size Selector */}
-          <div className="hidden md:flex items-center gap-1 bg-[#12142d]/30 border border-slate-800 rounded-lg p-1" title={t("Adjust Text Size", "अक्षरों का आकार बदलें")}>
+          <div className="hidden sm:flex items-center gap-1 bg-[#12142d]/30 border border-slate-800 rounded-lg p-1" title={t("Adjust Text Size", "अक्षरों का आकार बदलें")}>
             <button
-              onClick={() => setFontScale('SMALL')}
-              className={`px-2 py-0.5 text-[10px] font-black rounded transition-all ${fontScale === 'SMALL' ? 'bg-[#cca43b] text-slate-950 font-black' : 'text-slate-400 hover:text-white'}`}
-              title={t("Small Fonts", "छोटे अक्षर")} />
+              onClick={() => setFontScale(fontScale === 'NORMAL' ? 'LARGE' : fontScale === 'LARGE' ? 'XLARGE' : 'NORMAL')}
+              className="px-2 py-0.5 text-[10px] font-black text-slate-400 hover:text-white rounded transition-all"
+              title={t("Font Size", "अक्षर")}
+            >
+              A±
+            </button>
           </div>
 
           {/* User profile / Google Authentication State State Container */}
@@ -3445,11 +3332,9 @@ function VedicKundliApp() {
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b theme-border pb-3 mb-5">
                     <div className="flex items-center gap-2.5">
-                      <img 
-                        src="https://images.unsplash.com/photo-1568910118311-ca74cbda1fbd?auto=format&fit=crop&q=80&w=150"
-                        alt="Lord Ganesha"
-                        className="w-10 h-10 rounded-xl object-cover border border-amber-500/30 shadow-xs animate-pulse"
-                      />
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/30 text-xl shadow-xs shrink-0 animate-pulse select-none">
+                        🕉️
+                      </div>
                       <div>
                         <h3 className="text-base font-bold text-slate-800 font-cinzel leading-none">{t("New Kundli Creator", "नवीन जन्म कुंडली रेखांकन")}</h3>
                         <p className="text-[10px] text-slate-400 mt-1">{t("Calculate detailed traditional horoscopes instantly", "विवरण भरकर पारंपरिक वैदिक कुण्डली प्राप्त करें")}</p>
