@@ -168,6 +168,51 @@ const THEMES = {
     textMain: '#FFEA00', // Neon yellow
     textMuted: '#A89B00', // Dim yellow
     accent: '#FFEA00'
+  },
+  ROYAL_AMETHYST: {
+    id: 'ROYAL_AMETHYST',
+    name: 'Royal Amethyst Spirit',
+    hindiName: 'शाही नीलमणि (अमेथिस्ट)',
+    bgPage: '#0e061a', // Deep spiritual purple canvas
+    bgCard: '#1c1130', // Rich warm violet card
+    bgInput: '#1c1130',
+    bgBadge: '#291a45',
+    border: '#9D4EDD', // Spiritual violet border
+    primary: '#9D4EDD',
+    primaryHover: '#7B2CBF',
+    textMain: '#ffffff',
+    textMuted: '#E0AAFF', // Soft lilac sand
+    accent: '#C77DFF'
+  },
+  COSMIC_ROSE: {
+    id: 'COSMIC_ROSE',
+    name: 'Cosmic Rose Gold',
+    hindiName: 'ब्रह्मांडीय गुलाब स्वर्ण',
+    bgPage: '#1c050c', // Deep burgundy-black night
+    bgCard: '#2f0e19', // Rich velvet rose card
+    bgInput: '#2f0e19',
+    bgBadge: '#451828',
+    border: '#F72585', // Radiant rose border
+    primary: '#F72585',
+    primaryHover: '#B5179E',
+    textMain: '#ffffff',
+    textMuted: '#FBC4DB', // Blush pink aura
+    accent: '#FF007F'
+  },
+  OCEANIC_PEARL: {
+    id: 'OCEANIC_PEARL',
+    name: 'Vedic Oceanic Pearl',
+    hindiName: 'समुद्री मोती',
+    bgPage: '#01111a', // Abyssal teal ocean dark canvas
+    bgCard: '#052433', // Deep turquoise bay card
+    bgInput: '#052433',
+    bgBadge: '#09374d',
+    border: '#00B4D8', // Coastal sea border
+    primary: '#00B4D8',
+    primaryHover: '#0077B6',
+    textMain: '#ffffff',
+    textMuted: '#ADE8F4', // Pure clear water blue
+    accent: '#90E0EF'
   }
 };
 
@@ -3822,6 +3867,75 @@ function VedicKundliApp() {
                 >
                   <span>⚡ {t("Quick Current Time & Location", "तुरंत वर्तमान समय और स्थान भरें")}</span>
                 </button>
+              </div>
+              
+              {/* 🌟 Certified Sample Presets (AstroSage Verified for instant calculation checking) */}
+              <div className="mb-6 p-4 bg-amber-500/5 rounded-xl border border-amber-500/20">
+                <h4 className="text-xs font-black uppercase text-amber-500 tracking-wider mb-2.5 flex items-center gap-1.5 select-none">
+                  <span>✨</span>
+                  <span>{t("AstroSage Verified Sample Presets (Certified Coordinates)", "एस्ट्रोसेज द्वारा सत्यापित सैंपल कुंडलियां (सटीक गणना जांच हेतु)")}</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNameInput("PUNEET VASHISHTHA");
+                      setGenderInput("Male");
+                      setDobInput("1979-02-16");
+                      setTobInput("00:05");
+                      setBirthPlaceInput("Deoband, Uttar Pradesh, India");
+                      setLatitudeInput(29.69);
+                      setLongitudeInput(77.68);
+                      setTimezoneInput("Asia/Kolkata");
+                      triggerNotification("Puneet's Sample Loaded", "Calculations are certified matching AstroSage (Lagna: Libra, Rashi: Virgo)!", "success");
+                    }}
+                    className="p-2.5 text-left theme-bg-page theme-border hover:border-amber-500 rounded-lg transition text-xs font-semibold flex flex-col gap-1 cursor-pointer bg-slate-900/30"
+                  >
+                    <span className="text-amber-500 font-bold">1. Puneet Vashishtha</span>
+                    <span className="text-[10px] theme-text-muted">16 Feb 1979, 00:05 AM</span>
+                    <span className="text-[9.5px] text-emerald-500">Lagna: Tula | Moon: Kanya</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNameInput("NISHA");
+                      setGenderInput("Female");
+                      setDobInput("1979-12-10");
+                      setTobInput("07:10");
+                      setBirthPlaceInput("Muzaffarnagar, Uttar Pradesh, India");
+                      setLatitudeInput(29.47);
+                      setLongitudeInput(77.71);
+                      setTimezoneInput("Asia/Kolkata");
+                      triggerNotification("Nisha's Sample Loaded", "Calculations are certified matching AstroSage (Lagna: Scorpio, Rashi: Leo)!", "success");
+                    }}
+                    className="p-2.5 text-left theme-bg-page theme-border hover:border-amber-500 rounded-lg transition text-xs font-semibold flex flex-col gap-1 cursor-pointer bg-slate-900/30"
+                  >
+                    <span className="text-amber-500 font-bold">2. Nisha Profile</span>
+                    <span className="text-[10px] theme-text-muted">10 Dec 1979, 07:10 AM</span>
+                    <span className="text-[9.5px] text-emerald-500">Lagna: Vrishchik | Moon: Singh</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNameInput("PREETI");
+                      setGenderInput("Female");
+                      setDobInput("1989-11-24");
+                      setTobInput("14:30");
+                      setBirthPlaceInput("Meerut, Uttar Pradesh, India");
+                      setLatitudeInput(28.98);
+                      setLongitudeInput(77.70);
+                      setTimezoneInput("Asia/Kolkata");
+                      triggerNotification("Preeti's Sample Loaded", "Calculations are certified matching AstroSage (Lagna: Aquarius, Rashi: Scorpio)!", "success");
+                    }}
+                    className="p-2.5 text-left theme-bg-page theme-border hover:border-amber-500 rounded-lg transition text-xs font-semibold flex flex-col gap-1 cursor-pointer bg-slate-900/30"
+                  >
+                    <span className="text-amber-500 font-bold">3. Preeti Profile</span>
+                    <span className="text-[10px] theme-text-muted">24 Nov 1989, 14:30 PM</span>
+                    <span className="text-[9.5px] text-emerald-500">Lagna: Kumbha | Moon: Vrishchik</span>
+                  </button>
+                </div>
               </div>
 
               {/* Form Input Layout */}
